@@ -1,0 +1,53 @@
+services:
+  # Postgres is not needed by the demo yet. When the backend lands, add a `db` service the same way
+  # buh_crm does, with its host port on a DIFFERENT number (DB_HOST_PORT=15433): buh_crm already
+  # holds 127.0.0.1:15432 on the shared server.
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ${APP_NAME:?set APP_NAME in .env}-app
+    init: true
+    env_file:
+      - .env
+    environment:
+      APP_NAME: ${APP_NAME}
+      APP_DOMAIN: ${APP_DOMAIN}
+      PORT: ${PORT:-3000}
+      NODE_ENV: ${NODE_ENV:-production}
+      TZ: ${TZ:-Europe/Kyiv}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
+    # No `ports:` — the app is reachable only through Traefik, like buh_crm. Publishing PORT on the
+    # host would clash with any other container on the same port and bypass TLS / Cloudflare.
+    restart: unless-stopped
+    networks:
+      - app-net
+      - proxy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=proxy"
+      # Router/service names come from APP_NAME: they must differ from buh_crm's `buh-crm`.
+      - "traefik.http.routers.${APP_NAME}.rule=Host(`${APP_DOMAIN:?set APP_DOMAIN in .env}`)"
+      - "traefik.http.routers.${APP_NAME}.entrypoints=websecure"
+      - "traefik.http.routers.${APP_NAME}.tls.certresolver=cf"
+      - "traefik.http.services.${APP_NAME}.loadbalancer.server.port=${PORT:-3000}"
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "node -e \"require('http').get('http://127.0.0.1:' + (process.env.PORT || 3000) + '/health', r => process.exit(r.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1));\""
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
+
+networks:
+  app-net:
+    driver: bridge
+  proxy:
+    external: true

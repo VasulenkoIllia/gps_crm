@@ -1,0 +1,356 @@
+:root {
+  --ink: #0b0b0b;
+  --ink-2: #52514e;
+  --muted: #898781;
+  --grid: #e1e0d9;
+  --surface: #ffffff;
+  --page: #f6f6f4;
+  --border: rgba(11, 11, 11, 0.08);
+  --accent: #2a78d6;
+  --good: #0ca30c;
+  --critical: #d03b3b;
+  --q: #eb6834;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--page);
+  color: var(--ink);
+}
+
+a {
+  color: var(--accent);
+}
+
+/* ---------- Layout ---------- */
+
+.app-sider {
+  border-inline-end: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow: auto;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 18px 16px 14px;
+  color: var(--ink);
+  text-decoration: none;
+  font-weight: 600;
+}
+.brand-compact {
+  padding: 0;
+}
+.brand-mark {
+  background: var(--accent);
+  color: #fff;
+  border-radius: 6px;
+  padding: 2px 6px;
+  font-size: 12px;
+  letter-spacing: 0.04em;
+}
+.brand-name {
+  white-space: nowrap;
+}
+
+.app-header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 56px;
+  padding: 0 16px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  line-height: normal;
+}
+.app-header-controls {
+  margin-inline-start: auto;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.app-content {
+  padding: 20px 24px 48px;
+  max-width: 1440px;
+  width: 100%;
+  margin: 0 auto;
+}
+@media (max-width: 768px) {
+  .app-content {
+    padding: 16px 16px 40px;
+  }
+  .app-header {
+    padding: 0 8px;
+  }
+}
+
+.page-title {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+.page-subtitle {
+  color: var(--ink-2);
+  margin-top: 4px;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.page-title-extra {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* ---------- Panels & tiles ---------- */
+
+.panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  min-width: 0;
+}
+.panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 14px 16px 0;
+}
+.panel-title {
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.panel-body {
+  padding: 12px 16px 16px;
+}
+
+.grid {
+  display: grid;
+  gap: 16px;
+}
+.grid-2 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.grid-3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.grid-roles {
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+}
+.kpi-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+@media (max-width: 1100px) {
+  .grid-3 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 768px) {
+  .grid-2,
+  .grid-3,
+  .grid-roles {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.kpi {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px 16px;
+  min-width: 0;
+}
+.kpi-label {
+  color: var(--ink-2);
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.kpi-value {
+  font-size: 26px;
+  font-weight: 600;
+  margin-top: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.kpi-hint {
+  color: var(--muted);
+  font-size: 12px;
+  margin-top: 2px;
+}
+
+.group-label {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+  margin: 8px 0 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* ---------- Open question marker ---------- */
+
+.q-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--q);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: help;
+  vertical-align: middle;
+  flex: none;
+  line-height: 1;
+  margin-inline-start: 4px;
+}
+.q-badge:focus-visible {
+  outline: 2px solid var(--q);
+  outline-offset: 2px;
+}
+.q-badge-static {
+  cursor: default;
+}
+.q-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--ink-2);
+  white-space: nowrap;
+}
+
+/* ---------- Bar list (horizontal bars, HTML) ---------- */
+
+.barlist {
+  display: grid;
+  gap: 10px;
+}
+.barlist-row {
+  display: grid;
+  grid-template-columns: minmax(90px, 38%) 1fr auto;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+}
+.barlist-label {
+  color: var(--ink-2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.barlist-track {
+  height: 14px;
+  position: relative;
+}
+.barlist-bar {
+  height: 100%;
+  border-radius: 0 4px 4px 0;
+  min-width: 2px;
+}
+.barlist-value {
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+  text-align: right;
+  min-width: 48px;
+}
+
+/* ---------- Misc ---------- */
+
+.muted {
+  color: var(--muted);
+}
+.secondary {
+  color: var(--ink-2);
+}
+.num {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.debt {
+  color: var(--critical);
+  font-weight: 600;
+}
+.clickable-rows .ant-table-tbody > tr {
+  cursor: pointer;
+}
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.toolbar > * {
+  min-width: 0;
+}
+.dl {
+  display: grid;
+  grid-template-columns: minmax(120px, 40%) 1fr;
+  gap: 8px 12px;
+  font-size: 14px;
+}
+.dl dt {
+  color: var(--ink-2);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.dl dd {
+  margin: 0;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.calc-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 4px 0;
+}
+.calc-total {
+  border-top: 1px solid var(--grid);
+  margin-top: 4px;
+  padding-top: 8px;
+  font-weight: 600;
+}
+.preview-message {
+  white-space: pre-wrap;
+  background: #f4f7fb;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px 14px;
+  font-size: 14px;
+  line-height: 1.5;
+}
+.var-chip {
+  cursor: pointer;
+}

@@ -1,0 +1,37 @@
+{
+  "name": "gps_crm",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=24 <25"
+  },
+  "scripts": {
+    "dev": "vite",
+    "dev:server": "tsx watch server/server.ts",
+    "build": "npm run build:web && npm run build:server",
+    "build:web": "tsc -p tsconfig.json && vite build",
+    "build:server": "tsc -p tsconfig.server.json",
+    "typecheck": "tsc -p tsconfig.json && tsc -p tsconfig.server.json --noEmit",
+    "start": "node dist-server/server.js",
+    "preview": "npm run build && npm run start"
+  },
+  "dependencies": {
+    "@ant-design/icons": "^6.3.4",
+    "antd": "^6.6.5",
+    "dayjs": "^1.11.23",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "react-router-dom": "^7.18.4",
+    "recharts": "^3.10.1"
+  },
+  "devDependencies": {
+    "@types/node": "^24.19.0",
+    "@types/react": "^19.0.10",
+    "@types/react-dom": "^19.0.4",
+    "@vitejs/plugin-react": "^4.4.1",
+    "tsx": "^4.19.2",
+    "typescript": "^5.8.3",
+    "vite": "^6.2.0"
+  }
+}
