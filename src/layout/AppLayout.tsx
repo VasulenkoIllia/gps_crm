@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { Link, Outlet, useLocation } from "react-router-dom";
-import { Alert, Button, Drawer, Grid, Layout, Menu, Popconfirm, Select, Switch, Tag, Tooltip } from "antd";
+import { Button, Drawer, Grid, Layout, Menu, Popconfirm, Select, Tag, Tooltip } from "antd";
 import {
   AppstoreOutlined, CarOutlined, DashboardOutlined, HddOutlined, MenuOutlined, NotificationOutlined,
   ReloadOutlined, SafetyOutlined, TeamOutlined, WalletOutlined,
@@ -24,12 +24,11 @@ const NAV: { path: string; label: string; icon: ReactNode; perm?: Permission }[]
 ];
 
 export default function AppLayout() {
-  const { ui, setUi, setRole, can, reset } = useStore();
+  const { ui, setRole, can, reset } = useStore();
   const location = useLocation();
   const screens = Grid.useBreakpoint();
   const isMobile = !screens.lg;
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [bannerOpen, setBannerOpen] = useState(true);
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -80,13 +79,6 @@ export default function AppLayout() {
                 popupMatchSelectWidth={false}
               />
             </Tooltip>
-            <Tooltip title="Показати / сховати маркери відкритих питань до клієнта">
-              <span className="q-switch">
-                <Switch size="small" checked={ui.showQuestions} onChange={(v) => setUi({ showQuestions: v })} />
-                <span className="q-badge q-badge-static">?</span>
-                {!isMobile && <span>Питання</span>}
-              </span>
-            </Tooltip>
             <Popconfirm
               title="Скинути демо-дані?"
               description="Усі внесені зміни буде втрачено."
@@ -101,21 +93,6 @@ export default function AppLayout() {
           </div>
         </Layout.Header>
         <Layout.Content className="app-content">
-          {bannerOpen && (
-            <Alert
-              type="info"
-              showIcon
-              closable={{ onClose: () => setBannerOpen(false) }}
-              style={{ marginBottom: 16 }}
-              title="Демо-прототип для обговорення. Усі дані вигадані, тарифи — з вашої таблиці."
-              description={
-                <>
-                  Маркер <span className="q-badge q-badge-static">?</span> позначає відкрите питання: наведіть на нього, щоб
-                  побачити питання і припущення, на якому побудовано екран. Зміни зберігаються лише у вашому браузері.
-                </>
-              }
-            />
-          )}
           <Outlet />
         </Layout.Content>
       </Layout>

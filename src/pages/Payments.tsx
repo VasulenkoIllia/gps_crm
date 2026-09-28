@@ -8,7 +8,7 @@ import { useStore } from "../store/DemoStore";
 import { GRACE_DAYS, objectDebt, overdueDays } from "../domain/billing";
 import { USER_BY_ID } from "../data/reference";
 import { fmtDate, fmtMoney, matches } from "../components/format";
-import { Kpi, PageTitle, Q, StatusTag } from "../components/ui";
+import { Kpi, PageTitle, StatusTag } from "../components/ui";
 import PaymentModal, { METHOD_LABELS, METHOD_OPTIONS } from "../components/PaymentModal";
 
 interface DebtorRow {
@@ -17,7 +17,7 @@ interface DebtorRow {
   payerId: string;
   objects: number;
   maxDays: number;
-  /** Active objects past the grace period — candidates for suspension. */
+  /** Active objects past the grace period: candidates for suspension. */
   toSuspend: number;
   debt: number;
 }
@@ -30,7 +30,7 @@ export default function Payments() {
   const [methods, setMethods] = useState<PaymentMethod[]>([]);
   const [range, setRange] = useState<[Dayjs, Dayjs] | null>([today.subtract(2, "month").startOf("month"), today]);
 
-  // Debt is tracked per payer (question 1.4): one row per payer with overdue objects.
+  // Debt is tracked per payer: one row per payer with overdue objects.
   const debtors = useMemo(() => {
     const rows: DebtorRow[] = [];
     for (const payer of data.payers) {
@@ -89,14 +89,14 @@ export default function Payments() {
     { title: "Статус", render: (_: unknown, r: DebtorRow) => <StatusTag status={index.summaries[r.subscriberId].status} /> },
     { title: "Об'єктів з боргом", align: "right" as const, render: (_: unknown, r: DebtorRow) => r.objects },
     {
-      title: <>Прострочення <Q id="1.2" /></>,
+      title: "Прострочення",
       align: "right" as const,
       sorter: (a: DebtorRow, b: DebtorRow) => a.maxDays - b.maxDays,
       render: (_: unknown, r: DebtorRow) => (
         <span className="num">
           {r.maxDays} дн.{" "}
           {r.toSuspend > 0 && (
-            <Tooltip title={`${r.toSuspend} активн. об'єкт(ів) прострочено більше ${GRACE_DAYS} днів — за правилом час призупиняти`}>
+            <Tooltip title={`${r.toSuspend} активн. об'єкт(ів) прострочено більше ${GRACE_DAYS} днів, за правилом час призупиняти`}>
               <Tag color="warning">призупинити?</Tag>
             </Tooltip>
           )}
@@ -141,9 +141,9 @@ export default function Payments() {
       },
     },
     { title: "Сума", align: "right" as const, render: (_: unknown, p: Payment) => <span className="num">{fmtMoney(p.amount)}</span> },
-    { title: "Період", render: (_: unknown, p: Payment) => <span className="num">{fmtDate(p.periodFrom)} – {fmtDate(p.periodTo)}</span> },
+    { title: "Період", render: (_: unknown, p: Payment) => <span className="num">{fmtDate(p.periodFrom)} - {fmtDate(p.periodTo)}</span> },
     { title: "Об'єктів", align: "right" as const, render: (_: unknown, p: Payment) => p.objectIds.length },
-    { title: "Рахунок", render: (_: unknown, p: Payment) => p.invoiceNo ?? <span className="muted">—</span> },
+    { title: "Рахунок", render: (_: unknown, p: Payment) => p.invoiceNo ?? <span className="muted">-</span> },
     { title: "Спосіб", render: (_: unknown, p: Payment) => METHOD_LABELS[p.method] },
     { title: "Вніс", render: (_: unknown, p: Payment) => USER_BY_ID[p.createdBy]?.name },
   ];
@@ -160,12 +160,12 @@ export default function Payments() {
           )
         }
       >
-        Облік оплат «оплачено до» по кожному об'єкту <Q id="1.1" />
+        Облік оплат «оплачено до» по кожному об'єкту
       </PageTitle>
 
       <div className="kpi-row">
         <Kpi label="Загальний борг" value={<span className="debt">{fmtMoney(totalDebt)}</span>} hint={`${debtors.length} платників`} />
-        <Kpi label={`Прострочено > ${GRACE_DAYS} днів`} value={overGrace.length} hint="платників з активними об'єктами — кандидати на призупинення" q="1.2" />
+        <Kpi label={`Прострочено > ${GRACE_DAYS} днів`} value={overGrace.length} hint="платників з активними об'єктами, кандидати на призупинення" />
         <Kpi label="Надійшло цього місяця" value={fmtMoney(thisMonth)} hint={today.format("MMMM YYYY")} />
       </div>
 

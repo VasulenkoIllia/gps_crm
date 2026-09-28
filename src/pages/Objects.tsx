@@ -8,7 +8,7 @@ import { useStore } from "../store/DemoStore";
 import { objectDebt, objectPrice, overdueDays } from "../domain/billing";
 import { ADDON_BY_ID, modelLabel, PROGRAMS, TARIFFS, TRACKER_MODELS, tariffLabel } from "../data/reference";
 import { fmtDate, fmtMoney, matches } from "../components/format";
-import { PageTitle, ProgramDot, Q, StatusTag } from "../components/ui";
+import { PageTitle, ProgramDot, StatusTag } from "../components/ui";
 
 const STATUS_OPTIONS: { value: ObjectStatus; label: string }[] = [
   { value: "active", label: "Активні" },
@@ -100,7 +100,7 @@ export default function Objects() {
         title: "Оплачено до",
         sorter: (a, b) => a.paidUntil.localeCompare(b.paidUntil),
         render: (_, o) => {
-          if (o.status === "disconnected") return <span className="muted">—</span>;
+          if (o.status === "disconnected") return <span className="muted">-</span>;
           const days = overdueDays(o.paidUntil, today);
           return (
             <Tooltip title={days ? `Прострочено ${days} дн.` : undefined}>
@@ -123,7 +123,7 @@ export default function Objects() {
           </Button>
         }
       >
-        Знайдено {rows.length} об'єктів <Q id="3.1" />
+        Знайдено {rows.length} об'єктів
       </PageTitle>
 
       <div className="toolbar">

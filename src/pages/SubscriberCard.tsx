@@ -10,7 +10,7 @@ import { useStore } from "../store/DemoStore";
 import { objectDebt, objectPrice, overdueDays } from "../domain/billing";
 import { ADDON_BY_ID, tariffLabel, USER_BY_ID } from "../data/reference";
 import { fmtDate, fmtDateTime, fmtMoney } from "../components/format";
-import { ChannelTag, Kpi, PageTitle, ProgramDot, Q, Section, StatusTag, TypeTag } from "../components/ui";
+import { ChannelTag, Kpi, PageTitle, ProgramDot, Section, StatusTag, TypeTag } from "../components/ui";
 import PaymentModal, { METHOD_LABELS } from "../components/PaymentModal";
 import { ContactModal } from "../components/SubscriberForms";
 
@@ -44,7 +44,7 @@ export default function SubscriberCard() {
         <div>
           <div>{o.name}</div>
           <div className="muted" style={{ fontSize: 12 }}>
-            {o.plate ?? "—"} · IMEI {o.deviceId ? index.deviceById[o.deviceId]?.imei : "—"}
+            {o.plate ? `${o.plate} · ` : ""}IMEI {o.deviceId ? index.deviceById[o.deviceId]?.imei : "-"}
           </div>
         </div>
       ),
@@ -60,15 +60,15 @@ export default function SubscriberCard() {
       ),
     },
     ...(multiPayer
-      ? [{ title: <>Платник <Q id="1.4" /></>, render: (_: unknown, o: GpsObject) => index.payerById[o.payerId]?.name }]
+      ? [{ title: "Платник", render: (_: unknown, o: GpsObject) => index.payerById[o.payerId]?.name }]
       : []),
     ...(finance
       ? [
           { title: "Сума / міс", align: "right" as const, render: (_: unknown, o: GpsObject) => <span className="num">{fmtMoney(objectPrice(o).total)}</span> },
           {
-            title: <>Оплачено до <Q id="1.1" /></>,
+            title: "Оплачено до",
             render: (_: unknown, o: GpsObject) => {
-              if (o.status === "disconnected") return <span className="muted">—</span>;
+              if (o.status === "disconnected") return <span className="muted">-</span>;
               const days = overdueDays(o.paidUntil, today);
               return (
                 <Tooltip title={days ? `Прострочено ${days} дн. · борг ${fmtMoney(objectDebt(o, today))}` : undefined}>
@@ -95,7 +95,7 @@ export default function SubscriberCard() {
             )}
             {c.fullName}
           </div>
-          <div className="muted" style={{ fontSize: 12 }}>{c.position ?? "—"}</div>
+          <div className="muted" style={{ fontSize: 12 }}>{c.position ?? "-"}</div>
         </div>
       ),
     },
@@ -109,9 +109,9 @@ export default function SubscriberCard() {
         </div>
       ),
     },
-    { title: <>Канал <Q id="5.5" /></>, render: (_: unknown, c: Contact) => <ChannelTag channel={c.channel} /> },
+    { title: "Канал", render: (_: unknown, c: Contact) => <ChannelTag channel={c.channel} /> },
     {
-      title: <>Chat ID <Q id="5.2" /></>,
+      title: "Chat ID",
       render: (_: unknown, c: Contact) => (
         <div style={{ fontSize: 12 }}>
           <div>Telegram: {c.telegramChatId ? <CheckOutlined style={{ color: "#0ca30c" }} /> : <span className="muted">немає</span>}</div>
@@ -125,7 +125,7 @@ export default function SubscriberCard() {
         <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
           {c.billingNotify && <Tag>Оплата / борг</Tag>}
           {c.techNotify && <Tag>Технічні</Tag>}
-          {!c.billingNotify && !c.techNotify && <span className="muted">—</span>}
+          {!c.billingNotify && !c.techNotify && <span className="muted">-</span>}
         </div>
       ),
     },
@@ -143,10 +143,10 @@ export default function SubscriberCard() {
   const paymentColumns = [
     { title: "Дата", render: (_: unknown, p: Payment) => <span className="num">{fmtDate(p.paidAt)}</span> },
     { title: "Сума", align: "right" as const, render: (_: unknown, p: Payment) => <span className="num">{fmtMoney(p.amount)}</span> },
-    { title: "Період", render: (_: unknown, p: Payment) => <span className="num">{fmtDate(p.periodFrom)} – {fmtDate(p.periodTo)}</span> },
+    { title: "Період", render: (_: unknown, p: Payment) => <span className="num">{fmtDate(p.periodFrom)} - {fmtDate(p.periodTo)}</span> },
     { title: "Об'єктів", align: "right" as const, render: (_: unknown, p: Payment) => p.objectIds.length },
     ...(multiPayer ? [{ title: "Платник", render: (_: unknown, p: Payment) => index.payerById[p.payerId]?.name }] : []),
-    { title: "Рахунок", render: (_: unknown, p: Payment) => p.invoiceNo ?? <span className="muted">—</span> },
+    { title: "Рахунок", render: (_: unknown, p: Payment) => p.invoiceNo ?? <span className="muted">-</span> },
     { title: "Спосіб", render: (_: unknown, p: Payment) => METHOD_LABELS[p.method] },
     { title: "Вніс", render: (_: unknown, p: Payment) => USER_BY_ID[p.createdBy]?.name },
   ];
@@ -177,7 +177,7 @@ export default function SubscriberCard() {
             {k.fileName}
           </Button>
         ) : (
-          <span className="muted">—</span>
+          <span className="muted">-</span>
         ),
     },
   ];
@@ -217,7 +217,7 @@ export default function SubscriberCard() {
       key: "payers",
       label: (
         <span>
-          Платники ({payers.length}) <Q id="1.4" />
+          Платники ({payers.length})
         </span>
       ),
       children: (
@@ -237,15 +237,15 @@ export default function SubscriberCard() {
               >
                 <dl className="dl">
                   <dt>{p.taxId?.length === 10 ? "ІПН" : "ЄДРПОУ"}</dt>
-                  <dd className="num">{p.taxId ?? "—"}</dd>
+                  <dd className="num">{p.taxId ?? "-"}</dd>
                   <dt>IBAN платника</dt>
-                  <dd className="num">{p.iban ?? "—"}</dd>
-                  <dt>Форма оплати <Q id="1.7" /></dt>
+                  <dd className="num">{p.iban ?? "-"}</dd>
+                  <dt>Форма оплати</dt>
                   <dd>{METHOD_LABELS[p.method]}</dd>
                   <dt>Об'єкти</dt>
                   <dd>{live.length} діючих{own.length > live.length ? `, ${own.length - live.length} відключених` : ""}</dd>
                   <dt>Договір</dt>
-                  <dd>{contract ? `${contract.number} до ${fmtDate(contract.validUntil)}` : "—"}</dd>
+                  <dd>{contract ? `${contract.number} до ${fmtDate(contract.validUntil)}` : "-"}</dd>
                   {finance && (
                     <>
                       <dt>Абонплата / міс</dt>
@@ -283,7 +283,7 @@ export default function SubscriberCard() {
       key: "contracts",
       label: (
         <span>
-          Договори ({contracts.length}) <Q id="4.5" />
+          Договори ({contracts.length})
         </span>
       ),
       children: (
@@ -338,19 +338,18 @@ export default function SubscriberCard() {
         <Tag>{sub.code}</Tag>
         <TypeTag type={sub.type} />
         <StatusTag status={sum.status} />
-        <Q id="4.1" />
       </PageTitle>
 
       <div className="grid grid-2" style={{ marginBottom: 16 }}>
         <Section title="Картка абонента">
           <dl className="dl">
             <dt>{sub.type === "B2C" ? "ІПН" : "ЄДРПОУ / ІПН"}</dt>
-            <dd className="num">{sub.taxId ?? "—"}</dd>
-            <dt>Відповідальний менеджер <Q id="4.4" /></dt>
+            <dd className="num">{sub.taxId ?? "-"}</dd>
+            <dt>Відповідальний менеджер</dt>
             <dd>{USER_BY_ID[sub.managerId]?.name}</dd>
             <dt>Дата реєстрації</dt>
             <dd>{fmtDate(sub.createdAt)}</dd>
-            <dt>Посилання на CRM <Q id="5.1" /></dt>
+            <dt>Посилання на CRM</dt>
             <dd>
               <a href={sub.crmUrl} target="_blank" rel="noreferrer" onClick={(e) => { e.preventDefault(); message.info("Демо: відкриється картка клієнта в CRM"); }}>
                 <LinkOutlined /> Відкрити в CRM
@@ -367,7 +366,7 @@ export default function SubscriberCard() {
         <div className="kpi-row" style={{ marginBottom: 0 }}>
           <Kpi label="Активні об'єкти" value={sum.active} hint={`призупинені: ${sum.suspended} · відключені: ${sum.disconnected}`} />
           {finance && <Kpi label="Оборот / міс" value={fmtMoney(sum.mrr)} hint="за активними об'єктами" />}
-          {finance && <Kpi label="Борг" value={<span className={sum.debt ? "debt" : undefined}>{fmtMoney(sum.debt)}</span>} q="1.1" />}
+          {finance && <Kpi label="Борг" value={<span className={sum.debt ? "debt" : undefined}>{fmtMoney(sum.debt)}</span>} />}
           {finance && <Kpi label="LTV" value={fmtMoney(sum.ltv)} hint="сплачено за весь час" />}
         </div>
       </div>

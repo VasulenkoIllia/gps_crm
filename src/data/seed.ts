@@ -25,9 +25,9 @@ export interface DemoData {
   seq: { subscriber: number; invoice: number };
 }
 
-export const DATA_VERSION = 6;
+export const DATA_VERSION = 7;
 
-/** Company requisites used in message templates (question 1.6 — unknown yet). */
+/** Company requisites used in message templates (placeholder until the client provides them). */
 export const COMPANY_REQUISITES = "ТОВ «Ваша компанія», IBAN UA00 0000 0000 0000 0000 0000 000";
 
 type ProfileId = "agro" | "intl" | "city" | "machinery" | "municipal" | "medical" | "school" | "car";
@@ -337,7 +337,7 @@ export function generateDemoData(today: Dayjs, seed = 20260927): DemoData {
         paidUntil = disconnectedAt;
       } else if (objScenario === "suspended") {
         status = "suspended";
-        // Annual tariffs: the current year was not paid; monthly: 1–3 months behind.
+        // Annual tariffs: the current year was not paid; monthly: 1-3 months behind.
         paidUntil = tariff.period === "year" ? lastAnniversary().subtract(1, "day") : today.subtract(int(1, 3), "month").endOf("month");
       } else if ((objScenario === "late" || objScenario === "late2") && tariff.period === "month") {
         // Keep the overdue past the grace period whatever day of the month the demo is opened.
@@ -408,7 +408,7 @@ export function generateDemoData(today: Dayjs, seed = 20260927): DemoData {
         log({ at: at(paidUntil.add(11, "day")), userId: "u-tech", entity: "object", entityId: obj.id, subscriberId: sub.id, action: "Призупинено об'єкт", details: `${vehicle} · несплата` });
       }
       if (disconnectedAt) {
-        log({ at: at(disconnectedAt), userId: "u-tech", entity: "object", entityId: obj.id, subscriberId: sub.id, action: "Відключено об'єкт", details: `${vehicle} · причина: ${REASON_BY_ID[reasonId ?? ""]?.name ?? "—"}` });
+        log({ at: at(disconnectedAt), userId: "u-tech", entity: "object", entityId: obj.id, subscriberId: sub.id, action: "Відключено об'єкт", details: `${vehicle} · причина: ${REASON_BY_ID[reasonId ?? ""]?.name ?? "-"}` });
       }
     }
 
@@ -455,7 +455,7 @@ export function generateDemoData(today: Dayjs, seed = 20260927): DemoData {
     }
     const recent = payments.filter((p) => p.subscriberId === sub.id).sort((a, b) => b.paidAt.localeCompare(a.paidAt)).slice(0, 2);
     for (const p of recent) {
-      log({ at: at(p.paidAt), userId: managerId, entity: "payment", entityId: p.id, subscriberId: sub.id, action: "Внесено оплату", details: `${p.amount.toLocaleString("uk-UA")} грн · ${dayjs(p.periodFrom).format("DD.MM.YYYY")}–${dayjs(p.periodTo).format("DD.MM.YYYY")}` });
+      log({ at: at(p.paidAt), userId: managerId, entity: "payment", entityId: p.id, subscriberId: sub.id, action: "Внесено оплату", details: `${p.amount.toLocaleString("uk-UA")} грн · ${dayjs(p.periodFrom).format("DD.MM.YYYY")} - ${dayjs(p.periodTo).format("DD.MM.YYYY")}` });
     }
   });
 
@@ -478,12 +478,12 @@ export function generateDemoData(today: Dayjs, seed = 20260927): DemoData {
     {
       id: "t-debt", kind: "debt", name: "Повідомлення про заборгованість",
       subject: "Заборгованість за GPS-моніторинг",
-      body: "Доброго дня, {{name}}!\nЗа абонентом {{company}} ({{code}}) обліковується заборгованість {{debt}} грн за GPS-моніторинг.\nЩоб уникнути призупинення доступу, просимо сплатити найближчим часом.\nРеквізити: {{requisites}}.\nЯкщо оплату вже здійснено — просто проігноруйте це повідомлення.",
+      body: "Доброго дня, {{name}}!\nЗа абонентом {{company}} ({{code}}) обліковується заборгованість {{debt}} грн за GPS-моніторинг.\nЩоб уникнути призупинення доступу, просимо сплатити найближчим часом.\nРеквізити: {{requisites}}.\nЯкщо оплату вже здійснено, просто проігноруйте це повідомлення.",
     },
     {
       id: "t-invoice", kind: "invoice", name: "Рахунок та реквізити",
       subject: "Рахунок на оплату GPS-моніторингу",
-      body: "Доброго дня, {{name}}!\nНадсилаємо рахунок на оплату GPS-моніторингу: {{objects}} об'єкт(ів), сума {{amount}} грн на місяць.\nРеквізити: {{requisites}}.\nРахунок — у вкладенні.",
+      body: "Доброго дня, {{name}}!\nНадсилаємо рахунок на оплату GPS-моніторингу: {{objects}} об'єкт(ів), сума {{amount}} грн на місяць.\nРеквізити: {{requisites}}.\nРахунок у вкладенні.",
     },
     {
       id: "t-tech", kind: "tech", name: "Технічні роботи на сервері",
@@ -498,14 +498,14 @@ export function generateDemoData(today: Dayjs, seed = 20260927): DemoData {
     {
       id: "t-info", kind: "info", name: "Зміна тарифів",
       subject: "Зміна тарифів з 1 січня",
-      body: "Доброго дня, {{name}}!\nПовідомляємо, що з 1 січня змінюються тарифи на GPS-моніторинг.\nДеталі — у вашого менеджера {{manager}}.",
+      body: "Доброго дня, {{name}}!\nПовідомляємо, що з 1 січня змінюються тарифи на GPS-моніторинг.\nДеталі можна уточнити у вашого менеджера {{manager}}.",
     },
   ];
 
   const rules: AutoRule[] = [
     { id: "r-reminder", name: "Нагадування перед закінченням оплати", description: "За 3 дні до дати «оплачено до»", templateId: "t-reminder", enabled: true, schedule: "щодня о 10:00" },
     { id: "r-debt", name: "Повідомлення про заборгованість", description: "На 1, 5 і 10 день прострочення", templateId: "t-debt", enabled: true, schedule: "щодня о 10:30" },
-    { id: "r-invoice", name: "Рахунок на новий період", description: "1-го числа — платникам з оплатою за рахунком", templateId: "t-invoice", enabled: false, schedule: "1-го числа о 09:00" },
+    { id: "r-invoice", name: "Рахунок на новий період", description: "1-го числа, платникам з оплатою за рахунком", templateId: "t-invoice", enabled: false, schedule: "1-го числа о 09:00" },
     { id: "r-contract", name: "Закінчення договору", description: "За 30 днів до закінчення терміну дії договору", templateId: "t-contract", enabled: false, schedule: "щопонеділка о 10:00" },
   ];
 

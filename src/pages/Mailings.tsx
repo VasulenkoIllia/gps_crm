@@ -8,7 +8,7 @@ import { objectPrice } from "../domain/billing";
 import { PROGRAMS, USER_BY_ID } from "../data/reference";
 import { COMPANY_REQUISITES } from "../data/seed";
 import { fmtDate, fmtDateTime, fmtNum } from "../components/format";
-import { CHANNEL_LABELS, ChannelTag, Kpi, PageTitle, Q, Section, STATUS_LABELS } from "../components/ui";
+import { CHANNEL_LABELS, ChannelTag, Kpi, PageTitle, Section, STATUS_LABELS } from "../components/ui";
 
 const KIND_LABELS: Record<TemplateKind, string> = {
   reminder: "Нагадування про оплату",
@@ -56,7 +56,7 @@ function variablesFor(sub: Subscriber, contact: Contact, index: Index, today: Da
     objects: String(live.length),
     amount: fmtNum(live.reduce((s, o) => s + objectPrice(o).total, 0)),
     debt: fmtNum(sum.debt),
-    paid_until: paidUntil ? fmtDate(paidUntil) : "—",
+    paid_until: paidUntil ? fmtDate(paidUntil) : "-",
     requisites: COMPANY_REQUISITES,
     manager: USER_BY_ID[sub.managerId]?.name ?? "",
     today: today.format("DD.MM.YYYY"),
@@ -201,7 +201,7 @@ function NewMailing() {
                 ]}
               />
             </Form.Item>
-            <Form.Item label={<>Канал <Q id="5.5" /></>} style={{ marginBottom: 8 }}>
+            <Form.Item label="Канал" style={{ marginBottom: 8 }}>
               <Radio.Group
                 value={channelMode}
                 onChange={(e) => setChannelMode(e.target.value)}
@@ -215,7 +215,7 @@ function NewMailing() {
               />
             </Form.Item>
             <Checkbox checked={fallback} onChange={(e) => setFallback(e.target.checked)}>
-              Якщо канал недоступний — надіслати на Email
+              Якщо канал недоступний, надіслати на Email
             </Checkbox>
           </Form>
         </Section>
@@ -314,7 +314,7 @@ function NewMailing() {
               Надіслати ({ok.length})
             </Button>
           ) : (
-            <div className="muted" style={{ marginTop: 12 }}>Ваша роль не може запускати розсилки. <Q id="5.6" /></div>
+            <div className="muted" style={{ marginTop: 12 }}>Ваша роль не може запускати розсилки.</div>
           )}
         </Section>
       </div>
@@ -326,11 +326,11 @@ function ChannelsSetup() {
   return (
     <Section title="Канали відправки">
       <dl className="dl">
-        <dt>Telegram-бот <Q id="5.2" /></dt>
+        <dt>Telegram-бот</dt>
         <dd><Tag color="warning">потрібен токен бота з CRM</Tag></dd>
-        <dt>Viber-бот <Q id="5.2" /></dt>
+        <dt>Viber-бот</dt>
         <dd><Tag color="warning">потрібен токен; бот платний</Tag></dd>
-        <dt>Email <Q id="5.3" /></dt>
+        <dt>Email</dt>
         <dd><Tag color="warning">потрібна пошта / домен</Tag></dd>
       </dl>
     </Section>
@@ -431,8 +431,8 @@ function AutoRules() {
   return (
     <>
       <p className="secondary">
-        Сценарії запускаються за розкладом і надсилають повідомлення лише контактам з відповідною позначкою. Параметри — для
-        обговорення <Q id="5.4" />
+        Сценарії запускаються за розкладом і надсилають повідомлення лише контактам з відповідною позначкою
+        («оплата / борг» або «технічні»).
       </p>
       <Table
         size="small"

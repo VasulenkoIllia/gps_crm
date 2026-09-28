@@ -6,7 +6,7 @@ import type { Device, DeviceStatus, Sensor, Sim, SimStatus } from "../domain/typ
 import { useStore } from "../store/DemoStore";
 import { modelLabel, SIM_PLAN_BY_ID, SIM_PLANS, TRACKER_MODELS } from "../data/reference";
 import { fmtMoney, matches } from "../components/format";
-import { DEVICE_STATUS_OPTIONS, DeviceStatusTag, Kpi, PageTitle, Q, SIM_STATUS_OPTIONS, SimStatusTag } from "../components/ui";
+import { DEVICE_STATUS_OPTIONS, DeviceStatusTag, Kpi, PageTitle, SIM_STATUS_OPTIONS, SimStatusTag } from "../components/ui";
 
 export default function Equipment() {
   const { data, index, can } = useStore();
@@ -19,7 +19,7 @@ export default function Equipment() {
 
   const objectLink = (objectId?: string) => {
     const o = objectId ? index.objectById[objectId] : undefined;
-    if (!o) return <span className="muted">—</span>;
+    if (!o) return <span className="muted">-</span>;
     const sub = index.subscriberById[o.subscriberId];
     return (
       <div>
@@ -61,13 +61,13 @@ export default function Equipment() {
           )
         }
       >
-        Облік складу та встановленого обладнання <Q id="3.2" />
+        Облік складу та встановленого обладнання
       </PageTitle>
 
       <div className="kpi-row">
         <Kpi label="Трекери встановлено" value={count("installed")} />
         <Kpi label="Трекери на складі" value={count("in_stock")} hint={`у ремонті: ${count("repair")} · списано: ${count("written_off")}`} />
-        <Kpi label="SIM на складі" value={data.sims.filter((s) => s.status === "in_stock").length} q="3.3" />
+        <Kpi label="SIM на складі" value={data.sims.filter((s) => s.status === "in_stock").length} />
         {can("cost.view") && (
           <Kpi label="SIM на призупинених об'єктах" value={fmtMoney(suspendedSimCost)} hint="витрати на місяць без оплати від клієнта" />
         )}
@@ -105,9 +105,9 @@ export default function Equipment() {
                     scroll={{ x: 900 }}
                     columns={[
                       { title: "IMEI", render: (_, d) => <span className="num">{d.imei}</span> },
-                      { title: <>Модель <Q id="3.5" /></>, render: (_, d) => <span className={d.modelId ? undefined : "muted"}>{modelLabel(d.modelId)}</span> },
+                      { title: "Модель", render: (_, d) => <span className={d.modelId ? undefined : "muted"}>{modelLabel(d.modelId)}</span> },
                       { title: "Статус", render: (_, d) => <DeviceStatusTag status={d.status} /> },
-                      { title: <>Власність <Q id="3.2" /></>, render: (_, d) => (d.ownership === "sold" ? "Продано клієнту" : "Оренда (наш)") },
+                      { title: "Власність", render: (_, d) => (d.ownership === "sold" ? "Продано клієнту" : "Оренда (наш)") },
                       { title: "Об'єкт", render: (_, d) => objectLink(d.objectId) },
                     ]}
                   />
@@ -140,9 +140,9 @@ export default function Equipment() {
                     columns={[
                       { title: "ICCID (SN)", render: (_, s) => <span className="num">{s.iccid}</span> },
                       { title: "Номер", render: (_, s) => <span className="num">{s.msisdn}</span> },
-                      { title: <>Оператор / план <Q id="3.3" /></>, render: (_, s) => `${SIM_PLAN_BY_ID[s.planId]?.operator} · ${SIM_PLAN_BY_ID[s.planId]?.name}` },
+                      { title: "Оператор / план", render: (_, s) => `${SIM_PLAN_BY_ID[s.planId]?.operator} · ${SIM_PLAN_BY_ID[s.planId]?.name}` },
                       ...(can("cost.view")
-                        ? [{ title: <>Вартість / міс <Q id="2.7" /></>, align: "right" as const, render: (_: unknown, s: Sim) => <span className="num">{fmtMoney(SIM_PLAN_BY_ID[s.planId]?.monthlyCost ?? 0)}</span> }]
+                        ? [{ title: "Вартість / міс", align: "right" as const, render: (_: unknown, s: Sim) => <span className="num">{fmtMoney(SIM_PLAN_BY_ID[s.planId]?.monthlyCost ?? 0)}</span> }]
                         : []),
                       { title: "Статус", render: (_, s) => <SimStatusTag status={s.status} /> },
                       { title: "Об'єкт", render: (_, s) => objectLink(simObject(s)) },

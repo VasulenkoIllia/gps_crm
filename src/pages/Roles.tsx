@@ -3,7 +3,7 @@ import { useStore } from "../store/DemoStore";
 import { DEFAULT_ROLE_MATRIX, PERMISSIONS, ROLE_LABELS, type Permission } from "../domain/permissions";
 import type { RoleId } from "../domain/types";
 import { USERS } from "../data/reference";
-import { PageTitle, Q, Section } from "../components/ui";
+import { PageTitle, Section } from "../components/ui";
 
 const ROLES: RoleId[] = ["admin", "manager", "tech"];
 
@@ -26,7 +26,7 @@ export default function Roles() {
           )
         }
       >
-        Пропозиція прав для обговорення. Змініть галочку — і перемкніть роль у шапці, щоб побачити результат.
+        Пропозиція прав для обговорення. Змініть галочку і перемкніть роль у шапці, щоб побачити результат.
       </PageTitle>
 
       <div className="grid grid-roles">
@@ -41,11 +41,7 @@ export default function Roles() {
               { title: "Розділ", dataIndex: "group", width: 120, render: (g: string) => <span className="secondary">{g}</span> },
               {
                 title: "Право",
-                render: (_, p) => (
-                  <>
-                    {p.label} {p.question && <Q id={p.question} />}
-                  </>
-                ),
+                dataIndex: "label",
               },
               ...ROLES.map((role) => ({
                 title: ROLE_LABELS[role],
@@ -78,8 +74,8 @@ export default function Roles() {
           </Section>
           <Section title="Журнал змін">
             <p className="secondary" style={{ margin: 0 }}>
-              Кожна зміна (хто, коли, що змінив) записується в журнал абонента та об'єкта — замість поля «Дата останньої зміни».
-              Видалення — «м'яке», з можливістю відновлення. <Q id="6.4" />
+              Кожна зміна (хто, коли, що змінив) записується в журнал абонента та об'єкта замість поля «Дата останньої зміни».
+              Видалення «м'яке», з можливістю відновлення.
             </p>
           </Section>
         </div>

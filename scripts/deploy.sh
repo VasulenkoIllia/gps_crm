@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Deploy gps_crm on the server (same flow as buh_crm, minus the database — the demo has none yet).
+# Deploy gps_crm on the server (same flow as buh_crm, minus the database: the demo has none yet).
 #
 #   ./scripts/deploy.sh      pull, rebuild, wait until /health answers
 #
@@ -10,9 +10,9 @@ cd "$(dirname "$0")/.."
 
 say() { printf '\n\033[1m▸ %s\033[0m\n' "$1"; }
 
-[ -f .env ] || { echo "no .env in $(pwd) — copy .env.example to .env and fill it in" >&2; exit 1; }
+[ -f .env ] || { echo "no .env in $(pwd); copy .env.example to .env and fill it in" >&2; exit 1; }
 docker network inspect proxy >/dev/null 2>&1 ||
-  { echo "docker network 'proxy' not found — is Traefik running on this host?" >&2; exit 1; }
+  { echo "docker network 'proxy' not found. Is Traefik running on this host?" >&2; exit 1; }
 
 say "Pulling"
 git pull --ff-only
@@ -26,9 +26,9 @@ for i in $(seq 1 60); do
     echo "   up after ${i}s"
     break
   fi
-  [ "$i" = 60 ] && { echo "   still not answering — check: docker compose logs app" >&2; exit 1; }
+  [ "$i" = 60 ] && { echo "   still not answering, check: docker compose logs app" >&2; exit 1; }
   sleep 1
 done
 
-say "Done — $(git log -1 --format='%h %s')"
+say "Done: $(git log -1 --format='%h %s')"
 echo "   rollback, if needed: git checkout <previous commit> && docker compose up -d --build"

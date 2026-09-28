@@ -10,7 +10,7 @@ import {
   TARIFFS, tariffLabel, USER_BY_ID,
 } from "../data/reference";
 import { fmtDate, fmtDateTime, fmtMoney, pct } from "../components/format";
-import { DeviceStatusTag, PageTitle, ProgramDot, Q, Section, SimStatusTag, StatusTag } from "../components/ui";
+import { DeviceStatusTag, PageTitle, ProgramDot, Section, SimStatusTag, StatusTag } from "../components/ui";
 import PaymentModal from "../components/PaymentModal";
 
 export default function ObjectCard() {
@@ -88,7 +88,7 @@ export default function ObjectCard() {
 
       {o.status !== "disconnected" && days > GRACE_DAYS && o.status === "active" && finance && (
         <div className="panel" style={{ padding: "10px 16px", marginBottom: 16, borderColor: "#ec835a" }}>
-          Оплата прострочена на <b>{days} дн.</b> — за правилом «{GRACE_DAYS} днів» об'єкт має бути призупинено. <Q id="1.2" /> <Q id="4.2" />
+          Оплата прострочена на <b>{days} дн.</b> За правилом «{GRACE_DAYS} днів» об'єкт має бути призупинено.
         </div>
       )}
 
@@ -100,15 +100,15 @@ export default function ObjectCard() {
           <dl className="dl">
             <dt>Програма</dt>
             <dd><ProgramDot id={o.programId} /></dd>
-            <dt>Сервер моніторингу <Q id="3.4" /></dt>
+            <dt>Сервер моніторингу</dt>
             <dd>{SERVER_BY_ID[o.serverId]?.name}</dd>
             <dt>Тариф</dt>
             <dd>{tariffLabel(o.tariffId)}</dd>
-            <dt>Додаткові послуги <Q id="2.2" /></dt>
-            <dd>{o.addonIds.length ? o.addonIds.map((a) => <Tag key={a}>{ADDON_BY_ID[a]?.name}</Tag>) : "—"}</dd>
-            <dt>Знижка <Q id="2.3" /></dt>
-            <dd>{o.discount ? `${o.discount} грн / міс` : "—"}</dd>
-            <dt>Платник <Q id="1.4" /></dt>
+            <dt>Додаткові послуги</dt>
+            <dd>{o.addonIds.length ? o.addonIds.map((a) => <Tag key={a}>{ADDON_BY_ID[a]?.name}</Tag>) : "-"}</dd>
+            <dt>Знижка</dt>
+            <dd>{o.discount ? `${o.discount} грн / міс` : "-"}</dd>
+            <dt>Платник</dt>
             <dd>{payer?.name}</dd>
             <dt>Дата підключення</dt>
             <dd>{fmtDate(o.connectedAt)}</dd>
@@ -116,15 +116,15 @@ export default function ObjectCard() {
               <>
                 <dt>Дата відключення</dt>
                 <dd>{fmtDate(o.disconnectedAt)}</dd>
-                <dt>Причина <Q id="3.7" /></dt>
-                <dd>{REASON_BY_ID[o.disconnectReasonId ?? ""]?.name ?? "—"}</dd>
+                <dt>Причина</dt>
+                <dd>{REASON_BY_ID[o.disconnectReasonId ?? ""]?.name ?? "-"}</dd>
               </>
             )}
           </dl>
         </Section>
 
         {finance ? (
-          <Section title="Розрахунок на місяць" q="2.1">
+          <Section title="Розрахунок на місяць">
             <div className="calc-row">
               <span className="secondary">
                 Тариф {tariff?.name}
@@ -138,7 +138,7 @@ export default function ObjectCard() {
             </div>
             <div className="calc-row">
               <span className="secondary">Знижка</span>
-              <span className="num">−{fmtMoney(price.discount)}</span>
+              <span className="num">{price.discount ? `−${fmtMoney(price.discount)}` : "-"}</span>
             </div>
             <div className="calc-row calc-total">
               <span>Абонплата / міс</span>
@@ -147,7 +147,7 @@ export default function ObjectCard() {
             {can("cost.view") && (
               <>
                 <div className="group-label" style={{ marginTop: 12 }}>
-                  Собівартість <Q id="2.6" />
+                  Собівартість
                 </div>
                 <div className="calc-row">
                   <span className="secondary">Розміщення в програмі</span>
@@ -155,7 +155,7 @@ export default function ObjectCard() {
                 </div>
                 <div className="calc-row">
                   <span className="secondary">
-                    SIM · {sim ? SIM_PLAN_BY_ID[sim.planId]?.name : "—"} <Q id="2.7" />
+                    SIM · {sim ? SIM_PLAN_BY_ID[sim.planId]?.name : "-"}
                   </span>
                   <span className="num">{fmtMoney(cost.sim)}</span>
                 </div>
@@ -176,7 +176,6 @@ export default function ObjectCard() {
 
         <Section
           title="Обладнання"
-          q="3.1"
           extra={can("equipment.edit") && o.status !== "disconnected" && (
             <Button size="small" icon={<SwapOutlined />} onClick={() => setSwapOpen(true)}>Замінити трекер</Button>
           )}
@@ -184,29 +183,29 @@ export default function ObjectCard() {
           <div className="group-label">GPS-трекер</div>
           <dl className="dl">
             <dt>IMEI</dt>
-            <dd className="num">{device?.imei ?? "—"}</dd>
-            <dt>Модель <Q id="3.6" /></dt>
+            <dd className="num">{device?.imei ?? "-"}</dd>
+            <dt>Модель</dt>
             <dd className={device?.modelId ? undefined : "muted"}>{modelLabel(device?.modelId)}</dd>
-            <dt>Власність <Q id="3.2" /></dt>
-            <dd>{device ? (device.ownership === "sold" ? "Продано клієнту" : "Оренда (наш)") : "—"}</dd>
+            <dt>Власність</dt>
+            <dd>{device ? (device.ownership === "sold" ? "Продано клієнту" : "Оренда (наш)") : "-"}</dd>
             <dt>Статус</dt>
-            <dd>{device ? <DeviceStatusTag status={device.status} /> : "—"}</dd>
+            <dd>{device ? <DeviceStatusTag status={device.status} /> : "-"}</dd>
           </dl>
           <div className="group-label">
-            SIM-картка <Q id="3.3" />
+            SIM-картка
           </div>
           <dl className="dl">
             <dt>ICCID</dt>
-            <dd className="num">{sim?.iccid ?? "—"}</dd>
+            <dd className="num">{sim?.iccid ?? "-"}</dd>
             <dt>Номер</dt>
-            <dd className="num">{sim?.msisdn ?? "—"}</dd>
+            <dd className="num">{sim?.msisdn ?? "-"}</dd>
             <dt>Оператор / план</dt>
-            <dd>{sim ? `${SIM_PLAN_BY_ID[sim.planId]?.operator} · ${SIM_PLAN_BY_ID[sim.planId]?.name}` : "—"}</dd>
+            <dd>{sim ? `${SIM_PLAN_BY_ID[sim.planId]?.operator} · ${SIM_PLAN_BY_ID[sim.planId]?.name}` : "-"}</dd>
             <dt>Статус</dt>
-            <dd>{sim ? <SimStatusTag status={sim.status} /> : "—"}</dd>
+            <dd>{sim ? <SimStatusTag status={sim.status} /> : "-"}</dd>
           </dl>
           <div className="group-label">
-            Додаткові датчики (ДУТ) <Q id="2.5" />
+            Додаткові датчики (ДУТ)
           </div>
           {sensors.length ? (
             <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
@@ -219,7 +218,7 @@ export default function ObjectCard() {
 
         <div className="grid" style={{ alignContent: "start" }}>
           {finance && o.status !== "disconnected" && (
-            <Section title="Оплата" q="1.1">
+            <Section title="Оплата">
               <dl className="dl">
                 <dt>Оплачено до</dt>
                 <dd className={days ? "debt num" : "num"}>{fmtDate(o.paidUntil)}</dd>
@@ -237,7 +236,7 @@ export default function ObjectCard() {
                   dataSource={objectPayments}
                   columns={[
                     { title: "Дата", render: (_, p) => fmtDate(p.paidAt) },
-                    { title: "Період", render: (_, p) => `${fmtDate(p.periodFrom)} – ${fmtDate(p.periodTo)}` },
+                    { title: "Період", render: (_, p) => `${fmtDate(p.periodFrom)} - ${fmtDate(p.periodTo)}` },
                     { title: "Сума (разом)", align: "right", render: (_, p) => <span className="num">{fmtMoney(p.amount)}</span> },
                   ]}
                 />
@@ -301,22 +300,22 @@ function EditServiceModal({ open, onClose, objectId }: { open: boolean; onClose:
         preserve={false}
         initialValues={{ tariffId: o.tariffId, addonIds: o.addonIds, discount: o.discount, payerId: o.payerId }}
       >
-        <Form.Item name="tariffId" label={<>Тариф <Q id="2.4" /></>} rules={[{ required: true }]} extra="Лише тарифи поточної програми; перехід на іншу програму — окрема операція">
+        <Form.Item name="tariffId" label="Тариф" rules={[{ required: true }]} extra="Лише тарифи поточної програми; перехід на іншу програму є окремою операцією">
           <Select
-            options={TARIFFS.filter((t) => t.programId === o.programId).map((t) => ({ value: t.id, label: `${tariffLabel(t.id)} — ${fmtMoney(t.price)}` }))}
+            options={TARIFFS.filter((t) => t.programId === o.programId).map((t) => ({ value: t.id, label: `${tariffLabel(t.id)}, ${fmtMoney(t.price)}` }))}
           />
         </Form.Item>
-        <Form.Item name="addonIds" label={<>Додаткові послуги <Q id="2.2" /></>}>
+        <Form.Item name="addonIds" label="Додаткові послуги">
           {allowedAddons.length ? (
             <Checkbox.Group options={allowedAddons.map((a) => ({ value: a.id, label: `${a.name} · ${a.price} грн/міс` }))} />
           ) : (
             <span className="muted">Для цієї програми додаткових послуг немає</span>
           )}
         </Form.Item>
-        <Form.Item name="discount" label={<>Знижка, грн / міс <Q id="2.3" /></>}>
+        <Form.Item name="discount" label="Знижка, грн / міс">
           <InputNumber min={0} step={10} style={{ width: 160 }} />
         </Form.Item>
-        <Form.Item name="payerId" label={<>Платник <Q id="1.4" /></>} rules={[{ required: true }]}>
+        <Form.Item name="payerId" label="Платник" rules={[{ required: true }]}>
           <Select options={(index.payersBySubscriber[o.subscriberId] ?? []).map((p) => ({ value: p.id, label: p.name }))} />
         </Form.Item>
       </Form>
@@ -336,7 +335,7 @@ function SwapDeviceModal({ open, onClose, objectId }: { open: boolean; onClose: 
   const submit = () => {
     if (!newDeviceId) return void message.error("Оберіть трекер зі складу");
     actions.replaceDevice(objectId, newDeviceId, oldStatus);
-    message.success("Трекер замінено — історія й оплати об'єкта збережені");
+    message.success("Трекер замінено, історія й оплати об'єкта збережені");
     setNewDeviceId(undefined);
     onClose();
   };
@@ -344,12 +343,12 @@ function SwapDeviceModal({ open, onClose, objectId }: { open: boolean; onClose: 
   return (
     <Modal open={open} onCancel={onClose} onOk={submit} title="Заміна GPS-трекера" okText="Замінити" cancelText="Скасувати" destroyOnHidden>
       <p className="secondary">
-        Об'єкт, тариф та історія оплат залишаються без змін — змінюється лише встановлений трекер. SIM-картка переходить у новий
-        трекер. <Q id="3.1" />
+        Об'єкт, тариф та історія оплат залишаються без змін, змінюється лише встановлений трекер. SIM-картка переходить у новий
+        трекер.
       </p>
       <Form layout="vertical">
         <Form.Item label="Поточний трекер">
-          <span className="num">{current ? `${modelLabel(current.modelId)} · IMEI ${current.imei}` : "—"}</span>
+          <span className="num">{current ? `${modelLabel(current.modelId)} · IMEI ${current.imei}` : "-"}</span>
         </Form.Item>
         <Form.Item label={`Новий трекер зі складу (${stock.length} шт.)`} required>
           <Select
@@ -391,7 +390,7 @@ function DisconnectModal({ open, onClose, objectId }: { open: boolean; onClose: 
   return (
     <Modal open={open} onCancel={onClose} onOk={submit} title="Відключення об'єкта" okText="Відключити" okButtonProps={{ danger: true }} cancelText="Скасувати" destroyOnHidden>
       <Form layout="vertical">
-        <Form.Item label={<>Причина відключення <Q id="3.7" /></>} required>
+        <Form.Item label="Причина відключення" required>
           <Select value={reasonId} onChange={setReasonId} options={DISCONNECT_REASONS.map((r) => ({ value: r.id, label: r.name }))} placeholder="Оберіть причину" />
         </Form.Item>
       </Form>

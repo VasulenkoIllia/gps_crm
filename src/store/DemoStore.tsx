@@ -17,11 +17,10 @@ const UI_KEY = "gps_crm:ui";
 export interface UiState {
   role: RoleId;
   userId: string;
-  showQuestions: boolean;
   matrix: RoleMatrix;
 }
 
-const DEFAULT_UI: UiState = { role: "admin", userId: "u-admin", showQuestions: true, matrix: DEFAULT_ROLE_MATRIX };
+const DEFAULT_UI: UiState = { role: "admin", userId: "u-admin", matrix: DEFAULT_ROLE_MATRIX };
 
 export interface SubscriberSummary {
   status: SubscriberStatus;
@@ -70,7 +69,7 @@ function writeJson(key: string, value: unknown) {
   try {
     localStorage.setItem(key, JSON.stringify(value));
   } catch {
-    // Storage may be unavailable (private mode) — the demo keeps working in memory.
+    // Storage may be unavailable (private mode); the demo keeps working in memory.
   }
 }
 
@@ -283,7 +282,7 @@ function createActions(setData: SetData, today: Dayjs, userId: () => string) {
           audit: [
             entry({
               entity: "object", entityId: objectId, subscriberId: o.subscriberId, action: labels[status],
-              details: disconnected ? `${o.name} · причина: ${REASON_BY_ID[reasonId ?? ""]?.name ?? "—"}` : o.name,
+              details: disconnected ? `${o.name} · причина: ${REASON_BY_ID[reasonId ?? ""]?.name ?? "-"}` : o.name,
             }),
             ...d.audit,
           ],
@@ -331,7 +330,7 @@ function createActions(setData: SetData, today: Dayjs, userId: () => string) {
           audit: [
             entry({
               entity: "object", entityId: objectId, subscriberId: o.subscriberId, action: "Замінено трекер",
-              details: `IMEI ${oldDev?.imei ?? "—"} → ${newDev.imei}`,
+              details: `IMEI ${oldDev?.imei ?? "-"} → ${newDev.imei}`,
             }),
             ...d.audit,
           ],

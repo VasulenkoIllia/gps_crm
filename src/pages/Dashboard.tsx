@@ -9,7 +9,7 @@ import { objectCost, objectDebt, objectPrice } from "../domain/billing";
 import { modelLabel, PROGRAM_BY_ID, PROGRAM_COLORS, PROGRAMS, REASON_BY_ID } from "../data/reference";
 import { fmtMoney, fmtNum, pct } from "../components/format";
 import { BarList } from "../components/BarList";
-import { Kpi, PageTitle, ProgramDot, Q, Section } from "../components/ui";
+import { Kpi, PageTitle, ProgramDot, Section } from "../components/ui";
 
 const INK_2 = "#52514e";
 const MUTED = "#898781";
@@ -65,7 +65,7 @@ export default function Dashboard() {
     const types: SubscriberType[] = ["B2B", "B2C", "B2G"];
     const byType = types.map((t) => ({ type: t, count: visibleSubs.filter((s) => s.type === t && liveClients.has(s.id)).length }));
 
-    // Proposal block (question 7.3)
+    // Proposal block: metrics beyond the client's dashboard sheet
     const months = Array.from({ length: 12 }, (_, i) => today.subtract(11 - i, "month").startOf("month"));
     const monthKey = (d: string) => d.slice(0, 7);
     const paymentsByMonth = new Map<string, number>();
@@ -124,17 +124,17 @@ export default function Dashboard() {
         Станом на {today.format("DD.MM.YYYY")} · показники з аркуша «Дашборд» вашої таблиці
       </PageTitle>
 
-      <div className="group-label">1–2 · Активні об'єкти</div>
+      <div className="group-label">1-2 · Активні об'єкти</div>
       <div className="kpi-row">
         <Kpi label="Активні об'єкти" value={fmtNum(m.active.length)} hint={`у ${m.activeClients.size} клієнтів`} />
-        {finance && <Kpi label="Очікуваний оборот / міс" value={fmtMoney(activeRevenue)} hint="річні тарифи — 1/12 на місяць" />}
-        {costs && <Kpi label="Собівартість / міс" value={fmtMoney(activeCost)} hint="розміщення в програмі + SIM" q="2.6" />}
+        {finance && <Kpi label="Очікуваний оборот / міс" value={fmtMoney(activeRevenue)} hint="річні тарифи враховано як 1/12 на місяць" />}
+        {costs && <Kpi label="Собівартість / міс" value={fmtMoney(activeCost)} hint="розміщення в програмі + SIM" />}
         {costs && <Kpi label="Маржа / міс" value={fmtMoney(activeRevenue - activeCost)} hint={`${pct(activeRevenue - activeCost, activeRevenue)}% від обороту`} />}
       </div>
 
-      <div className="group-label">3–4 · Призупинені та відключені</div>
+      <div className="group-label">3-4 · Призупинені та відключені</div>
       <div className="kpi-row">
-        <Kpi label="Призупинені об'єкти" value={fmtNum(m.suspended.length)} hint="відсутня оплата" q="1.2" />
+        <Kpi label="Призупинені об'єкти" value={fmtNum(m.suspended.length)} hint="відсутня оплата" />
         {finance && <Kpi label="Недоотримано / міс" value={fmtMoney(m.revenue(m.suspended))} hint="очікувана оплата по призупинених" />}
         {costs && <Kpi label="Витрати на призупинені / міс" value={<span className="debt">{fmtMoney(m.cost(m.suspended))}</span>} hint="платимо за SIM і розміщення без оплати" />}
         <Kpi label="Відключені об'єкти" value={fmtNum(m.disconnected.length)} hint={`з них за 12 міс: ${m.disconnected12}`} />
@@ -176,7 +176,7 @@ export default function Dashboard() {
       </div>
 
       <div className="grid grid-3" style={{ marginBottom: 16 }}>
-        <Section title="5 · Об'єкти за моделями трекерів" q="3.6">
+        <Section title="5 · Об'єкти за моделями трекерів">
           <BarList
             rows={[...m.models.entries()]
               .sort((a, b) => (a[0] === "none" ? 1 : b[0] === "none" ? -1 : b[1] - a[1]))
@@ -217,7 +217,7 @@ export default function Dashboard() {
       </div>
 
       <div className="group-label" style={{ marginTop: 24 }}>
-        Пропозиції до дашборду <Q id="7.3" />
+        Пропозиції до дашборду
       </div>
       <div className="grid grid-2" style={{ marginBottom: 16 }}>
         {finance && (
@@ -267,7 +267,7 @@ export default function Dashboard() {
             )}
           </Section>
         )}
-        <Section title="Причини відключень за 12 місяців" q="3.7">
+        <Section title="Причини відключень за 12 місяців">
           <BarList
             rows={[...m.reasons.entries()]
               .sort((a, b) => b[1] - a[1])

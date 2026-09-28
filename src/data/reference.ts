@@ -10,7 +10,7 @@ export const PROGRAMS: Program[] = [
   { id: "ruhavik", name: "Ruhavik", placementCost: 30 },
 ];
 
-/** Fixed categorical colors per program (dataviz slots 1–3, never re-assigned). */
+/** Fixed categorical colors per program (dataviz slots 1-3, never re-assigned). */
 export const PROGRAM_COLORS: Record<string, string> = {
   unitrack: "#2a78d6",
   forguard: "#eb6834",
@@ -92,6 +92,6 @@ export const modelLabel = (id?: string) => {
 
 export const tariffLabel = (id: string) => {
   const t = TARIFF_BY_ID[id];
-  if (!t) return "—";
+  if (!t) return "-";
   return `${PROGRAM_BY_ID[t.programId]?.name ?? ""} ${t.name} · ${t.period === "month" ? "міс" : "рік"}`;
 };

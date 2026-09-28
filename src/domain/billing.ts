@@ -1,10 +1,10 @@
-// Pure billing rules. Demo assumption (open question 1.1): each object carries a "paid until" date,
+// Pure billing rules. Demo assumption, to be confirmed with the client: each object carries a "paid until" date,
 // debt = full overdue months × monthly price. Replace once the client confirms the real model.
 import dayjs from "dayjs";
 import type { GpsObject, ObjectStatus, SubscriberStatus, Tariff } from "./types";
 import { ADDON_BY_ID, PROGRAM_BY_ID, SERVER_BY_ID, SIM_PLAN_BY_ID, TARIFF_BY_ID } from "../data/reference";
 
-/** Grace period after `paidUntil` before an object is expected to be suspended (question 1.2). */
+/** Grace period after `paidUntil` before an object is expected to be suspended (assumption). */
 export const GRACE_DAYS = 10;
 
 export function tariffMonthly(t: Tariff | undefined): number {
@@ -58,7 +58,7 @@ export function objectDebt(o: GpsObject, today: dayjs.Dayjs): number {
   return overdueMonths(o.paidUntil, today) * objectPrice(o).total;
 }
 
-/** Derived subscriber status (question 4.1 — manual vs derived). */
+/** Subscriber status derived from its objects (assumption: not set manually). */
 export function deriveSubscriberStatus(statuses: ObjectStatus[]): SubscriberStatus {
   const live = statuses.filter((s) => s !== "disconnected");
   if (statuses.length === 0 || live.length === 0) return "disconnected";

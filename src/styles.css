@@ -213,40 +213,6 @@ a {
   gap: 6px;
 }
 
-/* ---------- Open question marker ---------- */
-
-.q-badge {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  background: var(--q);
-  color: #fff;
-  font-size: 11px;
-  font-weight: 700;
-  cursor: help;
-  vertical-align: middle;
-  flex: none;
-  line-height: 1;
-  margin-inline-start: 4px;
-}
-.q-badge:focus-visible {
-  outline: 2px solid var(--q);
-  outline-offset: 2px;
-}
-.q-badge-static {
-  cursor: default;
-}
-.q-switch {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  color: var(--ink-2);
-  white-space: nowrap;
-}
-
 /* ---------- Bar list (horizontal bars, HTML) ---------- */
 
 .barlist {

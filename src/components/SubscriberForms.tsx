@@ -4,7 +4,7 @@ import type { Channel, Contact, SubscriberType } from "../domain/types";
 import { useStore } from "../store/DemoStore";
 import { USERS } from "../data/reference";
 import { METHOD_OPTIONS } from "./PaymentModal";
-import { CHANNEL_LABELS, Q, TYPE_OPTIONS } from "./ui";
+import { CHANNEL_LABELS, TYPE_OPTIONS } from "./ui";
 
 const CHANNEL_OPTIONS = (Object.keys(CHANNEL_LABELS) as Channel[]).map((c) => ({ value: c, label: CHANNEL_LABELS[c] }));
 const PHONE_RULE = { pattern: /^\+?[\d\s()-]{10,18}$/, message: "Формат: +380 50 123 45 67" };
@@ -25,11 +25,11 @@ function ChannelFields() {
   const rules = channelRules(channel);
   return (
     <>
-      <Form.Item name="channel" label={<>Канал повідомлень <Q id="5.5" /></>} rules={[{ required: true }]} initialValue="telegram">
+      <Form.Item name="channel" label="Канал повідомлень" rules={[{ required: true }]} initialValue="telegram">
         <Radio.Group options={CHANNEL_OPTIONS} optionType="button" />
       </Form.Item>
       <div className="grid grid-3" style={{ gap: 12 }}>
-        <Form.Item name="telegramChatId" label={<>Telegram Chat ID <Q id="5.2" /></>} rules={rules.telegramChatId} extra="З CRM">
+        <Form.Item name="telegramChatId" label="Telegram Chat ID" rules={rules.telegramChatId} extra="З CRM">
           <Input />
         </Form.Item>
         <Form.Item name="viberChatId" label="Viber Chat ID" rules={rules.viberChatId} extra="З CRM">
@@ -86,10 +86,10 @@ export function NewSubscriberModal({ open, onClose }: { open: boolean; onClose: 
 
   const taxRules =
     type === "B2C"
-      ? [{ pattern: /^\d{10}$/, message: "ІПН — 10 цифр" }]
+      ? [{ pattern: /^\d{10}$/, message: "ІПН: 10 цифр" }]
       : [
           { required: true, message: "Обов'язково для юросіб" },
-          { pattern: /^(\d{8}|\d{10})$/, message: "ЄДРПОУ — 8 цифр, ІПН (ФОП) — 10 цифр" },
+          { pattern: /^(\d{8}|\d{10})$/, message: "ЄДРПОУ: 8 цифр, ІПН (ФОП): 10 цифр" },
         ];
 
   return (
@@ -107,7 +107,7 @@ export function NewSubscriberModal({ open, onClose }: { open: boolean; onClose: 
         }}
       >
         <div className="group-label">
-          ID буде присвоєно автоматично: <b>{nextCode}</b> <Q id="4.3" />
+          ID буде присвоєно автоматично: <b>{nextCode}</b>
         </div>
         <Form.Item name="type" label="Тип абонента" rules={[{ required: true }]}>
           <Radio.Group options={TYPE_OPTIONS} />
@@ -123,13 +123,13 @@ export function NewSubscriberModal({ open, onClose }: { open: boolean; onClose: 
           <Form.Item name="taxId" label={type === "B2C" ? "ІПН (необов'язково)" : "ЄДРПОУ / ІПН"} rules={taxRules}>
             <Input inputMode="numeric" />
           </Form.Item>
-          <Form.Item name="crmUrl" label={<>Посилання на CRM <Q id="5.1" /></>} rules={[{ required: true, message: "Обов'язкове поле" }, { type: "url", message: "Некоректне посилання" }]}>
+          <Form.Item name="crmUrl" label="Посилання на CRM" rules={[{ required: true, message: "Обов'язкове поле" }, { type: "url", message: "Некоректне посилання" }]}>
             <Input placeholder="https://crm…" />
           </Form.Item>
-          <Form.Item name="managerId" label={<>Відповідальний менеджер <Q id="4.4" /></>} rules={[{ required: true }]}>
+          <Form.Item name="managerId" label="Відповідальний менеджер" rules={[{ required: true }]}>
             <Select options={USERS.filter((u) => u.role === "manager").map((u) => ({ value: u.id, label: u.name }))} />
           </Form.Item>
-          <Form.Item name="paymentMethod" label={<>Форма оплати <Q id="1.7" /></>} rules={[{ required: true }]}>
+          <Form.Item name="paymentMethod" label="Форма оплати" rules={[{ required: true }]}>
             <Select options={METHOD_OPTIONS} />
           </Form.Item>
         </div>

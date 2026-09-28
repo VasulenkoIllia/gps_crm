@@ -6,7 +6,6 @@ import { useStore } from "../store/DemoStore";
 import { extendPaidUntil, objectPrice } from "../domain/billing";
 import { TARIFF_BY_ID } from "../data/reference";
 import { fmtDate, fmtMoney } from "./format";
-import { Q } from "./ui";
 
 export const METHOD_OPTIONS: { value: PaymentMethod; label: string }[] = [
   { value: "invoice", label: "Безготівка за рахунком" },
@@ -105,24 +104,24 @@ export default function PaymentModal({ open, onClose, subscriberId: fixedSubscri
           </Form.Item>
         )}
         <div className="grid grid-2" style={{ gap: 12 }}>
-          <Form.Item label={<>Платник <Q id="1.4" /></>} required style={{ marginBottom: 12 }}>
+          <Form.Item label="Платник" required style={{ marginBottom: 12 }}>
             <Select value={payerId} onChange={(id: string) => selectPayer(id)} options={payers.map((p) => ({ value: p.id, label: p.name }))} />
           </Form.Item>
-          <Form.Item label={<>Спосіб оплати <Q id="1.7" /></>} style={{ marginBottom: 12 }}>
+          <Form.Item label="Спосіб оплати" style={{ marginBottom: 12 }}>
             <Select value={method} onChange={setMethod} options={METHOD_OPTIONS} />
           </Form.Item>
-          <Form.Item label={<>Дата оплати <Q id="1.8" /></>} style={{ marginBottom: 12 }}>
+          <Form.Item label="Дата оплати" style={{ marginBottom: 12 }}>
             <DatePicker value={paidAt} onChange={(d) => d && setPaidAt(d)} format="DD.MM.YYYY" style={{ width: "100%" }} allowClear={false} />
           </Form.Item>
           {method === "invoice" ? (
-            <Form.Item label={<>Номер рахунку <Q id="1.5" /></>} style={{ marginBottom: 12 }}>
+            <Form.Item label="Номер рахунку" style={{ marginBottom: 12 }}>
               <Input value={invoiceNo} onChange={(e) => setInvoiceNo(e.target.value)} />
             </Form.Item>
           ) : (
             <div />
           )}
         </div>
-        <Form.Item label={<>Оплачений період <Q id="1.3" /></>} style={{ marginBottom: 12 }}>
+        <Form.Item label="Оплачений період" style={{ marginBottom: 12 }}>
           <Segmented
             value={months}
             onChange={(v) => {
@@ -161,7 +160,7 @@ export default function PaymentModal({ open, onClose, subscriberId: fixedSubscri
                       )}
                     </>
                   ) : (
-                    <span className="muted">—</span>
+                    <span className="muted">-</span>
                   ),
               },
               { title: "Сума", align: "right", render: (_, o) => <span className="num">{fmtMoney(objectPrice(o).total * months)}</span> },

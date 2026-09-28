@@ -6,9 +6,9 @@ import {
 } from "../data/reference";
 import { tariffMonthly } from "../domain/billing";
 import { fmtMoney, fmtNum } from "../components/format";
-import { PageTitle, ProgramDot, Q } from "../components/ui";
+import { PageTitle, ProgramDot } from "../components/ui";
 
-/** Annual price vs 12 × monthly price of the same tariff — shows the inconsistency behind question 2.1. */
+/** Annual price vs 12 × monthly price of the same tariff: Forguard annual prices are not a flat −10%. */
 function annualDiscount(t: Tariff): number | undefined {
   if (t.period !== "year") return undefined;
   const monthly = TARIFFS.find((x) => x.programId === t.programId && x.name === t.name && x.period === "month");
@@ -25,7 +25,7 @@ export default function References() {
   return (
     <>
       <PageTitle title="Тарифи та довідники">
-        Тарифи та додаткові послуги — з вашої таблиці. {!can("references.edit") && "Редагування доступне адміністратору."}
+        Тарифи та додаткові послуги взяті з вашої таблиці. {!can("references.edit") && "Редагування доступне адміністратору."}
       </PageTitle>
       <div className="panel" style={{ padding: "4px 16px 16px" }}>
         <Tabs
@@ -47,11 +47,11 @@ export default function References() {
                     { title: "Ціна", align: "right", render: (_, t) => <span className="num">{fmtMoney(t.price)}</span> },
                     { title: "Еквівалент / міс", align: "right", render: (_, t) => <span className="num">{fmtMoney(tariffMonthly(t))}</span> },
                     {
-                      title: <>Знижка за рік <Q id="2.1" /></>,
+                      title: "Знижка за рік",
                       align: "right",
                       render: (_, t) => {
                         const d = annualDiscount(t);
-                        if (d === undefined) return <span className="muted">—</span>;
+                        if (d === undefined) return <span className="muted">-</span>;
                         const pctValue = d * 100;
                         const odd = Math.abs(pctValue - 10) > 0.5;
                         return (
@@ -79,7 +79,7 @@ export default function References() {
                     { title: "Послуга", dataIndex: "name" },
                     { title: "Ціна / міс", align: "right", render: (_, a) => <span className="num">{fmtMoney(a.price)}</span> },
                     {
-                      title: <>Доступна для програм <Q id="2.2" /></>,
+                      title: "Доступна для програм",
                       render: (_, a) => <div style={{ display: "flex", gap: 8 }}>{a.programIds.map((p) => <ProgramDot key={p} id={p} />)}</div>,
                     },
                     { title: "Підключено", align: "right", render: (_, a) => data.objects.filter((o) => o.status !== "disconnected" && o.addonIds.includes(a.id)).length },
@@ -98,10 +98,10 @@ export default function References() {
                   dataSource={SERVERS}
                   columns={[
                     { title: "Програма", render: (_, s) => <ProgramDot id={s.programId} /> },
-                    { title: <>Сервер <Q id="3.4" /></>, dataIndex: "name" },
+                    { title: "Сервер", dataIndex: "name" },
                     ...(costs
                       ? [{
-                          title: <>Розміщення / об'єкт / міс <Q id="2.6" /></>,
+                          title: "Розміщення / об'єкт / міс",
                           align: "right" as const,
                           render: (_: unknown, s: MonitoringServer) => (
                             <span className="num">
@@ -126,10 +126,10 @@ export default function References() {
                   pagination={false}
                   dataSource={SIM_PLANS}
                   columns={[
-                    { title: <>Оператор <Q id="3.3" /></>, dataIndex: "operator" },
+                    { title: "Оператор", dataIndex: "operator" },
                     { title: "План", dataIndex: "name" },
                     ...(costs
-                      ? [{ title: <>Вартість / міс <Q id="2.7" /></>, align: "right" as const, render: (_: unknown, p: SimPlan) => <span className="num">{fmtMoney(p.monthlyCost)}</span> }]
+                      ? [{ title: "Вартість / міс", align: "right" as const, render: (_: unknown, p: SimPlan) => <span className="num">{fmtMoney(p.monthlyCost)}</span> }]
                       : []),
                     { title: "SIM-карток", align: "right", render: (_, p) => data.sims.filter((s) => s.planId === p.id).length },
                   ]}
@@ -147,7 +147,7 @@ export default function References() {
                   dataSource={TRACKER_MODELS}
                   columns={[
                     { title: "Виробник", dataIndex: "vendor" },
-                    { title: <>Модель <Q id="3.5" /></>, dataIndex: "name" },
+                    { title: "Модель", dataIndex: "name" },
                     { title: "Трекерів в обліку", align: "right", render: (_, m) => devicesByModel(m.id) },
                   ]}
                 />
@@ -163,7 +163,7 @@ export default function References() {
                   pagination={false}
                   dataSource={DISCONNECT_REASONS}
                   columns={[
-                    { title: <>Причина <Q id="3.7" /></>, dataIndex: "name" },
+                    { title: "Причина", dataIndex: "name" },
                     { title: "Відключено об'єктів", align: "right", render: (_, r) => objectsByReason(r.id) },
                   ]}
                 />

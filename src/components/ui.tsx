@@ -1,13 +1,11 @@
 import type { ReactNode } from "react";
-import { Popover, Tag, Tooltip, Typography } from "antd";
+import { Tag, Tooltip, Typography } from "antd";
 import {
   CheckCircleOutlined, ExclamationCircleOutlined, MailOutlined, MessageOutlined, PauseCircleOutlined,
   SendOutlined, StopOutlined,
 } from "@ant-design/icons";
 import type { Channel, DeviceStatus, ObjectStatus, SimStatus, SubscriberStatus, SubscriberType } from "../domain/types";
 import { PROGRAM_BY_ID, PROGRAM_COLORS } from "../data/reference";
-import { QUESTIONS } from "../data/questions";
-import { useStore } from "../store/DemoStore";
 
 const STATUS: Record<SubscriberStatus, { label: string; color: string; icon: ReactNode }> = {
   active: { label: "Активний", color: "success", icon: <CheckCircleOutlined /> },
@@ -43,7 +41,7 @@ export function TypeTag({ type }: { type: SubscriberType }) {
   );
 }
 
-export const TYPE_OPTIONS = (Object.keys(TYPE_HINT) as SubscriberType[]).map((t) => ({ value: t, label: `${t} — ${TYPE_HINT[t]}` }));
+export const TYPE_OPTIONS = (Object.keys(TYPE_HINT) as SubscriberType[]).map((t) => ({ value: t, label: `${t} (${TYPE_HINT[t]})` }));
 
 export function ProgramDot({ id }: { id: string }) {
   return (
@@ -97,35 +95,6 @@ export function SimStatusTag({ status }: { status: SimStatus }) {
 }
 export const SIM_STATUS_OPTIONS = Object.entries(SIM_STATUS).map(([value, s]) => ({ value, label: s.label }));
 
-/**
- * Open-question marker. Shows the client question and the assumption the demo makes;
- * hidden when the "Питання" switch in the header is off.
- */
-export function Q({ id }: { id: string }) {
-  const { ui } = useStore();
-  const q = QUESTIONS[id];
-  if (!ui.showQuestions || !q) return null;
-  return (
-    <Popover
-      title={`Питання ${id}`}
-      content={
-        <div style={{ maxWidth: 340 }}>
-          <Typography.Paragraph style={{ marginBottom: q.assumption ? 8 : 0 }}>{q.text}</Typography.Paragraph>
-          {q.assumption && (
-            <Typography.Text type="secondary">
-              <b>У демо:</b> {q.assumption}
-            </Typography.Text>
-          )}
-        </div>
-      }
-    >
-      <span className="q-badge" role="button" tabIndex={0} aria-label={`Питання ${id}`}>
-        ?
-      </span>
-    </Popover>
-  );
-}
-
 export function PageTitle({ title, extra, children }: { title: ReactNode; extra?: ReactNode; children?: ReactNode }) {
   return (
     <div className="page-title">
@@ -140,11 +109,11 @@ export function PageTitle({ title, extra, children }: { title: ReactNode; extra?
   );
 }
 
-export function Kpi({ label, value, hint, q }: { label: string; value: ReactNode; hint?: ReactNode; q?: string }) {
+export function Kpi({ label, value, hint }: { label: string; value: ReactNode; hint?: ReactNode }) {
   return (
     <div className="kpi">
       <div className="kpi-label">
-        {label} {q && <Q id={q} />}
+        {label}
       </div>
       <div className="kpi-value">{value}</div>
       {hint && <div className="kpi-hint">{hint}</div>}
@@ -152,12 +121,12 @@ export function Kpi({ label, value, hint, q }: { label: string; value: ReactNode
   );
 }
 
-export function Section({ title, extra, children, q }: { title: ReactNode; extra?: ReactNode; children: ReactNode; q?: string }) {
+export function Section({ title, extra, children }: { title: ReactNode; extra?: ReactNode; children: ReactNode }) {
   return (
     <section className="panel">
       <header className="panel-head">
         <span className="panel-title">
-          {title} {q && <Q id={q} />}
+          {title}
         </span>
         {extra}
       </header>

@@ -7,7 +7,7 @@ import type { Subscriber, SubscriberStatus, SubscriberType } from "../domain/typ
 import { useStore } from "../store/DemoStore";
 import { PROGRAMS, USER_BY_ID, USERS } from "../data/reference";
 import { fmtMoney, matches } from "../components/format";
-import { PageTitle, ProgramDot, Q, STATUS_LABELS, StatusTag, TypeTag } from "../components/ui";
+import { PageTitle, ProgramDot, STATUS_LABELS, StatusTag, TypeTag } from "../components/ui";
 import { NewSubscriberModal } from "../components/SubscriberForms";
 
 export default function Subscribers() {
@@ -119,7 +119,7 @@ export default function Subscribers() {
         sorter: (a, b) => index.summaries[a.id].debt - index.summaries[b.id].debt,
         render: (_, s) => {
           const debt = index.summaries[s.id].debt;
-          return debt > 0 ? <span className="num debt">{fmtMoney(debt)}</span> : <span className="muted">—</span>;
+          return debt > 0 ? <span className="num debt">{fmtMoney(debt)}</span> : <span className="muted">-</span>;
         },
       },
       {
@@ -156,7 +156,7 @@ export default function Subscribers() {
           style={{ marginBottom: 12 }}
           title={
             <>
-              Показано лише абонентів, за якими закріплений {currentUser.name}. <Q id="6.1" />
+              Показано лише абонентів, за якими закріплений {currentUser.name}.
             </>
           }
         />

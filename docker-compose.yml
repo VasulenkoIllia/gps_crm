@@ -21,7 +21,7 @@ services:
     volumes:
       - /etc/localtime:/etc/localtime:ro
       - /etc/timezone:/etc/timezone:ro
-    # No `ports:` — the app is reachable only through Traefik, like buh_crm. Publishing PORT on the
+    # No `ports:` here. The app is reachable only through Traefik, like buh_crm. Publishing PORT on the
     # host would clash with any other container on the same port and bypass TLS / Cloudflare.
     restart: unless-stopped
     networks:
