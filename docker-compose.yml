@@ -1,7 +1,7 @@
 services:
   # Postgres is not needed by the demo yet. When the backend lands, add a `db` service the same way
-  # buh_crm does, with its host port on a DIFFERENT number (DB_HOST_PORT=15433): buh_crm already
-  # holds 127.0.0.1:15432 on the shared server.
+  # buh_crm does, with its own DB_HOST_PORT: on the shared server buh_crm holds 15433 and
+  # 5432/5433/5435/15432/15434 are taken too. Check `ss -ltn` on the server before picking one.
 
   app:
     build:
