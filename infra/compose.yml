@@ -1,0 +1,140 @@
+# One environment on the shared server. deploy.sh runs it with --project-name and --env-file for that environment.
+# Do not rename APP_NAME of a live environment: the database volume name derives from it.
+name: ${APP_NAME:?set APP_NAME in .env}
+
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: 10m
+    max-file: "3"
+
+# The app sits on the shared proxy network too, so the database gets a name no other project uses: a bare `db` could
+# resolve to a container of another project.
+x-app-environment: &app-environment
+  NODE_ENV: production
+  TZ: Europe/Kyiv
+  DATABASE_URL: postgresql://${POSTGRES_USER:?}:${POSTGRES_PASSWORD:?}@${APP_NAME}-db:5432/${POSTGRES_DB:?}
+
+x-app-base: &app-base
+  image: ghcr.io/vasulenkoillia/gps_crm:${IMAGE_TAG:?}
+  init: true
+  # The app needs no Linux capabilities: it runs as the node user
+  cap_drop:
+    - ALL
+  security_opt:
+    - no-new-privileges:true
+  mem_limit: ${APP_MEM_LIMIT:-768m}
+  logging: *logging
+  depends_on:
+    db:
+      condition: service_healthy
+
+services:
+  app:
+    <<: *app-base
+    restart: unless-stopped
+    # Longer than the app's own shutdown timeout, so a stop finishes the work instead of a SIGKILL
+    stop_grace_period: 30s
+    environment:
+      <<: *app-environment
+      APP_ROLE: ${APP_ROLE:-all}
+      HOST: 0.0.0.0
+      PORT: "3000"
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+    # No published port: Traefik reaches the app over the proxy network
+    networks:
+      - app-net
+      - proxy
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=proxy
+      - traefik.http.routers.${APP_NAME}.rule=Host(`${APP_DOMAIN:?}`)
+      - traefik.http.routers.${APP_NAME}.entrypoints=websecure
+      - traefik.http.routers.${APP_NAME}.tls=true
+      - traefik.http.routers.${APP_NAME}.tls.certresolver=cf
+      - traefik.http.routers.${APP_NAME}.middlewares=${ROUTER_MIDDLEWARES:-${APP_NAME}-headers,${APP_NAME}-auth}
+      - traefik.http.services.${APP_NAME}.loadbalancer.server.port=3000
+      - traefik.http.middlewares.${APP_NAME}-headers.headers.stsSeconds=31536000
+      - traefik.http.middlewares.${APP_NAME}-headers.headers.contentTypeNosniff=true
+      - traefik.http.middlewares.${APP_NAME}-headers.headers.frameDeny=true
+      - traefik.http.middlewares.${APP_NAME}-headers.headers.referrerPolicy=strict-origin-when-cross-origin
+      - traefik.http.middlewares.${APP_NAME}-auth.basicauth.users=${BASIC_AUTH_USERS:-}
+      - traefik.http.middlewares.${APP_NAME}-auth.basicauth.removeheader=true
+    # On readiness, so Traefik routes only to a container whose database and migrations are in order
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:3000/health/ready').then((r) => process.exit(r.ok ? 0 : 1), () => process.exit(1))"
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+      start_interval: 2s
+
+  # One-off: deploy.sh runs it before `up`, from the new image. No labels and no proxy network, so Traefik never
+  # sees it. Profile: a plain `up` must not start it.
+  migrate:
+    <<: *app-base
+    profiles:
+      - ops
+    restart: "no"
+    command: ["../../node_modules/.bin/prisma", "migrate", "deploy"]
+    # lock_timeout: a migration queued behind a long query would block every later query of that table
+    environment:
+      <<: *app-environment
+      DATABASE_URL: postgresql://${POSTGRES_USER:?}:${POSTGRES_PASSWORD:?}@${APP_NAME}-db:5432/${POSTGRES_DB:?}?options=-c%20lock_timeout%3D5s
+    networks:
+      - app-net
+
+  db:
+    image: postgres:18-alpine
+    # Runs as postgres from the first start, so the entrypoint needs no root capabilities either
+    user: postgres
+    init: true
+    restart: unless-stopped
+    stop_grace_period: 60s
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    mem_limit: ${DB_MEM_LIMIT:-1g}
+    logging: *logging
+    command:
+      - postgres
+      - -c
+      - shared_preload_libraries=pg_stat_statements
+      - -c
+      - log_min_duration_statement=500
+      # Slow queries are logged without their values: those are payers' names, phones and IBANs
+      - -c
+      - log_parameter_max_length=0
+      - -c
+      - log_parameter_max_length_on_error=0
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:?}
+      POSTGRES_USER: ${POSTGRES_USER:?}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?}
+    # PostgreSQL 18 keeps its data in a versioned folder under this path, not in /data
+    volumes:
+      - db-data:/var/lib/postgresql
+    networks:
+      app-net:
+        aliases:
+          - ${APP_NAME}-db
+    healthcheck:
+      # Over TCP: the first-start init server listens only on the socket, so a socket check would pass too early
+      test: ["CMD-SHELL", 'pg_isready -h 127.0.0.1 -U "$${POSTGRES_USER}" -d "$${POSTGRES_DB}"']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  db-data:
+
+networks:
+  app-net:
+    driver: bridge
+  proxy:
+    external: true

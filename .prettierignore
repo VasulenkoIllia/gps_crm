@@ -1,0 +1,12 @@
+# Prettier reads .gitignore too; these are the tracked files it must skip
+package-lock.json
+apps/api/prisma/migrations
+
+# Demo code, kept until its removal after Ф3
+/src
+/server
+/scripts
+/index.html
+/vite.config.ts
+/tsconfig.server.json
+/docker-compose.yml

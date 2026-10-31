@@ -1,0 +1,181 @@
+:root {
+  --ink: #0b0b0b;
+  --ink-2: #52514e;
+  --surface: #ffffff;
+  --page: #f6f6f4;
+  --border: rgba(11, 11, 11, 0.08);
+  --accent: #2771c9;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--page);
+  color: var(--ink);
+}
+
+a {
+  color: var(--accent);
+}
+
+/* Layout */
+
+.skip-link {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  z-index: 1100;
+  padding: 8px 12px;
+  background: var(--surface);
+  border-radius: 8px;
+  transform: translateY(-200%);
+}
+.skip-link:focus {
+  transform: none;
+}
+
+.app-root {
+  min-height: 100dvh;
+}
+
+.app-sider {
+  border-inline-end: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  height: 100dvh;
+  overflow: auto;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 18px 16px 14px;
+  color: var(--ink);
+  text-decoration: none;
+  font-weight: 600;
+}
+.brand-compact {
+  padding: 0;
+}
+.brand-mark {
+  background: var(--accent);
+  color: #fff;
+  border-radius: 6px;
+  padding: 2px 6px;
+  font-size: 12px;
+  letter-spacing: 0.04em;
+}
+.brand-name {
+  white-space: nowrap;
+}
+
+.app-header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 56px;
+  padding: 0 16px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  line-height: normal;
+}
+
+.app-content {
+  padding: 20px 24px 48px;
+  max-width: 1440px;
+  width: 100%;
+  margin: 0 auto;
+}
+/* One below the md breakpoint of antd, which switches the phone theme */
+@media (max-width: 767px) {
+  .app-content {
+    padding: 16px 16px 40px;
+  }
+  .app-header {
+    padding: 0 8px;
+  }
+}
+
+/* Page template */
+
+.page-title {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+.page-title-text {
+  min-width: 0;
+}
+.page-title-heading {
+  margin: 0;
+  font-size: 24px;
+  line-height: 1.3;
+  font-weight: 600;
+}
+/* Takes focus on a route change only, so a visible ring would be noise */
+.page-title-heading:focus {
+  outline: none;
+}
+.page-subtitle {
+  color: var(--ink-2);
+  margin-top: 4px;
+}
+.page-title-extra {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  min-width: 0;
+  margin-bottom: 16px;
+}
+.panel-title {
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0;
+  padding: 14px 16px 0;
+}
+.panel-body {
+  padding: 12px 16px 16px;
+}
+
+/* Showcase */
+
+.swatches {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.swatch-color {
+  height: 40px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+.swatch-name {
+  margin-top: 4px;
+  font-size: 13px;
+  color: var(--ink-2);
+}
+.showcase-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.showcase-form {
+  max-width: 480px;
+}

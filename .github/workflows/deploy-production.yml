@@ -1,0 +1,51 @@
+name: Deploy production
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Image tag that passed staging, sha-<full commit>
+        required: true
+        type: string
+
+permissions: {}
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  deploy-production:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    # Above the worst case on the server: a 15 minute wait for a rollout left by a cancelled run, three stalled pulls of
+    # 6 minutes, a 10 minute migration, then the rollout
+    timeout-minutes: 50
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - name: Refuse unless production is enabled
+        env:
+          PRODUCTION_ENABLED: ${{ vars.PRODUCTION_ENABLED }}
+        run: |
+          if [ "$PRODUCTION_ENABLED" != "true" ]; then
+            echo "::error::Repository variable PRODUCTION_ENABLED is not true"
+            exit 1
+          fi
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Refuse a tag that did not pass staging
+        env:
+          GH_TOKEN: ${{ github.token }}
+          IMAGE_TAG: ${{ inputs.tag }}
+        run: bash infra/scripts/check-staging-passed.sh "$IMAGE_TAG"
+      - name: Deploy over SSH
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY_PRODUCTION }}
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+          IMAGE_TAG: ${{ inputs.tag }}
+        run: bash infra/scripts/remote-deploy.sh "$IMAGE_TAG"
