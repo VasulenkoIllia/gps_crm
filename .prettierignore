@@ -1,0 +1,3 @@
+# Prettier reads .gitignore too; these are the tracked files it must skip
+package-lock.json
+apps/api/prisma/migrations

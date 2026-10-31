@@ -1,37 +1,48 @@
 {
   "name": "gps_crm",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "private": true,
   "type": "module",
   "engines": {
     "node": ">=24 <25"
   },
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
   "scripts": {
-    "dev": "vite",
-    "dev:server": "tsx watch server/server.ts",
-    "build": "npm run build:web && npm run build:server",
-    "build:web": "tsc -p tsconfig.json && vite build",
-    "build:server": "tsc -p tsconfig.server.json",
-    "typecheck": "tsc -p tsconfig.json && tsc -p tsconfig.server.json --noEmit",
-    "start": "node dist-server/server.js",
-    "preview": "npm run build && npm run start"
-  },
-  "dependencies": {
-    "@ant-design/icons": "^6.3.4",
-    "antd": "^6.6.5",
-    "dayjs": "^1.11.23",
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0",
-    "react-router-dom": "^7.18.4",
-    "recharts": "^3.10.1"
+    "dev": "npm run dev:api & npm run dev:web & wait",
+    "dev:api": "npm run dev -w @gps_crm/api",
+    "dev:web": "npm run dev -w @gps_crm/web",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "lint": "eslint . --max-warnings 0",
+    "lint:deps": "depcruise apps packages --config .dependency-cruiser.cjs",
+    "lint:compose": "bash infra/scripts/check-compose.sh",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "test": "vitest run --project shared --project api --project web",
+    "test:integration": "vitest run --project integration",
+    "build": "npm run build --workspaces --if-present",
+    "verify": "npm run db:generate && npm run format:check && npm run lint && npm run lint:deps && npm run lint:compose && npm run typecheck && npm run test && npm run build",
+    "start": "npm run start -w @gps_crm/api",
+    "db:up": "docker compose --env-file .env -f infra/compose.dev.yml up -d --wait",
+    "db:down": "docker compose --env-file .env -f infra/compose.dev.yml down",
+    "db:generate": "npm run db:generate -w @gps_crm/api",
+    "db:migrate": "npm run db:migrate -w @gps_crm/api",
+    "db:deploy": "npm run db:deploy -w @gps_crm/api"
   },
   "devDependencies": {
-    "@types/node": "^24.19.0",
-    "@types/react": "^19.0.10",
-    "@types/react-dom": "^19.0.4",
-    "@vitejs/plugin-react": "^4.4.1",
-    "tsx": "^4.19.2",
-    "typescript": "^5.8.3",
-    "vite": "^6.2.0"
+    "@eslint/js": "10.0.1",
+    "@types/node": "24.19.2",
+    "dependency-cruiser": "18.6.0",
+    "eslint": "10.12.0",
+    "eslint-plugin-react-hooks": "7.1.1",
+    "globals": "17.13.0",
+    "prettier": "3.9.10",
+    "tsx": "4.23.15",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.71.2",
+    "vite": "8.3.4",
+    "vitest": "5.0.5"
   }
 }
