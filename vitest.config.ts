@@ -11,6 +11,7 @@ export default defineConfig({
         test: { name: "api", root: "apps/api", include: ["src/**/*.test.ts"], exclude: [INTEGRATION_TESTS] },
       },
       { test: { name: "web", root: "apps/web", include: ["src/**/*.test.ts"] } },
+      { test: { name: "infra", root: "infra", include: ["*.test.ts"] } },
       // One database, so test files take turns
       {
         test: {
