@@ -22,7 +22,10 @@ case "$*" in
   ps*) printf '%b\\n' "$FAKE_DB_CONTAINERS" ;;
   inspect*) echo postgres:18-alpine ;;
   run* | logs*) ;;
-  rm*) [ ! -e "$FAKE_DIR/restored" ] || exit "$FAKE_RM_AFTER_RESTORE_EXIT"; exit "$FAKE_RM_EXIT" ;;
+  rm*)
+    echo "Error response from daemon: No such container: $4" >&2
+    [ ! -e "$FAKE_DIR/restored" ] || exit "$FAKE_RM_AFTER_RESTORE_EXIT"
+    exit "$FAKE_RM_EXIT" ;;
   *pg_isready*) ;;
   *pg_dump*) printf 'dump bytes'; exit "$FAKE_DUMP_EXIT" ;;
   *"pg_restore -f /dev/null"*) cat >/dev/null; exit "$FAKE_READ_BACK_EXIT" ;;
@@ -270,7 +273,7 @@ describe("backup.sh", () => {
       const result = run("dump", { FAKE_RM_EXIT: "1" });
 
       expect(result.status).toBe(0);
-      expect(result.stdout + result.stderr).toContain("still on the disk");
+      expect(result.stderr).toContain("still on the disk: Error response from daemon");
       expect(status("dump").ok).toBe(true);
     });
 

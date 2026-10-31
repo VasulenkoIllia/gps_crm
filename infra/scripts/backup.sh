@@ -103,8 +103,10 @@ timed() {
 # -v every time: the image keeps its data in a volume of its own, and without it a restored copy of the database stays
 # on the disk as an anonymous volume
 remove_check_db() {
-  timeout --foreground "$CLEANUP_TIMEOUT_SECONDS" docker rm -f -v "$check_container" >/dev/null && return 0
-  say "could not remove $check_container: a restored copy of the database is still on the disk" >&2
+  local errors
+  # Kept only for a failure: on success docker can still name a container that was not there, and that is the usual case
+  errors=$(timeout --foreground "$CLEANUP_TIMEOUT_SECONDS" docker rm -f -v "$check_container" 2>&1 >/dev/null) && return 0
+  say "could not remove $check_container, a restored copy of the database is still on the disk: $errors" >&2
   return 1
 }
 
