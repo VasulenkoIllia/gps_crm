@@ -31,12 +31,8 @@ export default defineConfig(
     "apps/api/src/generated/",
     "docs/",
     "design/",
-    // Demo code, kept until its removal after Ф3
+    // Local build output of the demo, kept in the demo tag
     "dist-server/",
-    "server/",
-    "scripts/",
-    "src/",
-    "vite.config.ts",
   ]),
   js.configs.recommended,
   tseslint.configs.recommendedTypeChecked,

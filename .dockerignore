@@ -24,14 +24,3 @@ AGENTS.md
 CLAUDE.md
 README.md
 *.local.md
-
-# Demo code, kept until its removal after Ф3
-/src
-/server
-/scripts
-/dist-server
-/index.html
-/vite.config.ts
-/tsconfig.server.json
-/Dockerfile
-/docker-compose.yml
