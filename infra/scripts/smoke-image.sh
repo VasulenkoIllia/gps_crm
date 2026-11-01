@@ -12,7 +12,7 @@ image=${1:?usage: smoke-image.sh <image>}
 
 trap 'docker rm -f "$CONTAINER" >/dev/null 2>&1 || true' EXIT
 docker run --detach --name "$CONTAINER" --env DATABASE_URL=postgresql://smoke:smoke@127.0.0.1:1/smoke \
-  --env APP_URL=http://127.0.0.1:3000 --env SECRETS_KEY="$PLACEHOLDER_KEY" "$image" >/dev/null
+  --env APP_URL=http://127.0.0.1:3000 --env SECRETS_KEY="$PLACEHOLDER_KEY" --env FILES_DIR=/files "$image" >/dev/null
 
 health="fetch('http://127.0.0.1:3000/health').then((r) => process.exit(r.ok ? 0 : 1), () => process.exit(1))"
 for _ in $(seq 1 "$ATTEMPTS"); do
