@@ -3,7 +3,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import type { DbClient } from "../../core/db/client.js";
 import { connectTestAppDatabase, connectTestDatabase } from "../../core/db/test-database.js";
 import { createTariff } from "../../test-references.js";
-import { resetClients, startClientApi, type ClientApi } from "./subscribers.test-support.js";
+import { resetClients, startClientApi, type ClientApi } from "../../test-clients.js";
 
 const today = todayKyiv();
 const NEXT_FIRST = firstOfNextMonth(today);

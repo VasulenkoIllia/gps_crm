@@ -4,7 +4,7 @@ import { activityContext, can } from "../../core/access/access.js";
 import { API_PREFIX, type AppDeps } from "../../core/deps.js";
 import { parseInput } from "../../core/http/validate.js";
 import { createIdSeries, deleteIdSeries, listIdSeries, updateIdSeries } from "./id-series.service.js";
-import { changing, creating } from "./route-helpers.js";
+import { changing, creating } from "../../core/http/route-helpers.js";
 
 const PATH = `${API_PREFIX}/subscriber-id-series`;
 

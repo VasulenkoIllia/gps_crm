@@ -28,6 +28,11 @@ export function firstOfNextMonth(date: string): string {
   return `${next.year}-${String(next.month).padStart(MONTH_DIGITS, "0")}-01`;
 }
 
+// As a date reads in a message: ДД.ММ.РРРР
+export function dateText(date: string): string {
+  return date.split("-").reverse().join(".");
+}
+
 const MS_IN_DAY = 86_400_000;
 const ISO_DATE_LENGTH = 10;
 

@@ -43,6 +43,25 @@ const REQUIRED_CHECKS = [
   "sim_plans_inactive_in_package",
   "contractors_inactive_in_package",
   "disconnect_reasons_inactive_in_package",
+  "devices_imei_format",
+  "sims_iccid_format",
+  "sims_msisdn_format",
+  "sims_plan_with_operator",
+  "sensors_serial_no_length",
+  "objects_name_length",
+  "objects_disconnected_on_with_status",
+  "objects_reason_only_when_disconnected",
+  "objects_working_with_tracker",
+  "devices_archived_in_package",
+  "sims_archived_in_package",
+  "sensors_archived_in_package",
+  "objects_archived_in_package",
+  "object_status_periods_dates",
+  "object_service_terms_dates",
+  "object_addon_periods_dates",
+  "device_installations_dates",
+  "sim_installations_dates",
+  "sensor_installations_dates",
 ];
 // The migrations' own: activity.partitions adds months after these, so the list is a floor
 const REQUIRED_PARTITIONS = [
@@ -101,13 +120,21 @@ describe("schema invariants", () => {
     );
   });
 
-  it.each(["subscriber_id_series_no_overlap", "subscriber_tariff_periods_no_overlap"])(
-    "has exclusion constraint %s",
-    async (name) => {
-      const rows = await db.$queryRaw<unknown[]>`SELECT 1 FROM pg_constraint WHERE conname = ${name} AND contype = 'x'`;
-      expect(rows).toHaveLength(1);
-    },
-  );
+  it.each([
+    "subscriber_id_series_no_overlap",
+    "subscriber_tariff_periods_no_overlap",
+    "object_status_periods_no_overlap",
+    "object_service_terms_no_overlap",
+    "object_addon_periods_no_overlap",
+    "device_installations_object_no_overlap",
+    "device_installations_device_no_overlap",
+    "sim_installations_device_no_overlap",
+    "sim_installations_sim_no_overlap",
+    "sensor_installations_sensor_no_overlap",
+  ])("has exclusion constraint %s", async (name) => {
+    const rows = await db.$queryRaw<unknown[]>`SELECT 1 FROM pg_constraint WHERE conname = ${name} AND contype = 'x'`;
+    expect(rows).toHaveLength(1);
+  });
 
   // Prisma does not describe these, so nothing but this list would notice one gone. Each one carries a promise of its own:
   // a page of a list, a search by how a number ends, one primary contact, a number free again after the archive.
@@ -133,6 +160,26 @@ describe("schema invariants", () => {
     ["contracts_signed_on_id_idx", "WHERE (archived_at IS NULL)"],
     ["contracts_valid_until_id_idx", "WHERE (archived_at IS NULL)"],
     ["contracts_number_norm_trgm_idx", "gin_trgm_ops"],
+    ["devices_imei_pattern_idx", "text_pattern_ops"],
+    ["devices_imei_rev_idx", "text_pattern_ops"],
+    ["sims_iccid_pattern_idx", "text_pattern_ops"],
+    ["sims_iccid_rev_idx", "text_pattern_ops"],
+    ["sims_msisdn_rev_idx", "text_pattern_ops"],
+    ["sensors_serial_no_norm_trgm_idx", "gin_trgm_ops"],
+    ["devices_status_id_idx", "WHERE (archived_at IS NULL)"],
+    ["sims_status_id_idx", "WHERE (archived_at IS NULL)"],
+    ["device_installations_open_idx", "WHERE (valid_to IS NULL)"],
+    ["sim_installations_open_idx", "WHERE (valid_to IS NULL)"],
+    ["sensor_installations_open_idx", "WHERE (valid_to IS NULL)"],
+    ["object_addon_periods_open_idx", "WHERE (valid_to IS NULL)"],
+    ["objects_name_norm_id_idx", "WHERE (archived_at IS NULL)"],
+    ["objects_connected_on_id_idx", "WHERE (archived_at IS NULL)"],
+    ["objects_subscriber_id_id_idx", "WHERE (archived_at IS NULL)"],
+    ["objects_subscriber_id_name_norm_id_idx", "WHERE (archived_at IS NULL)"],
+    ["objects_status_program_id_idx", "WHERE (archived_at IS NULL)"],
+    ["objects_payer_id_status_idx", "WHERE (archived_at IS NULL)"],
+    ["objects_archived_name_norm_id_idx", "WHERE (archived_at IS NOT NULL)"],
+    ["objects_name_norm_trgm_idx", "gin_trgm_ops"],
   ])("has index %s with %s", async (name, part) => {
     const rows = await db.$queryRaw<{ definition: string }[]>`
       SELECT indexdef AS definition FROM pg_indexes WHERE indexname = ${name}

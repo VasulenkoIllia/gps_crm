@@ -1,17 +1,17 @@
 import { contactCreateSchema, contactUpdateSchema, type ContactList } from "@gps_crm/shared";
 import type { FastifyInstance } from "fastify";
 import { activityContext, can, recordScope } from "../../core/access/access.js";
-import { API_PREFIX, type AppDeps } from "../../core/deps.js";
+import { API_PREFIX } from "../../core/deps.js";
 import { parseInput } from "../../core/http/validate.js";
-import { archiveContact, restoreRecord } from "./archive.service.js";
+import { archiveContact, restoreRecord, type PackageDeps } from "./archive.service.js";
 import { createContact, deleteContact, listContacts, makeContactPrimary, updateContact } from "./contacts.service.js";
-import { changing, creating, idOf } from "./route-helpers.js";
+import { changing, creating, idOf } from "../../core/http/route-helpers.js";
 import { findRecordBatchId } from "./subscribers.read.service.js";
 
 const OF_CLIENT = `${API_PREFIX}/subscribers/:id/contacts`;
 const PATH = `${API_PREFIX}/contacts`;
 
-export function registerContactRoutes(app: FastifyInstance, deps: AppDeps): void {
+export function registerContactRoutes(app: FastifyInstance, deps: PackageDeps): void {
   const read = { config: { access: can("subscribers.read") } };
   const write = { config: { access: can("subscribers.write") } };
   const archive = { config: { access: can("records.archive") } };

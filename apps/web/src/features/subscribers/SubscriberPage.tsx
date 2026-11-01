@@ -7,7 +7,7 @@ import {
   type SubscriberCard,
 } from "@gps_crm/shared";
 import { useQuery } from "@tanstack/react-query";
-import { Button, Empty, Skeleton } from "antd";
+import { Button, Skeleton } from "antd";
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router";
 import { useCan } from "../../lib/session";
@@ -25,6 +25,7 @@ import {
   type DetailTab,
   type Fact,
 } from "../../ui";
+import { ClientObjectsTab } from "../objects/ClientObjectsTab";
 import { ClientActivityTab } from "./ClientActivityTab";
 import { ContactsTab } from "./ContactsTab";
 import { ContractsTab } from "./ContractsTab";
@@ -124,7 +125,7 @@ function SubscriberView({ card }: { card: SubscriberCard }) {
   const formCard = opened?.card ?? card;
 
   const tabs: DetailTab[] = [
-    { key: "objects", label: "Об'єкти", render: () => <Empty description="Об'єктів ще немає" /> },
+    { key: "objects", label: "Об'єкти", render: () => <ClientObjectsTab card={card} /> },
     { key: "contacts", label: "Контакти", render: () => <ContactsTab card={card} /> },
     { key: "payers", label: "Платники", render: () => <PayersTab card={card} /> },
     { key: "contracts", label: "Договори", render: () => <ContractsTab card={card} /> },

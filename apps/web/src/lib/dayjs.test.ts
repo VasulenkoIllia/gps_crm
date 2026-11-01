@@ -1,5 +1,7 @@
+import { addDays, todayKyiv } from "@gps_crm/shared";
+import dayjs from "dayjs";
 import { describe, expect, it } from "vitest";
-import { formatDate, formatDateTime, isDateValue, startOfDay, startOfNextDay } from "./dayjs";
+import { formatDate, formatDateTime, isDateValue, isFutureDay, startOfDay, startOfNextDay } from "./dayjs";
 
 describe("formatDate", () => {
   it("turns a business date around, with no zone to shift it", () => {
@@ -36,5 +38,13 @@ describe("isDateValue", () => {
     expect(isDateValue("2027-02-30")).toBe(false);
     expect(isDateValue("2027-13-01")).toBe(false);
     expect(isDateValue("вчора")).toBe(false);
+  });
+});
+
+describe("isFutureDay", () => {
+  it("lets today through and stops at tomorrow", () => {
+    expect(isFutureDay(dayjs(todayKyiv()))).toBe(false);
+    expect(isFutureDay(dayjs(addDays(todayKyiv(), -1)))).toBe(false);
+    expect(isFutureDay(dayjs(addDays(todayKyiv(), 1)))).toBe(true);
   });
 });

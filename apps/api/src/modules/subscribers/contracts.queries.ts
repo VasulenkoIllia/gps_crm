@@ -14,12 +14,13 @@ import {
 import type { RecordScope } from "../../core/access/access.js";
 import type { DbOrTx } from "../../core/db/client.js";
 import { fromDbDate, toDbDate } from "../../core/db/dates.js";
+import { escapeLike } from "../../core/db/like.js";
 import { findLatestFileNames } from "../../core/files/files.repository.js";
 import type { Prisma } from "../../generated/prisma/client.js";
 import { CONTRACT_OWNER } from "./contracts.files.js";
 import { scopedContract } from "./contracts.repository.js";
 import { scopedPayer } from "./payers.repository.js";
-import { escapeLike, MIN_NAME_SEARCH } from "./subscribers.queries.js";
+import { MIN_NAME_SEARCH } from "./subscribers.queries.js";
 import { subscriberWhere } from "./subscribers.repository.js";
 
 // Who a search names: a person narrows it long before this

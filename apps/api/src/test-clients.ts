@@ -1,7 +1,7 @@
 import type { LightMyRequestResponse } from "fastify";
 import { firstOfNextMonth, todayKyiv, type SubscriberCard } from "@gps_crm/shared";
-import type { DbClient } from "../../core/db/client.js";
-import { clearClientData } from "../../core/db/test-database.js";
+import type { DbClient } from "./core/db/client.js";
+import { clearClientData } from "./core/db/test-database.js";
 import {
   clearReferences,
   createPlace,
@@ -9,8 +9,8 @@ import {
   startReferenceClient,
   type PlaceIds,
   type ReferenceClient,
-} from "../../test-references.js";
-import { api } from "../../test-auth.js";
+} from "./test-references.js";
+import { api } from "./test-auth.js";
 
 export interface ClientApi extends ReferenceClient {
   place: PlaceIds;

@@ -9,9 +9,9 @@ import {
 import type { DbOrTx } from "../../core/db/client.js";
 import type { AppDeps } from "../../core/deps.js";
 import { AppError } from "../../core/errors.js";
-import { assertVersion, changedFields, hasChanges, notFound } from "../references/index.js";
+import { assertVersion, changedFields, hasChanges, notFound, recordArchived } from "../references/index.js";
 import * as repo from "./contacts.repository.js";
-import { recordArchived, requireLiveSubscriber } from "./subscribers.helpers.js";
+import { requireLiveSubscriber } from "./subscribers.helpers.js";
 import { findVisibleId } from "./subscribers.repository.js";
 
 const PRIMARY_NEEDED = "Спершу призначте іншого основного контакту";

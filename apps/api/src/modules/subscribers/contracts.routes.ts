@@ -10,10 +10,10 @@ import {
 } from "@gps_crm/shared";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { activityContext, can, recordScope } from "../../core/access/access.js";
-import { API_PREFIX, UPLOAD_RATE_LIMIT, type AppDeps } from "../../core/deps.js";
+import { API_PREFIX, UPLOAD_RATE_LIMIT } from "../../core/deps.js";
 import { contentDisposition } from "../../core/http/content-disposition.js";
 import { parseInput } from "../../core/http/validate.js";
-import { archiveContract, restoreRecord } from "./archive.service.js";
+import { archiveContract, restoreRecord, type PackageDeps } from "./archive.service.js";
 import {
   checkContractNumber,
   createContract,
@@ -25,7 +25,7 @@ import {
   uploadContractFile,
   type ContractUpload,
 } from "./contracts.service.js";
-import { changing, creating, idOf } from "./route-helpers.js";
+import { changing, creating, idOf } from "../../core/http/route-helpers.js";
 import { findRecordBatchId } from "./subscribers.read.service.js";
 
 const OF_CLIENT = `${API_PREFIX}/subscribers/:id/contracts`;
@@ -52,7 +52,7 @@ async function readUpload(request: FastifyRequest): Promise<ContractUpload> {
   }
 }
 
-export function registerContractRoutes(app: FastifyInstance, deps: AppDeps): void {
+export function registerContractRoutes(app: FastifyInstance, deps: PackageDeps): void {
   const read = { config: { access: can("subscribers.read") } };
   const write = { config: { access: can("subscribers.write") } };
   const archive = { config: { access: can("records.archive") } };

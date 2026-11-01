@@ -30,6 +30,16 @@ export function isUniqueViolation(error: unknown): boolean {
 
 // onError gets errors of idle pooled connections (database restart, dropped network);
 // without it they would crash the process or go unseen
+// Every statement that reaches PostgreSQL, relation loads included: what a page of a list really costs. For the tests of
+// 06-quality.md §6.1: the app has no use for it.
+export function createStatementLog(databaseUrl: string): { db: DbClient; statements: string[] } {
+  const statements: string[] = [];
+  const adapter = new PrismaPg({ connectionString: databaseUrl });
+  const db = new PrismaClient({ adapter, log: [{ emit: "event", level: "query" }] });
+  db.$on("query", ({ query }) => statements.push(query));
+  return { db, statements };
+}
+
 export function createDbClient(
   databaseUrl: string,
   onError: (error: Error) => void,

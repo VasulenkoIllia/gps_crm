@@ -50,7 +50,7 @@ export function refreshClients(client: QueryClient): void {
   }
 }
 
-function queryOf(values: Record<string, string | null | undefined>): string {
+export function queryOf(values: Record<string, string | null | undefined>): string {
   const params = new URLSearchParams();
   for (const [key, value] of Object.entries(values)) if (value) params.set(key, value);
   const query = params.toString();

@@ -13,7 +13,7 @@ import {
   startClientApi,
   updateForm,
   type ClientApi,
-} from "./subscribers.test-support.js";
+} from "../../test-clients.js";
 import { reconcileRollups } from "./index.js";
 
 const UNKNOWN_ID = "019a0000-0000-7000-8000-000000000000";

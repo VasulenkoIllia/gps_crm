@@ -20,12 +20,12 @@ import type { AppDeps } from "../../core/deps.js";
 import { AppError } from "../../core/errors.js";
 import { detectFileType } from "../../core/files/file-type.js";
 import { createFileRecord, findLatestFile, placeFile } from "../../core/files/files.repository.js";
-import { assertVersion, changedFields, hasChanges, notFound } from "../references/index.js";
+import { assertVersion, changedFields, hasChanges, notFound, recordArchived } from "../references/index.js";
 import { CONTRACT_OWNER } from "./contracts.files.js";
 import { listContracts as readContracts, listContractsOf } from "./contracts.queries.js";
 import * as repo from "./contracts.repository.js";
 import { isLinked, lockPayer } from "./payers.repository.js";
-import { recordArchived, requireLiveSubscriber } from "./subscribers.helpers.js";
+import { requireLiveSubscriber } from "./subscribers.helpers.js";
 import { findVisibleId } from "./subscribers.repository.js";
 
 const PAYER_OF_CLIENT = "Оберіть платника цього клієнта";

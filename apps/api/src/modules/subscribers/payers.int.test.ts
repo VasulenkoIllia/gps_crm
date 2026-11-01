@@ -3,14 +3,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import type { DbClient } from "../../core/db/client.js";
 import { connectTestAppDatabase, connectTestDatabase } from "../../core/db/test-database.js";
 import { items } from "../../test-references.js";
-import {
-  companyForm,
-  EDRPOU,
-  OTHER_EDRPOU,
-  resetClients,
-  startClientApi,
-  type ClientApi,
-} from "./subscribers.test-support.js";
+import { companyForm, EDRPOU, OTHER_EDRPOU, resetClients, startClientApi, type ClientApi } from "../../test-clients.js";
 
 const INVOICE = { name: "Платник", paymentMethod: "invoice", legalName: "Повна назва", taxId: OTHER_EDRPOU };
 const UNKNOWN_ID = "019a0000-0000-7000-8000-000000000000";

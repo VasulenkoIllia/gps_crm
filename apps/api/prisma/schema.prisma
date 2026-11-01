@@ -304,6 +304,38 @@ model JobEvent {
   @@map("job_events")
 }
 
+enum ObjectStatus {
+  active
+  suspended
+  disconnected
+
+  @@map("object_status")
+}
+
+enum DeviceStatus {
+  installed
+  removed
+  repair
+  written_off
+
+  @@map("device_status")
+}
+
+enum DeviceOwnership {
+  sold
+  rented
+
+  @@map("device_ownership")
+}
+
+enum SimStatus {
+  active
+  blocked
+  free
+
+  @@map("sim_status")
+}
+
 // The reference lists (references.md). Every table: uuidv7, a name unique within its parent regardless of case, deactivation
 // instead of deletion.
 model Program {
@@ -325,6 +357,7 @@ model Program {
   tariffs     Tariff[]
   addons      AddonProgram[]
   subscribers Subscriber[]
+  objects     MonitoredObject[]
 
   @@index([sortOrder, nameNorm, id])
   @@index([archiveBatchId])
@@ -346,8 +379,9 @@ model MonitoringServer {
   updatedAt      DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
   updatedBy      String?  @map("updated_by") @db.Uuid
 
-  program Program  @relation(fields: [programId], references: [id], onDelete: Restrict)
+  program Program           @relation(fields: [programId], references: [id], onDelete: Restrict)
   tariffs Tariff[]
+  objects MonitoredObject[]
 
   @@unique([programId, nameNorm])
   // What the foreign key of tariffs points at: a tariff cannot name a server of another program, whoever writes it
@@ -381,10 +415,14 @@ model Tariff {
 
   subscribers       Subscriber[]
   subscriberPeriods SubscriberTariffPeriod[]
+  objects           MonitoredObject[]
+  ownTerms          ObjectServiceTerm[]
 
   @@unique([serverId, nameNorm, billingModel])
   // What the foreign key of subscribers points at: a client cannot hold a tariff of another program, whoever writes it
   @@unique([id, programId])
+  // What the foreign key of objects points at: an object cannot read a server or a program off another tariff
+  @@unique([id, serverId, programId])
   @@index([programId, serverId, nameNorm, billingModel, id])
   @@index([archiveBatchId])
   @@map("tariffs")
@@ -403,8 +441,9 @@ model Addon {
   updatedAt      DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
   updatedBy      String?  @map("updated_by") @db.Uuid
 
-  prices   AddonPrice[]
-  programs AddonProgram[]
+  prices        AddonPrice[]
+  programs      AddonProgram[]
+  objectPeriods ObjectAddonPeriod[]
 
   @@index([archiveBatchId])
   @@map("addons")
@@ -452,6 +491,8 @@ model TrackerModel {
   updatedAt      DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
   updatedBy      String?  @map("updated_by") @db.Uuid
 
+  devices Device[]
+
   @@index([sortOrder, nameNorm, id])
   @@index([archiveBatchId])
   @@map("tracker_models")
@@ -473,6 +514,7 @@ model SimOperator {
   updatedBy      String?  @map("updated_by") @db.Uuid
 
   plans SimPlan[]
+  sims  Sim[]
 
   @@index([sortOrder, nameNorm, id])
   @@index([archiveBatchId])
@@ -497,7 +539,11 @@ model SimPlan {
 
   operator SimOperator @relation(fields: [operatorId], references: [id], onDelete: Restrict)
 
+  sims Sim[]
+
   @@unique([operatorId, nameNorm])
+  // What the foreign key of sims points at: a SIM cannot hold a plan of another operator, whoever writes it
+  @@unique([id, operatorId])
   @@index([operatorId, sortOrder, nameNorm, id])
   @@index([archiveBatchId])
   @@map("sim_plans")
@@ -518,6 +564,10 @@ model Contractor {
   updatedAt      DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
   updatedBy      String?  @map("updated_by") @db.Uuid
 
+  deviceInstallations DeviceInstallation[]
+  simInstallations    SimInstallation[]
+  sensorInstallations SensorInstallation[]
+
   @@index([sortOrder, nameNorm, id])
   @@index([archiveBatchId])
   @@map("contractors")
@@ -537,6 +587,9 @@ model DisconnectReason {
   createdBy      String?  @map("created_by") @db.Uuid
   updatedAt      DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
   updatedBy      String?  @map("updated_by") @db.Uuid
+
+  objects       MonitoredObject[]
+  statusPeriods ObjectStatusPeriod[]
 
   @@index([sortOrder, nameNorm, id])
   @@index([archiveBatchId])
@@ -647,6 +700,7 @@ model Subscriber {
   payers         PayerSubscriber[]
   contracts      Contract[]
   archiveBatches ArchiveBatch[]
+  objects        MonitoredObject[]
 
   @@index([tariffId])
   @@index([programId])
@@ -733,6 +787,8 @@ model Payer {
 
   subscribers PayerSubscriber[]
   contracts   Contract[]
+  objects     MonitoredObject[]
+  objectTerms ObjectServiceTerm[]
 
   @@index([archiveBatchId])
   @@map("payers")
@@ -774,8 +830,8 @@ model Contract {
   archivedBy     String?   @map("archived_by") @db.Uuid
   archiveBatchId String?   @map("archive_batch_id") @db.Uuid
 
-  subscriber Subscriber @relation(fields: [subscriberId], references: [id], onDelete: Restrict)
-  payer      Payer      @relation(fields: [payerId], references: [id], onDelete: Restrict)
+  subscriber Subscriber      @relation(fields: [subscriberId], references: [id], onDelete: Restrict)
+  payer      Payer           @relation(fields: [payerId], references: [id], onDelete: Restrict)
   // П1: only a payer of this client, whatever the code around it does
   payerLink  PayerSubscriber @relation(fields: [payerId, subscriberId], references: [payerId, subscriberId], onDelete: Restrict)
 
@@ -783,4 +839,262 @@ model Contract {
   @@index([payerId])
   @@index([archiveBatchId])
   @@map("contracts")
+}
+
+// A tracker. Who it is on is told by objects.current_device_id: `status` says what a person may do with it (equipment.md П3)
+model Device {
+  id             String           @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  imei           String           @unique
+  imeiRev        String           @map("imei_rev")
+  modelId        String?          @map("model_id") @db.Uuid
+  status         DeviceStatus     @default(removed)
+  // Kept for later, no logic in stage 1 (equipment.md П6)
+  ownership      DeviceOwnership?
+  // Only while the tracker is on an object: one coming off leaves its SIM behind (D71)
+  currentSimId   String?          @unique @map("current_sim_id") @db.Uuid
+  note           String?
+  version        Int              @default(1)
+  createdAt      DateTime         @default(now()) @map("created_at") @db.Timestamptz
+  createdBy      String?          @map("created_by") @db.Uuid
+  updatedAt      DateTime         @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+  updatedBy      String?          @map("updated_by") @db.Uuid
+  archivedAt     DateTime?        @map("archived_at") @db.Timestamptz
+  archivedBy     String?          @map("archived_by") @db.Uuid
+  archiveBatchId String?          @map("archive_batch_id") @db.Uuid
+
+  model      TrackerModel? @relation(fields: [modelId], references: [id], onDelete: Restrict)
+  currentSim Sim?          @relation("CurrentSim", fields: [currentSimId], references: [id], onDelete: Restrict)
+
+  object           MonitoredObject?
+  installations    DeviceInstallation[]
+  simInstallations SimInstallation[]
+
+  @@index([modelId])
+  @@index([archiveBatchId])
+  @@map("devices")
+}
+
+model Sim {
+  id             String    @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  iccid          String    @unique
+  iccidRev       String    @map("iccid_rev")
+  msisdn         String?   @unique
+  msisdnRev      String?   @map("msisdn_rev")
+  operatorId     String?   @map("operator_id") @db.Uuid
+  planId         String?   @map("plan_id") @db.Uuid
+  status         SimStatus @default(free)
+  note           String?
+  version        Int       @default(1)
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  createdBy      String?   @map("created_by") @db.Uuid
+  updatedAt      DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+  updatedBy      String?   @map("updated_by") @db.Uuid
+  archivedAt     DateTime? @map("archived_at") @db.Timestamptz
+  archivedBy     String?   @map("archived_by") @db.Uuid
+  archiveBatchId String?   @map("archive_batch_id") @db.Uuid
+
+  operator SimOperator? @relation(fields: [operatorId], references: [id], onDelete: Restrict)
+  plan     SimPlan?     @relation(fields: [planId, operatorId], references: [id, operatorId], onDelete: Restrict, onUpdate: Restrict)
+
+  device        Device?           @relation("CurrentSim")
+  installations SimInstallation[]
+
+  @@index([operatorId])
+  @@index([planId])
+  @@index([archiveBatchId])
+  @@map("sims")
+}
+
+model Sensor {
+  id             String    @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  serialNo       String    @unique @map("serial_no")
+  serialNoNorm   String    @map("serial_no_norm")
+  note           String?
+  version        Int       @default(1)
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  createdBy      String?   @map("created_by") @db.Uuid
+  updatedAt      DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+  updatedBy      String?   @map("updated_by") @db.Uuid
+  archivedAt     DateTime? @map("archived_at") @db.Timestamptz
+  archivedBy     String?   @map("archived_by") @db.Uuid
+  archiveBatchId String?   @map("archive_batch_id") @db.Uuid
+
+  installations SensorInstallation[]
+
+  @@index([archiveBatchId])
+  @@map("sensors")
+}
+
+// An object of monitoring. MonitoredObject and not Object: the name a generated type must not take from the language.
+// status, payer_id, tariff_id, program_id and server_id repeat the newest versions of the histories below (D70): every filter
+// of the list reads them, and on millions of objects a join with the history would cost every page. The composite foreign key
+// keeps the program and the server to the tariff, and only a tariff of their own stops an object following its client.
+model MonitoredObject {
+  id                 String       @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  subscriberId       String       @map("subscriber_id") @db.Uuid
+  name               String
+  nameNorm           String       @map("name_norm")
+  status             ObjectStatus
+  statusFrom         DateTime     @map("status_from") @db.Date
+  connectedOn        DateTime     @map("connected_on") @db.Date
+  disconnectedOn     DateTime?    @map("disconnected_on") @db.Date
+  disconnectReasonId String?      @map("disconnect_reason_id") @db.Uuid
+  payerId            String       @map("payer_id") @db.Uuid
+  tariffId           String       @map("tariff_id") @db.Uuid
+  programId          String       @map("program_id") @db.Uuid
+  serverId           String       @map("server_id") @db.Uuid
+  hasOwnTariff       Boolean      @default(false) @map("has_own_tariff")
+  // Empty only on a disconnected object that went through the archive (D71)
+  currentDeviceId    String?      @unique @map("current_device_id") @db.Uuid
+  note               String?
+  version            Int          @default(1)
+  createdAt          DateTime     @default(now()) @map("created_at") @db.Timestamptz
+  createdBy          String?      @map("created_by") @db.Uuid
+  updatedAt          DateTime     @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+  updatedBy          String?      @map("updated_by") @db.Uuid
+  archivedAt         DateTime?    @map("archived_at") @db.Timestamptz
+  archivedBy         String?      @map("archived_by") @db.Uuid
+  archiveBatchId     String?      @map("archive_batch_id") @db.Uuid
+
+  subscriber       Subscriber        @relation(fields: [subscriberId], references: [id], onDelete: Restrict)
+  disconnectReason DisconnectReason? @relation(fields: [disconnectReasonId], references: [id], onDelete: Restrict)
+  payer            Payer             @relation(fields: [payerId], references: [id], onDelete: Restrict)
+  program          Program           @relation(fields: [programId], references: [id], onDelete: Restrict)
+  server           MonitoringServer  @relation(fields: [serverId], references: [id], onDelete: Restrict)
+  tariff           Tariff            @relation(fields: [tariffId, serverId, programId], references: [id, serverId, programId], onDelete: Restrict, onUpdate: Restrict)
+  currentDevice    Device?           @relation(fields: [currentDeviceId], references: [id], onDelete: Restrict)
+
+  statusPeriods       ObjectStatusPeriod[]
+  terms               ObjectServiceTerm[]
+  addonPeriods        ObjectAddonPeriod[]
+  deviceInstallations DeviceInstallation[]
+  sensorInstallations SensorInstallation[]
+
+  @@index([subscriberId])
+  @@index([payerId])
+  @@index([tariffId])
+  @@index([programId])
+  @@index([serverId])
+  @@index([disconnectReasonId])
+  @@index([archiveBatchId])
+  @@map("objects")
+}
+
+// Every history below: [valid_from, valid_to), and an exclusion in the migration keeps periods from overlapping (§3.4)
+model ObjectStatusPeriod {
+  id        String       @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  objectId  String       @map("object_id") @db.Uuid
+  status    ObjectStatus
+  validFrom DateTime     @map("valid_from") @db.Date
+  validTo   DateTime?    @map("valid_to") @db.Date
+  reasonId  String?      @map("reason_id") @db.Uuid
+  note      String?
+  createdAt DateTime     @default(now()) @map("created_at") @db.Timestamptz
+  createdBy String?      @map("created_by") @db.Uuid
+
+  object MonitoredObject   @relation(fields: [objectId], references: [id], onDelete: Restrict)
+  reason DisconnectReason? @relation(fields: [reasonId], references: [id], onDelete: Restrict)
+
+  @@index([objectId, validFrom(sort: Desc), id(sort: Desc)])
+  @@index([reasonId])
+  @@map("object_status_periods")
+}
+
+// A version of the terms: who pays, and a tariff of the object's own (empty: the tariff of the client). A version fixed with
+// the same date, or dropped before it began, stays as an empty period, as on the client (D61).
+model ObjectServiceTerm {
+  id          String    @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  objectId    String    @map("object_id") @db.Uuid
+  payerId     String    @map("payer_id") @db.Uuid
+  ownTariffId String?   @map("own_tariff_id") @db.Uuid
+  validFrom   DateTime  @map("valid_from") @db.Date
+  validTo     DateTime? @map("valid_to") @db.Date
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  createdBy   String?   @map("created_by") @db.Uuid
+
+  object    MonitoredObject @relation(fields: [objectId], references: [id], onDelete: Restrict)
+  payer     Payer           @relation(fields: [payerId], references: [id], onDelete: Restrict)
+  ownTariff Tariff?         @relation(fields: [ownTariffId], references: [id], onDelete: Restrict)
+
+  @@index([objectId, validFrom(sort: Desc), id(sort: Desc)])
+  @@index([payerId])
+  @@index([ownTariffId])
+  @@map("object_service_terms")
+}
+
+model ObjectAddonPeriod {
+  id        String    @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  objectId  String    @map("object_id") @db.Uuid
+  addonId   String    @map("addon_id") @db.Uuid
+  validFrom DateTime  @map("valid_from") @db.Date
+  validTo   DateTime? @map("valid_to") @db.Date
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  createdBy String?   @map("created_by") @db.Uuid
+
+  object MonitoredObject @relation(fields: [objectId], references: [id], onDelete: Restrict)
+  addon  Addon           @relation(fields: [addonId], references: [id], onDelete: Restrict)
+
+  @@index([objectId, validFrom(sort: Desc), id(sort: Desc)])
+  @@index([addonId])
+  @@map("object_addon_periods")
+}
+
+model DeviceInstallation {
+  id           String    @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  objectId     String    @map("object_id") @db.Uuid
+  deviceId     String    @map("device_id") @db.Uuid
+  validFrom    DateTime  @map("valid_from") @db.Date
+  validTo      DateTime? @map("valid_to") @db.Date
+  contractorId String?   @map("contractor_id") @db.Uuid
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  createdBy    String?   @map("created_by") @db.Uuid
+
+  object     MonitoredObject @relation(fields: [objectId], references: [id], onDelete: Restrict)
+  device     Device          @relation(fields: [deviceId], references: [id], onDelete: Restrict)
+  contractor Contractor?     @relation(fields: [contractorId], references: [id], onDelete: Restrict)
+
+  @@index([objectId, validFrom(sort: Desc), id(sort: Desc)])
+  @@index([deviceId, validFrom(sort: Desc), id(sort: Desc)])
+  @@index([contractorId])
+  @@map("device_installations")
+}
+
+model SimInstallation {
+  id           String    @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  deviceId     String    @map("device_id") @db.Uuid
+  simId        String    @map("sim_id") @db.Uuid
+  validFrom    DateTime  @map("valid_from") @db.Date
+  validTo      DateTime? @map("valid_to") @db.Date
+  contractorId String?   @map("contractor_id") @db.Uuid
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  createdBy    String?   @map("created_by") @db.Uuid
+
+  device     Device      @relation(fields: [deviceId], references: [id], onDelete: Restrict)
+  sim        Sim         @relation(fields: [simId], references: [id], onDelete: Restrict)
+  contractor Contractor? @relation(fields: [contractorId], references: [id], onDelete: Restrict)
+
+  @@index([deviceId, validFrom(sort: Desc), id(sort: Desc)])
+  @@index([simId, validFrom(sort: Desc), id(sort: Desc)])
+  @@index([contractorId])
+  @@map("sim_installations")
+}
+
+model SensorInstallation {
+  id           String    @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  objectId     String    @map("object_id") @db.Uuid
+  sensorId     String    @map("sensor_id") @db.Uuid
+  validFrom    DateTime  @map("valid_from") @db.Date
+  validTo      DateTime? @map("valid_to") @db.Date
+  contractorId String?   @map("contractor_id") @db.Uuid
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  createdBy    String?   @map("created_by") @db.Uuid
+
+  object     MonitoredObject @relation(fields: [objectId], references: [id], onDelete: Restrict)
+  sensor     Sensor          @relation(fields: [sensorId], references: [id], onDelete: Restrict)
+  contractor Contractor?     @relation(fields: [contractorId], references: [id], onDelete: Restrict)
+
+  @@index([objectId, validFrom(sort: Desc), id(sort: Desc)])
+  @@index([sensorId, validFrom(sort: Desc), id(sort: Desc)])
+  @@index([contractorId])
+  @@map("sensor_installations")
 }

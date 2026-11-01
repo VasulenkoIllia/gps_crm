@@ -1,6 +1,6 @@
 import { idParamsSchema } from "@gps_crm/shared";
 import type { FastifyReply, FastifyRequest } from "fastify";
-import { parseInput } from "../../core/http/validate.js";
+import { parseInput } from "./validate.js";
 
 const CREATED = 201;
 const NO_CONTENT = 204;

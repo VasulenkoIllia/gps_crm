@@ -8,6 +8,7 @@ import {
   type DuplicateList,
   type DuplicatesQuery,
   type ManagerList,
+  type ObjectCounts,
   type SubscriberCard,
   type SubscriberCodeCheck,
   type SubscriberCount,
@@ -21,6 +22,7 @@ import {
 import type { RecordScope } from "../../core/access/access.js";
 import type { DbOrTx } from "../../core/db/client.js";
 import { fromDbDate } from "../../core/db/dates.js";
+import { escapeLike } from "../../core/db/like.js";
 import type { Prisma } from "../../generated/prisma/client.js";
 import { scopedContact } from "./contacts.repository.js";
 import { scopedContract } from "./contracts.repository.js";
@@ -32,18 +34,14 @@ const CODE_DIGITS = /^\d{5,15}$/;
 const PHONE_LIKE = /^[\d\s()+-]+$/;
 const MIN_PHONE_SEARCH = 4;
 export const MIN_NAME_SEARCH = 3;
+const EQUIPMENT_MATCHES_MAX = 200;
 // A number ending the same way may sit on thousands of contacts, and a person narrows the search long before those
 const CONTACT_MATCHES_MAX = 200;
 const MANAGERS_MAX = 500;
 const HISTORY_MAX = 100;
 const DUPLICATES_MAX = 5;
-const LIKE_SPECIALS = /[\\%_]/g;
 
 type Where = Prisma.SubscriberWhereInput;
-
-export function escapeLike(text: string): string {
-  return text.replace(LIKE_SPECIALS, "\\$&");
-}
 
 // In two steps on purpose: `id IN (...)` next to an OR reads the matching rows, a subquery there reads the table
 async function matchingContacts(db: DbOrTx, where: Prisma.ContactWhereInput): Promise<string[]> {
@@ -55,25 +53,56 @@ async function matchingContacts(db: DbOrTx, where: Prisma.ContactWhereInput): Pr
   return [...new Set(rows.map((row) => row.subscriberId))];
 }
 
+// D69: whose object a number stands on. Two steps here as well, by the index of the number, and this module reads the
+// tables without their module: the graph keeps equipment out of subscribers, and a read crosses it in a queries file.
+async function matchingEquipment(db: DbOrTx, digits: string): Promise<string[]> {
+  const reversed = reverseDigits(digits);
+  const owner = { object: { select: { subscriberId: true } } };
+  const [devices, sims] = await Promise.all([
+    db.device.findMany({
+      where: { archivedAt: null, OR: [{ imei: { startsWith: digits } }, { imeiRev: { startsWith: reversed } }] },
+      take: EQUIPMENT_MATCHES_MAX,
+      select: owner,
+    }),
+    db.sim.findMany({
+      where: {
+        archivedAt: null,
+        OR: [
+          { iccid: { startsWith: digits } },
+          { iccidRev: { startsWith: reversed } },
+          { msisdnRev: { startsWith: reversed } },
+        ],
+      },
+      take: EQUIPMENT_MATCHES_MAX,
+      select: { device: { select: owner } },
+    }),
+  ]);
+  const clients = [...devices, ...sims.flatMap((sim) => (sim.device ? [sim.device] : []))];
+  return [...new Set(clients.flatMap((row) => (row.object ? [row.object.subscriberId] : [])))];
+}
+
 async function digitSearch(db: DbOrTx, text: string): Promise<Where> {
   const digits = text.replace(/\D/g, "");
   const reversed = reverseDigits(digits);
-  const phones =
+  const [phones, equipment] =
     digits.length >= MIN_PHONE_SEARCH
-      ? await matchingContacts(db, {
-          OR: [{ phoneRev: { startsWith: reversed } }, { phone2Rev: { startsWith: reversed } }],
-        })
-      : [];
+      ? await Promise.all([
+          matchingContacts(db, {
+            OR: [{ phoneRev: { startsWith: reversed } }, { phone2Rev: { startsWith: reversed } }],
+          }),
+          matchingEquipment(db, digits),
+        ])
+      : [[], []];
+  const owners = [...phones, ...equipment];
   const matches: Where[] = [
     { legacyCode: text },
     { taxId: { startsWith: digits } },
     ...(CODE_DIGITS.test(digits) ? [{ code: BigInt(digits) }] : []),
-    ...(phones.length > 0 ? [{ id: { in: phones } }] : []),
+    ...(owners.length > 0 ? [{ id: { in: owners } }] : []),
   ];
   return { OR: matches };
 }
 
-// IMEI and SIM join in with the objects, step 5
 async function searchWhere(db: DbOrTx, text: string): Promise<Where> {
   if (text.includes("@")) return { id: { in: await matchingContacts(db, { email: text.toLowerCase() }) } };
   if (PHONE_LIKE.test(text)) return digitSearch(db, text);
@@ -369,6 +398,33 @@ export async function listManagers(db: DbOrTx): Promise<ManagerList> {
     select: { id: true, fullName: true },
   });
   return { items: rows };
+}
+
+const NO_OBJECTS: ObjectCounts = { objectsActive: 0, objectsSuspended: 0, objectsDisconnected: 0 };
+const COUNT_OF_STATUS = {
+  active: "objectsActive",
+  suspended: "objectsSuspended",
+  disconnected: "objectsDisconnected",
+} as const;
+
+// П18: what the objects themselves say. An object in the archive counts for nobody.
+export async function readObjectFacts(db: DbOrTx, subscriberIds: string[]): Promise<Map<string, ObjectCounts>> {
+  const rows = await db.monitoredObject.groupBy({
+    by: ["subscriberId", "status"],
+    where: { subscriberId: { in: subscriberIds }, archivedAt: null },
+    _count: { _all: true },
+  });
+  const facts = new Map(subscriberIds.map((id) => [id, { ...NO_OBJECTS }]));
+  for (const { subscriberId, status, _count } of rows) {
+    const counts = facts.get(subscriberId);
+    if (counts) counts[COUNT_OF_STATUS[status]] = _count._all;
+  }
+  return facts;
+}
+
+// All of them, in the archive too: a client with any object has a history that a delete would hide (П21)
+export function countAllObjects(db: DbOrTx, subscriberId: string): Promise<number> {
+  return db.monitoredObject.count({ where: { subscriberId } });
 }
 
 export async function findManagerName(db: DbOrTx, id: string): Promise<string | null> {
