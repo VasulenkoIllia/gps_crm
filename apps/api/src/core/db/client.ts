@@ -23,9 +23,17 @@ export type DbClient = PrismaClient;
 export type DbOrTx = PrismaClient | Prisma.TransactionClient;
 
 const UNIQUE_VIOLATION = "P2002";
+const INVALID_BYTE_SEQUENCE = "22021";
 
 export function isUniqueViolation(error: unknown): boolean {
   return error instanceof Prisma.PrismaClientKnownRequestError && error.code === UNIQUE_VIOLATION;
+}
+
+// PostgreSQL refuses a NUL inside a text, and it is the first to look: a schema takes it for an ordinary character
+export function isInvalidText(error: unknown): boolean {
+  if (!(error instanceof Prisma.PrismaClientKnownRequestError)) return false;
+  const driverError = error.meta?.driverAdapterError as { cause?: { originalCode?: string } } | undefined;
+  return driverError?.cause?.originalCode === INVALID_BYTE_SEQUENCE;
 }
 
 // onError gets errors of idle pooled connections (database restart, dropped network);

@@ -1,11 +1,13 @@
 import type { ApiErrorBody } from "@gps_crm/shared";
 import type { FastifyInstance, FastifySchemaValidationError } from "fastify";
+import { isInvalidText } from "./db/client.js";
 
 const CLIENT_ERROR_MIN = 400;
 const SERVER_ERROR_MIN = 500;
 // The last status Fastify can send
 const STATUS_MAX = 599;
 const INTERNAL_SERVER_ERROR = 500;
+const HTTP_BAD_REQUEST = 400;
 
 type AppErrorStatus = 400 | 401 | 403 | 404 | 409 | 410 | 422 | 429 | 503;
 
@@ -37,6 +39,7 @@ const CLIENT_ERRORS: Record<number, ApiErrorBody> = {
 const BAD_REQUEST: ApiErrorBody = { code: "bad_request", message: "Некоректний запит" };
 const VALIDATION_FAILED: ApiErrorBody = { code: "validation_failed", message: "Перевірте заповнені поля" };
 const INVALID_VALUE = "Некоректне значення";
+const INVALID_TEXT: ApiErrorBody = { code: "invalid_text", message: "У тексті є недопустимий символ" };
 
 // Fastify sets statusCode on the errors it raises (bad JSON, failed schema check); anything else thrown, or a
 // status above 599, is a 500
@@ -82,6 +85,7 @@ function bodyOf(error: unknown, statusCode: number): ApiErrorBody {
 
 export function registerErrorHandling(app: FastifyInstance): void {
   app.setErrorHandler((error, request, reply) => {
+    if (isInvalidText(error)) return reply.code(HTTP_BAD_REQUEST).send(INVALID_TEXT);
     const statusCode = statusOf(error);
     if (statusCode >= SERVER_ERROR_MIN) request.log.error({ err: error }, "request failed");
     return reply.code(statusCode).send(bodyOf(error, statusCode));

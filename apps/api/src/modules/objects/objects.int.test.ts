@@ -50,6 +50,14 @@ describe("objects", () => {
   });
 
   describe("creation", () => {
+    it("answers 400 to a NUL in a text and saves nothing", async () => {
+      const response = await client.call("POST", "/objects", client.objectForm({ note: "до\u0000після" }));
+
+      expect(response.statusCode).toBe(400);
+      expect(response.json()).toMatchObject({ code: "invalid_text" });
+      expect(await list()).toEqual([]);
+    });
+
     it("makes an object with a new tracker and SIM, on the tariff of the client", async () => {
       const contractorId = await client.create("/contractors", { name: "Підрядник 1" });
       const imei = nextImei();
@@ -242,6 +250,16 @@ describe("objects", () => {
   });
 
   describe("the list", () => {
+    it("answers 400 to a NUL in a search, in a list of its own and of the clients", async () => {
+      const paths = ["/objects?q=ab%00cd", "/subscribers?q=ab%00cd"];
+      for (const path of paths) {
+        const response = await client.call("GET", path);
+
+        expect(response.statusCode).toBe(400);
+        expect(response.json()).toMatchObject({ code: "invalid_text" });
+      }
+    });
+
     it("finds an object by its name, tracker, SIM and client", async () => {
       const imei = nextImei();
       const iccid = nextIccid();
