@@ -14,8 +14,8 @@ import {
   Panel,
   type DataTableColumn,
 } from "../../ui";
-import { REFERENCES_KEY } from "../references/references.api";
-import { ACTIVITY_KEY, ARCHIVE_KEY, fetchArchivePage, restoreBatch } from "./activity.api";
+import { refreshClients } from "../subscribers/subscribers.api";
+import { ARCHIVE_KEY, fetchArchivePage, restoreBatch } from "./activity.api";
 
 function buildColumns(onRestore: (batch: ArchiveBatch) => void): DataTableColumn<ArchiveBatch>[] {
   return [
@@ -53,9 +53,7 @@ function ArchiveScreen() {
   const restore = useMutation({
     mutationFn: (batch: ArchiveBatch) => restoreBatch(batch.id),
     onSuccess: () => {
-      void client.invalidateQueries({ queryKey: ARCHIVE_KEY });
-      void client.invalidateQueries({ queryKey: ACTIVITY_KEY });
-      void client.invalidateQueries({ queryKey: REFERENCES_KEY });
+      refreshClients(client);
       setRestoring(null);
       void message.success("Записи відновлено");
     },

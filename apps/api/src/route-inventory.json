@@ -64,6 +64,84 @@
     "access": "public"
   },
   {
+    "method": "DELETE",
+    "url": "/api/v1/contacts/:id",
+    "access": "can:records.delete"
+  },
+  {
+    "method": "PATCH",
+    "url": "/api/v1/contacts/:id",
+    "access": "can:subscribers.write"
+  },
+  {
+    "method": "POST",
+    "url": "/api/v1/contacts/:id/archive",
+    "access": "can:records.archive"
+  },
+  {
+    "method": "POST",
+    "url": "/api/v1/contacts/:id/make-primary",
+    "access": "can:subscribers.write"
+  },
+  {
+    "method": "POST",
+    "url": "/api/v1/contacts/:id/restore",
+    "access": "can:records.archive"
+  },
+  {
+    "method": "GET",
+    "url": "/api/v1/contracts",
+    "access": "can:subscribers.read"
+  },
+  {
+    "method": "HEAD",
+    "url": "/api/v1/contracts",
+    "access": "can:subscribers.read",
+    "derived": true
+  },
+  {
+    "method": "PATCH",
+    "url": "/api/v1/contracts/:id",
+    "access": "can:subscribers.write"
+  },
+  {
+    "method": "POST",
+    "url": "/api/v1/contracts/:id/archive",
+    "access": "can:records.archive"
+  },
+  {
+    "method": "GET",
+    "url": "/api/v1/contracts/:id/file",
+    "access": "can:subscribers.read"
+  },
+  {
+    "method": "HEAD",
+    "url": "/api/v1/contracts/:id/file",
+    "access": "can:subscribers.read",
+    "derived": true
+  },
+  {
+    "method": "POST",
+    "url": "/api/v1/contracts/:id/file",
+    "access": "can:subscribers.write"
+  },
+  {
+    "method": "POST",
+    "url": "/api/v1/contracts/:id/restore",
+    "access": "can:records.archive"
+  },
+  {
+    "method": "GET",
+    "url": "/api/v1/contracts/number-check",
+    "access": "can:subscribers.write"
+  },
+  {
+    "method": "HEAD",
+    "url": "/api/v1/contracts/number-check",
+    "access": "can:subscribers.write",
+    "derived": true
+  },
+  {
     "method": "POST",
     "url": "/api/v1/invitations/accept",
     "access": "public"
@@ -139,6 +217,32 @@
     "method": "DELETE",
     "url": "/api/v1/me/sessions/:id",
     "access": "authenticated"
+  },
+  {
+    "method": "GET",
+    "url": "/api/v1/payers",
+    "access": "can:subscribers.read"
+  },
+  {
+    "method": "HEAD",
+    "url": "/api/v1/payers",
+    "access": "can:subscribers.read",
+    "derived": true
+  },
+  {
+    "method": "PATCH",
+    "url": "/api/v1/payers/:id",
+    "access": "can:subscribers.write"
+  },
+  {
+    "method": "POST",
+    "url": "/api/v1/payers/:id/archive",
+    "access": "can:records.archive"
+  },
+  {
+    "method": "POST",
+    "url": "/api/v1/payers/:id/restore",
+    "access": "can:records.archive"
   },
   {
     "method": "GET",
@@ -388,6 +492,202 @@
     "method": "POST",
     "url": "/api/v1/references/tracker-models/:id/deactivate",
     "access": "can:references.manage"
+  },
+  {
+    "method": "GET",
+    "url": "/api/v1/subscriber-id-series",
+    "access": "can:subscribers.read"
+  },
+  {
+    "method": "HEAD",
+    "url": "/api/v1/subscriber-id-series",
+    "access": "can:subscribers.read",
+    "derived": true
+  },
+  {
+    "method": "POST",
+    "url": "/api/v1/subscriber-id-series",
+    "access": "can:references.manage"
+  },
+  {
+    "method": "DELETE",
+    "url": "/api/v1/subscriber-id-series/:id",
+    "access": "can:references.manage"
+  },
+  {
+    "method": "PATCH",
+    "url": "/api/v1/subscriber-id-series/:id",
+    "access": "can:references.manage"
+  },
+  {
+    "method": "GET",
+    "url": "/api/v1/subscribers",
+    "access": "can:subscribers.read"
+  },
+  {
+    "method": "HEAD",
+    "url": "/api/v1/subscribers",
+    "access": "can:subscribers.read",
+    "derived": true
+  },
+  {
+    "method": "POST",
+    "url": "/api/v1/subscribers",
+    "access": "can:subscribers.write"
+  },
+  {
+    "method": "DELETE",
+    "url": "/api/v1/subscribers/:id",
+    "access": "can:records.delete"
+  },
+  {
+    "method": "GET",
+    "url": "/api/v1/subscribers/:id",
+    "access": "can:subscribers.read"
+  },
+  {
+    "method": "HEAD",
+    "url": "/api/v1/subscribers/:id",
+    "access": "can:subscribers.read",
+    "derived": true
+  },
+  {
+    "method": "PATCH",
+    "url": "/api/v1/subscribers/:id",
+    "access": "can:subscribers.write"
+  },
+  {
+    "method": "GET",
+    "url": "/api/v1/subscribers/:id/activity",
+    "access": "can:activity.read"
+  },
+  {
+    "method": "HEAD",
+    "url": "/api/v1/subscribers/:id/activity",
+    "access": "can:activity.read",
+    "derived": true
+  },
+  {
+    "method": "POST",
+    "url": "/api/v1/subscribers/:id/archive",
+    "access": "can:records.archive"
+  },
+  {
+    "method": "PATCH",
+    "url": "/api/v1/subscribers/:id/code",
+    "access": "can:subscribers.code.change"
+  },
+  {
+    "method": "GET",
+    "url": "/api/v1/subscribers/:id/contacts",
+    "access": "can:subscribers.read"
+  },
+  {
+    "method": "HEAD",
+    "url": "/api/v1/subscribers/:id/contacts",
+    "access": "can:subscribers.read",
+    "derived": true
+  },
+  {
+    "method": "POST",
+    "url": "/api/v1/subscribers/:id/contacts",
+    "access": "can:subscribers.write"
+  },
+  {
+    "method": "GET",
+    "url": "/api/v1/subscribers/:id/contracts",
+    "access": "can:subscribers.read"
+  },
+  {
+    "method": "HEAD",
+    "url": "/api/v1/subscribers/:id/contracts",
+    "access": "can:subscribers.read",
+    "derived": true
+  },
+  {
+    "method": "POST",
+    "url": "/api/v1/subscribers/:id/contracts",
+    "access": "can:subscribers.write"
+  },
+  {
+    "method": "GET",
+    "url": "/api/v1/subscribers/:id/payers",
+    "access": "can:subscribers.read"
+  },
+  {
+    "method": "HEAD",
+    "url": "/api/v1/subscribers/:id/payers",
+    "access": "can:subscribers.read",
+    "derived": true
+  },
+  {
+    "method": "POST",
+    "url": "/api/v1/subscribers/:id/payers",
+    "access": "can:subscribers.write"
+  },
+  {
+    "method": "DELETE",
+    "url": "/api/v1/subscribers/:id/payers/:payerId/link",
+    "access": "can:subscribers.write"
+  },
+  {
+    "method": "POST",
+    "url": "/api/v1/subscribers/:id/payers/:payerId/link",
+    "access": "can:subscribers.write"
+  },
+  {
+    "method": "POST",
+    "url": "/api/v1/subscribers/:id/restore",
+    "access": "can:records.archive"
+  },
+  {
+    "method": "POST",
+    "url": "/api/v1/subscribers/:id/tariff",
+    "access": "can:subscribers.write"
+  },
+  {
+    "method": "GET",
+    "url": "/api/v1/subscribers/code-check",
+    "access": "can:subscribers.code.change"
+  },
+  {
+    "method": "HEAD",
+    "url": "/api/v1/subscribers/code-check",
+    "access": "can:subscribers.code.change",
+    "derived": true
+  },
+  {
+    "method": "GET",
+    "url": "/api/v1/subscribers/count",
+    "access": "can:subscribers.read"
+  },
+  {
+    "method": "HEAD",
+    "url": "/api/v1/subscribers/count",
+    "access": "can:subscribers.read",
+    "derived": true
+  },
+  {
+    "method": "GET",
+    "url": "/api/v1/subscribers/duplicates",
+    "access": "can:subscribers.write"
+  },
+  {
+    "method": "HEAD",
+    "url": "/api/v1/subscribers/duplicates",
+    "access": "can:subscribers.write",
+    "derived": true
+  },
+  {
+    "method": "GET",
+    "url": "/api/v1/subscribers/managers",
+    "access": "can:subscribers.read"
+  },
+  {
+    "method": "HEAD",
+    "url": "/api/v1/subscribers/managers",
+    "access": "can:subscribers.read",
+    "derived": true
   },
   {
     "method": "GET",

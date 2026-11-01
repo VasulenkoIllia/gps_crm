@@ -11,6 +11,7 @@ import {
   TEST_APP_URL,
   testConfig,
   type CapturingMailer,
+  NO_FILES,
   NO_JOBS,
 } from "../../core/test-app.js";
 import {
@@ -456,7 +457,7 @@ describe("passwords", () => {
   const context = { actor: SYSTEM_ACTOR, ip: null, requestId: null };
   // The route answers before this work ends, so a test that expects nothing to happen has to wait for it directly
   const requestReset = (email: string) =>
-    requestPasswordReset({ db, config: testConfig(), mailer, jobs: NO_JOBS, logger }, context, email);
+    requestPasswordReset({ db, config: testConfig(), mailer, jobs: NO_JOBS, files: NO_FILES, logger }, context, email);
   const rewindLetters = (ageMs: number) =>
     owner.signInThrottle.updateMany({ data: { lastFailureAt: new Date(Date.now() - ageMs) } });
 

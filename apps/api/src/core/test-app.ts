@@ -1,8 +1,11 @@
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import type { FastifyInstance } from "fastify";
 import { buildApp, type AppOptions } from "../app.js";
 import type { AppConfig } from "./config.js";
 import { createDbClient } from "./db/client.js";
 import type { MailMessage, Mailer } from "./email/mailer.js";
+import type { FileStorage } from "./files/file-storage.js";
 import type { JobQueue } from "./jobs/job.js";
 
 const SECRETS_KEY_BYTES = 32;
@@ -23,6 +26,8 @@ export function testConfig(overrides: Partial<AppConfig> = {}): AppConfig {
     secretsKey: Buffer.alloc(SECRETS_KEY_BYTES, SECRETS_KEY_FILL),
     appVersion: null,
     backupStatusDir: null,
+    files: { storage: "local", dir: join(tmpdir(), "gps_crm-test-files") },
+    crmUrl: null,
     smtp: null,
     ...overrides,
   };
@@ -54,6 +59,14 @@ export const NO_JOBS: JobQueue = {
   requestRun: () => Promise.reject(new Error("jobs are not running in this test")),
   readQueues: () => Promise.resolve([]),
   lastErrorAt: () => null,
+};
+
+export const NO_FILES: FileStorage = {
+  name: "none",
+  prepare: () => Promise.resolve(),
+  put: () => Promise.reject(new Error("files are not stored in this test")),
+  read: () => Promise.resolve(null),
+  remove: () => Promise.resolve(),
 };
 
 // A database client that never connects: unit tests stay away from the routes that would need it

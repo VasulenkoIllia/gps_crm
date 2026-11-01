@@ -2,10 +2,12 @@ import { parseApiError, parseHealthResponse, type HealthResponse } from "@gps_cr
 
 const SERVICE_UNAVAILABLE = 503;
 const REQUEST_TIMEOUT_MS = 15_000;
+// A scan of 20 MB over a phone connection
+const UPLOAD_TIMEOUT_MS = 120_000;
 const CLIENT_ERROR_MIN = 400;
 const SERVER_ERROR_MIN = 500;
 const UNEXPECTED_ERROR = "Сталася помилка. Спробуйте ще раз.";
-const API_BASE = "/api/v1";
+export const API_BASE = "/api/v1";
 
 interface Parser<T> {
   parse: (value: unknown) => T;
@@ -71,6 +73,15 @@ export async function apiPost<T>(path: string, schema: Parser<T>, body?: unknown
 // For the answers with no body
 export async function apiSend(method: "POST" | "PATCH" | "DELETE", path: string, body?: unknown): Promise<void> {
   await apiFetch(`${API_BASE}${path}`, writeInit(method, body));
+}
+
+// No content-type here: the browser writes it, with the boundary of the form
+export async function apiUpload(path: string, file: File): Promise<void> {
+  const body = new FormData();
+  body.append("file", file);
+  const signal = AbortSignal.timeout(UPLOAD_TIMEOUT_MS);
+  const response = await fetch(`${API_BASE}${path}`, { method: "POST", body, signal });
+  if (!response.ok) throw await toApiError(response);
 }
 
 // 503 is a valid answer here: the body says the app is up but not ready, which the caller shows as a state

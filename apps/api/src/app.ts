@@ -1,11 +1,14 @@
 import { randomUUID } from "node:crypto";
 import cookie from "@fastify/cookie";
+import multipart from "@fastify/multipart";
 import rateLimit from "@fastify/rate-limit";
+import { CONTRACT_FILE_MAX_BYTES } from "@gps_crm/shared";
 import Fastify, { type FastifyBaseLogger, type FastifyInstance } from "fastify";
 import { registerAccessControl } from "./core/access/access.js";
 import { collectRouteInventory } from "./core/access/route-inventory.js";
 import type { AppDeps } from "./core/deps.js";
 import { NOT_FOUND_ERROR, registerErrorHandling } from "./core/errors.js";
+import { createFileStorage } from "./core/files/file-storage.js";
 import { clientIp, throttleAddress } from "./core/http/client-ip.js";
 import { registerHealthRoutes } from "./core/http/health.js";
 import { registerOriginCheck } from "./core/http/origin.js";
@@ -15,6 +18,7 @@ import { registerAccessRoutes } from "./modules/access/index.js";
 import { registerActivityRoutes, type ArchiveRestorers } from "./modules/activity/index.js";
 import { registerAuthRoutes } from "./modules/auth/index.js";
 import { REFERENCE_RESTORERS, registerReferencesRoutes } from "./modules/references/index.js";
+import { registerSubscribersRoutes, SUBSCRIBER_RESTORERS } from "./modules/subscribers/index.js";
 import { registerSystemRoutes } from "./modules/system/index.js";
 import { registerTwoFactorRoutes } from "./modules/two-factor/index.js";
 import { registerUsersRoutes } from "./modules/users/index.js";
@@ -26,7 +30,7 @@ const KEEP_ALIVE_TIMEOUT_MS = 95_000;
 // Fastify's default is no limit at all on a slow request body. Long work runs as a background job, not in a request.
 const REQUEST_TIMEOUT_MS = 60_000;
 
-export interface AppOptions extends Omit<AppDeps, "logger"> {
+export interface AppOptions extends Omit<AppDeps, "logger" | "files"> {
   logger?: FastifyBaseLogger;
   // Folder with the built web app; unset in development, where Vite serves the UI
   webRoot?: string;
@@ -48,12 +52,16 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
     trustProxy: ["loopback", "linklocal", "uniquelocal"],
   });
   const { db, config, mailer, jobs } = options;
-  const deps: AppDeps = { db, config, mailer, jobs, logger: app.log };
+  const files = createFileStorage(config.files);
+  // On start and not on the first upload: a volume that is not mounted must fail the deploy, not a person at their desk
+  await files.prepare();
+  const deps: AppDeps = { db, config, mailer, jobs, files, logger: app.log };
 
   registerErrorHandling(app);
   collectRouteInventory(app);
   await registerSecurityHeaders(app);
   await app.register(cookie);
+  await app.register(multipart, { limits: { fileSize: CONTRACT_FILE_MAX_BYTES, files: 1, parts: 1 } });
   // Per route, on the routes that take a credential; in memory, as there is one container
   await app.register(rateLimit, { global: false, keyGenerator: (request) => throttleAddress(clientIp(request)) });
   registerOriginCheck(app, config.appUrl);
@@ -63,8 +71,9 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
   registerTwoFactorRoutes(app, deps);
   registerAuthRoutes(app, deps);
   registerAccessRoutes(app);
-  registerActivityRoutes(app, deps, { ...REFERENCE_RESTORERS, ...options.archiveRestorers });
+  registerActivityRoutes(app, deps, { ...REFERENCE_RESTORERS, ...SUBSCRIBER_RESTORERS, ...options.archiveRestorers });
   registerReferencesRoutes(app, deps);
+  registerSubscribersRoutes(app, deps);
   registerSystemRoutes(app, deps);
 
   const { webRoot } = options;

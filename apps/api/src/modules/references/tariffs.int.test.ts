@@ -10,7 +10,7 @@ import {
   startReferenceClient,
   type PlaceIds,
   type ReferenceClient,
-} from "./references.test-support.js";
+} from "../../test-references.js";
 
 const IN_USE = "Тариф уже використовується. Для нової ціни створіть нову версію тарифу";
 const UNKNOWN_ID = "019a0000-0000-7000-8000-000000000000";
@@ -75,6 +75,7 @@ describe("tariffs", () => {
         billingModel: "month",
         priceKop: 10_000,
         isSelected: false,
+        clientCount: 0,
       },
     ]);
   });

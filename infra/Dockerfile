@@ -35,5 +35,7 @@ COPY --from=build /app/apps/web/dist /app/apps/web/dist
 # The server has no git: deploy-entry.sh takes compose.yml and deploy.sh out of the image it is about to run
 COPY infra/compose.yml /app/infra/compose.yml
 COPY infra/scripts /app/infra/scripts
+# The mount point of the volume `files-data`: a new named volume takes its owner from here
+RUN mkdir /files && chown node:node /files
 USER node
 CMD ["node", "dist/main.js"]

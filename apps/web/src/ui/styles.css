@@ -422,3 +422,104 @@ a {
 .showcase-form {
   max-width: 480px;
 }
+
+.form-drawer-footer {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* The field a list starts with: a whole row on a phone, two cells where there is room */
+.filter-field:has(.filter-search) {
+  grid-column: 1 / -1;
+}
+@media (min-width: 768px) {
+  .filter-field:has(.filter-search) {
+    grid-column: span 2;
+  }
+}
+
+.table-row-link {
+  cursor: pointer;
+}
+
+/* Two columns where there is room: on one column the tabs start below the first screen */
+@media (min-width: 992px) {
+  .detail-facts .fact-list {
+    columns: 2;
+    column-gap: 48px;
+  }
+  .detail-facts .fact-row {
+    break-inside: avoid;
+  }
+}
+
+.detail-subtitle {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.detail-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.tab-actions {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.record-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(320px, 100%), 1fr));
+  gap: 12px;
+}
+
+.record-card {
+  padding: 12px 16px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.record-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.record-card-title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.table-note {
+  color: var(--ink-2);
+  font-size: 12px;
+}
+
+.form-number {
+  width: 100%;
+}
+
+.form-section-title {
+  margin: 20px 0 8px;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.duplicates-list {
+  margin: 0;
+  padding-left: 18px;
+}

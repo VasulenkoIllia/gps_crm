@@ -28,6 +28,13 @@ export function firstOfNextMonth(date: string): string {
   return `${next.year}-${String(next.month).padStart(MONTH_DIGITS, "0")}-01`;
 }
 
+const MS_IN_DAY = 86_400_000;
+const ISO_DATE_LENGTH = 10;
+
+export function addDays(date: string, days: number): string {
+  return new Date(Date.parse(`${date}T00:00:00.000Z`) + days * MS_IN_DAY).toISOString().slice(0, ISO_DATE_LENGTH);
+}
+
 export const businessDateSchema = z.iso
   .date({ error: INVALID_DATE })
   .refine((date) => date >= BUSINESS_DATE_MIN && date < BUSINESS_DATE_MAX, INVALID_DATE);

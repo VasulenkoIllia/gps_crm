@@ -237,6 +237,14 @@ export interface TariffRow extends NamedRecord {
   serverName: string;
 }
 
+// By the module that takes the tariff: `references` knows the column and nothing about who took it (D55)
+export async function markTariffSelected(db: DbOrTx, programId: string, id: string): Promise<void> {
+  await db.tariff.updateMany({
+    where: { id, programId, isActive: true, selectedAt: null },
+    data: { selectedAt: new Date() },
+  });
+}
+
 export async function findTariff(db: DbOrTx, id: string): Promise<TariffRow | null> {
   const row = await db.tariff.findUnique({
     where: { id },

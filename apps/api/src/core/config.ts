@@ -1,3 +1,4 @@
+import { resolve } from "node:path";
 import { z } from "zod";
 
 const DEFAULT_PORT = 3000;
@@ -6,6 +7,8 @@ const MAX_PORT = 65_535;
 const SECRETS_KEY_BYTES = 32;
 // The Vite dev server: in development the browser's Origin is this one, not the API's
 const DEV_APP_URL = "http://localhost:5173";
+// The same relative path from src/ in development and from dist/ in the image, which sets FILES_DIR anyway
+const DEV_FILES_DIR = resolve(import.meta.dirname, "../../../../.tmp/files");
 
 // A key left empty in .env falls back to its default, never to ""
 function withDefault<T extends z.ZodType>(schema: T) {
@@ -28,6 +31,11 @@ const envSchema = z.object({
   APP_VERSION: withDefault(z.string().optional()),
   // Read-only mount of backup-status/ (system.md); empty means no backups here
   BACKUP_STATUS_DIR: withDefault(z.string().optional()),
+  // Only one place to keep files so far (D23); the choice stays a setting, so a second one changes no module
+  FILES_STORAGE: withDefault(z.enum(["local"]).default("local")),
+  FILES_DIR: withDefault(z.string().optional()),
+  // The address of the company's CRM: a link in a client's card then has to lead there (subscribers.md П13)
+  CRM_URL: withDefault(z.url({ protocol: /^https?$/ }).optional()),
   SMTP_HOST: withDefault(z.string().optional()),
   SMTP_PORT: withDefault(z.coerce.number().int().min(1).max(MAX_PORT).default(DEFAULT_SMTP_PORT)),
   SMTP_USER: withDefault(z.string().optional()),
@@ -44,6 +52,11 @@ export interface SmtpConfig {
   auth: { user: string; pass: string } | null;
 }
 
+export interface FilesConfig {
+  storage: "local";
+  dir: string;
+}
+
 export interface AppConfig {
   isProduction: boolean;
   appRole: AppRole;
@@ -56,6 +69,8 @@ export interface AppConfig {
   secretsKey: Buffer;
   appVersion: string | null;
   backupStatusDir: string | null;
+  files: FilesConfig;
+  crmUrl: string | null;
   // Null means no letters: links are passed by hand (D12)
   smtp: SmtpConfig | null;
 }
@@ -78,6 +93,12 @@ function appUrlOf(data: ParsedEnv): string {
   return DEV_APP_URL;
 }
 
+function filesConfigOf(data: ParsedEnv): FilesConfig {
+  if (data.FILES_DIR) return { storage: data.FILES_STORAGE, dir: data.FILES_DIR };
+  if (data.NODE_ENV === "production") throw new Error("Invalid environment (see .env.example): FILES_DIR: required");
+  return { storage: data.FILES_STORAGE, dir: DEV_FILES_DIR };
+}
+
 // Only variable names and rule texts reach the message: a broken DATABASE_URL must not print its password
 export function loadConfig(env: Record<string, string | undefined>): AppConfig {
   const parsed = envSchema.safeParse(env);
@@ -97,6 +118,8 @@ export function loadConfig(env: Record<string, string | undefined>): AppConfig {
     secretsKey: Buffer.from(data.SECRETS_KEY, "base64"),
     appVersion: data.APP_VERSION ?? null,
     backupStatusDir: data.BACKUP_STATUS_DIR ?? null,
+    files: filesConfigOf(data),
+    crmUrl: data.CRM_URL ?? null,
     smtp: smtpConfigOf(data),
   };
 }

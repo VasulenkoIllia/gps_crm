@@ -37,6 +37,22 @@ export function requireAuth(request: FastifyRequest): AuthContext {
   return request.auth;
 }
 
+// Whose clients a person works with: the manager at the level `own`, nobody in particular at `all`. A required argument
+// of every read and write on client data (access.md П2), so a new query cannot forget it.
+export interface RecordScope {
+  managerId: string | null;
+}
+
+// For what the system does on its own account, a restore of a package this person was already let into
+export const ALL_RECORDS: RecordScope = { managerId: null };
+
+export function recordScope(request: FastifyRequest): RecordScope {
+  const { accessScope } = request;
+  // A route with no permission on it has no level to speak of: that is a bug in the route, and it must not show everything
+  if (!accessScope) throw new Error("recordScope needs a route with a permission");
+  return { managerId: accessScope === "own" ? requireAuth(request).userId : null };
+}
+
 function actorOf(request: FastifyRequest): Actor {
   return request.auth ? { kind: "user", id: request.auth.userId } : SYSTEM_ACTOR;
 }

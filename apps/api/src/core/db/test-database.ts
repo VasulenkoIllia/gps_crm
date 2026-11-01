@@ -46,3 +46,35 @@ export function connectTestDatabase(): DbClient {
 export function connectTestAppDatabase(profile?: Parameters<typeof createDbClient>[2]): DbClient {
   return createDbClient(testAppDatabaseUrl(), failOnPoolError, profile);
 }
+
+const STARTING_SERIES = [
+  { name: "Фізособи", rangeFrom: 10_000n, rangeTo: 49_999n, types: ["B2C"] },
+  { name: "Юрособи", rangeFrom: 50_000n, rangeTo: 99_999n, types: ["B2B", "B2G"] },
+] as const;
+
+// Everything of the clients, and the series as the migration left them. Here and not in the module: the tables hold
+// users and tariffs by foreign keys, so the helpers that clear those come through this first.
+export async function clearClientData(owner: DbClient): Promise<void> {
+  await owner.storedFile.deleteMany();
+  await owner.contract.deleteMany();
+  await owner.contact.deleteMany();
+  await owner.payerSubscriber.deleteMany();
+  await owner.payer.deleteMany();
+  await owner.subscriberTariffPeriod.deleteMany();
+  await owner.subscriber.deleteMany();
+  await owner.subscriberIdSeriesType.deleteMany();
+  await owner.subscriberIdSeries.deleteMany();
+  for (const { types, name, rangeFrom, rangeTo } of STARTING_SERIES) {
+    const nameNorm = name.toLowerCase();
+    await owner.subscriberIdSeries.create({
+      data: {
+        name,
+        nameNorm,
+        rangeFrom,
+        rangeTo,
+        nextNumber: rangeFrom,
+        types: { create: types.map((type) => ({ type })) },
+      },
+    });
+  }
+}

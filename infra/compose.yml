@@ -46,6 +46,8 @@ services:
       LOG_LEVEL: ${LOG_LEVEL:-info}
       APP_VERSION: ${IMAGE_TAG:?}
       BACKUP_STATUS_DIR: /backup-status
+      FILES_DIR: /files
+      CRM_URL: ${CRM_URL:-}
       SMTP_HOST: ${SMTP_HOST:-}
       SMTP_PORT: ${SMTP_PORT:-}
       SMTP_USER: ${SMTP_USER:-}
@@ -60,6 +62,8 @@ services:
         read_only: true
         bind:
           create_host_path: false
+      # The files of the contracts. A new named volume takes the owner of the folder in the image, which is the node user.
+      - files-data:/files
     # No published port: Traefik reaches the app over the proxy network
     networks:
       - app-net
@@ -156,6 +160,7 @@ services:
 
 volumes:
   db-data:
+  files-data:
 
 networks:
   app-net:

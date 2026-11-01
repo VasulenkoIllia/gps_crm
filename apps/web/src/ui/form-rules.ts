@@ -26,9 +26,12 @@ export function errorMessage(error: unknown): string {
 // Puts an answer of the server under its field. `renamed` is for a form whose field differs from the name in the answer.
 export function showFieldErrors<T>(form: FormInstance<T>, error: unknown, renamed: Record<string, string> = {}): void {
   if (!(error instanceof ApiError) || !error.fieldErrors) return;
+  // A dot is a nested field: the first contact of a new client answers as `contact.phone`
   const fields = Object.entries(error.fieldErrors).map(([name, message]) => ({
-    name: renamed[name] ?? name,
+    name: (renamed[name] ?? name).split("."),
     errors: [message],
   }));
   form.setFields(fields as Parameters<typeof form.setFields>[0]);
+  const [first] = fields;
+  if (first) form.scrollToField(first.name as Parameters<typeof form.scrollToField>[0]);
 }

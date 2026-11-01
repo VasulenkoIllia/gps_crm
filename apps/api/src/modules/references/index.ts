@@ -1,5 +1,7 @@
 export { REFERENCE_RESTORERS } from "./archive.service.js";
+export { assertVersion, changedFields, hasChanges, notFound, type FieldChanges } from "./references.helpers.js";
 export { registerReferencesRoutes } from "./references.routes.js";
+export { selectTariff, type SelectedTariff } from "./tariffs.service.js";
 
 export const OWNED_TABLES = [
   "programs",

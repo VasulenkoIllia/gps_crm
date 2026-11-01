@@ -11,7 +11,7 @@ import {
   startReferenceClient,
   type PlaceIds,
   type ReferenceClient,
-} from "./references.test-support.js";
+} from "../../test-references.js";
 
 const TOO_EARLY = "Нова ціна не може діяти раніше за чинну";
 const UNKNOWN_ID = "019a0000-0000-7000-8000-000000000000";

@@ -5,7 +5,12 @@ import { LoadError } from "./LoadError";
 
 export type DataTableColumn<T> = TableColumnType<T>;
 
-interface DataTableProps<T> {
+export interface TableSort {
+  key: string;
+  order: "asc" | "desc";
+}
+
+export interface DataTableProps<T> {
   rows: T[] | undefined;
   columns: DataTableColumn<T>[];
   rowKey: keyof T & string;
@@ -15,8 +20,13 @@ interface DataTableProps<T> {
   hasMore?: boolean;
   isLoadingMore?: boolean;
   onLoadMore?: () => void;
+  // The server sorts: a column offers it with `sorter: true` and a `key`, and this says which one is on
+  sort?: TableSort;
+  onSort?: (sort: TableSort | null) => void;
+  onRowClick?: (row: T) => void;
 }
 
+const SORT_ORDERS = { asc: "ascend", desc: "descend" } as const;
 const PINNED_COLUMN_WIDTH_PX = 160;
 // On the cell too: under a max-content table a column's width is only a wish, and a long name would take the whole
 // screen and leave nothing to scroll. It wraps rather than cuts, because a phone has no pointer to show the rest.
@@ -29,10 +39,28 @@ function pinFirst<T>(columns: DataTableColumn<T>[]): DataTableColumn<T>[] {
   );
 }
 
+function withSortOrder<T>(columns: DataTableColumn<T>[], sort: TableSort | undefined): DataTableColumn<T>[] {
+  return columns.map((column) => {
+    if (!column.sorter) return column;
+    const sortOrder = sort && column.key === sort.key ? SORT_ORDERS[sort.order] : null;
+    return { ...column, sortOrder, sortDirections: ["ascend", "descend"] };
+  });
+}
+
+// A press on a link or a button in a row is about that link or button, and text selected to copy is not a press at all
+function isPlainRowClick(target: EventTarget): boolean {
+  const isSelecting = window.getSelection()?.isCollapsed === false;
+  return !isSelecting && !(target as HTMLElement).closest("a, button");
+}
+
 export function DataTable<T extends object>(props: DataTableProps<T>) {
   const { rows, columns, rowKey, error, empty, onRetry, hasMore, isLoadingMore, onLoadMore } = props;
+  const { sort, onSort, onRowClick } = props;
   const isPhone = Grid.useBreakpoint().md === false;
-  const shown = useMemo(() => (isPhone ? pinFirst(columns) : columns), [isPhone, columns]);
+  const shown = useMemo(() => {
+    const sorted = withSortOrder(columns, sort);
+    return isPhone ? pinFirst(sorted) : sorted;
+  }, [isPhone, columns, sort]);
 
   if (!rows) return error ? <LoadError error={error} onRetry={onRetry} /> : <Skeleton active />;
 
@@ -43,7 +71,23 @@ export function DataTable<T extends object>(props: DataTableProps<T>) {
       <FormAlert error={error} />
       {rows.length === 0 && <Empty description={empty} />}
       {rows.length > 0 && (
-        <Table<T> dataSource={rows} columns={shown} rowKey={rowKey} pagination={false} scroll={{ x: "max-content" }} />
+        <Table<T>
+          dataSource={rows}
+          columns={shown}
+          rowKey={rowKey}
+          pagination={false}
+          scroll={{ x: "max-content" }}
+          rowClassName={onRowClick ? "table-row-link" : undefined}
+          onRow={(row) => ({
+            onClick: (event) => {
+              if (onRowClick && isPlainRowClick(event.target)) onRowClick(row);
+            },
+          })}
+          onChange={(_pagination, _filters, sorter) => {
+            const { columnKey, order } = [sorter].flat()[0] ?? {};
+            onSort?.(order ? { key: String(columnKey), order: order === "ascend" ? "asc" : "desc" } : null);
+          }}
+        />
       )}
       {hasMore && (
         <div className="table-footer">

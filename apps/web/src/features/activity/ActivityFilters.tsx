@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Input } from "antd";
 import { useMemo, useState } from "react";
 import { DateFilter, FilterBar, FilterField, FilterSelect } from "../../ui";
+import { SubscriberFilter } from "../subscribers/SubscriberFilter";
 import { ACTIVITY_ACTORS_KEY, fetchActivityActors, type ActivityFilters as Filters } from "./activity.api";
 
 const ID_LABEL = "ID запису";
@@ -83,6 +84,7 @@ export function ActivityFilters({ filters, hasFilters, onChange, onReset }: Acti
         hasError={actors.isError}
         onChange={(value) => onChange("actorId", value)}
       />
+      <SubscriberFilter value={filters.subscriberId} onChange={(value) => onChange("subscriberId", value)} />
       <FilterSelect
         label="Дія"
         value={filters.action}

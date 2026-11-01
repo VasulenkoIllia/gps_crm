@@ -2,6 +2,9 @@ import { MutationCache, QueryCache, QueryClient } from "@tanstack/react-query";
 import { ApiError } from "./api";
 import { loginPath } from "./login-path";
 
+// The root of every RemoteSelect, for whoever changes the records they show
+export const REMOTE_SELECT_KEY = ["remote-select"];
+
 const STALE_TIME_MS = 30_000;
 const MAX_RETRIES = 1;
 const UNAUTHORIZED = 401;

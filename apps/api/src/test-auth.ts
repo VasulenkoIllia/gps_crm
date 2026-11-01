@@ -5,6 +5,7 @@ import { base32Decode, hotp, stepAt } from "./modules/two-factor/index.js";
 import { hashPassword } from "./core/crypto/passwords.js";
 import { openSecret } from "./core/crypto/secrets.js";
 import type { DbClient } from "./core/db/client.js";
+import { clearClientData } from "./core/db/test-database.js";
 import { API_PREFIX } from "./core/deps.js";
 import { testConfig } from "./core/test-app.js";
 
@@ -16,6 +17,7 @@ const TOTP_STEP_MS = 30_000;
 
 // Dependents first: nothing here cascades, on purpose
 export async function clearAuthData(ownerDb: DbClient): Promise<void> {
+  await clearClientData(ownerDb);
   await ownerDb.activityEvent.deleteMany();
   await ownerDb.twoFactorCredential.deleteMany();
   await ownerDb.session.deleteMany();
