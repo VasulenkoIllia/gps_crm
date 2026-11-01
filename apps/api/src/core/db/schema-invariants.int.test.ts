@@ -1,4 +1,5 @@
-import { afterAll, describe, expect, it } from "vitest";
+import { MONEY_MAX_KOP } from "@gps_crm/shared";
+import { afterAll, afterEach, beforeEach, describe, expect, it } from "vitest";
 import { APP_ROLE_NAME } from "./app-role.repository.js";
 import type { DbClient } from "./client.js";
 import { connectTestDatabase } from "./test-database.js";
@@ -7,7 +8,21 @@ import { connectTestDatabase } from "./test-database.js";
 const REQUIRED_EXTENSIONS = ["btree_gist", "pg_stat_statements", "pg_trgm"];
 // pgboss comes from the setup step and not from a migration
 const REQUIRED_SCHEMAS = ["part", "pgboss"];
-const REQUIRED_CHECKS = ["users_email_lowercase"];
+const REQUIRED_CHECKS = [
+  "users_email_lowercase",
+  "tariffs_price_kop_range",
+  "addon_prices_price_kop_range",
+  "cost_prices_cost_kop_range",
+  "programs_inactive_in_package",
+  "monitoring_servers_inactive_in_package",
+  "tariffs_inactive_in_package",
+  "addons_inactive_in_package",
+  "tracker_models_inactive_in_package",
+  "sim_operators_inactive_in_package",
+  "sim_plans_inactive_in_package",
+  "contractors_inactive_in_package",
+  "disconnect_reasons_inactive_in_package",
+];
 // The migrations' own: activity.partitions adds months after these, so the list is a floor
 const REQUIRED_PARTITIONS = [
   "activity_events_2026_11",
@@ -76,6 +91,81 @@ describe("schema invariants", () => {
     const role = await db.role.findUniqueOrThrow({ where: { key: "manager" } });
     const attempt = db.user.create({ data: { email: "Mixed@Example.test", fullName: "Тест", roleId: role.id } });
     await expect(attempt).rejects.toThrow(/users_email_lowercase/);
+  });
+
+  describe("the references, whoever writes the row", () => {
+    const NAME_PREFIX = "invariants";
+
+    async function clearRows(): Promise<void> {
+      const names = { startsWith: NAME_PREFIX };
+      await db.tariff.deleteMany({ where: { nameNorm: names } });
+      await db.monitoringServer.deleteMany({ where: { nameNorm: names } });
+      await db.addon.deleteMany({ where: { nameNorm: names } });
+      await db.program.deleteMany({ where: { nameNorm: names } });
+    }
+
+    // At the start as well: a test that failed halfway leaves its unique names behind
+    beforeEach(clearRows);
+    afterEach(clearRows);
+
+    async function createServer() {
+      const [program, other] = await Promise.all([
+        db.program.create({ data: { name: "Перша", nameNorm: `${NAME_PREFIX} перша` } }),
+        db.program.create({ data: { name: "Друга", nameNorm: `${NAME_PREFIX} друга` } }),
+      ]);
+      const server = await db.monitoringServer.create({
+        data: { programId: program.id, name: "Сервер", nameNorm: `${NAME_PREFIX} сервер` },
+      });
+      const tariff = {
+        serverId: server.id,
+        name: "Тариф",
+        nameNorm: `${NAME_PREFIX} тариф`,
+        billingModel: "month",
+        priceKop: 1n,
+      } as const;
+      return { program, other, server, tariff };
+    }
+
+    it("holds a tariff to a server of its own program", async () => {
+      const { program, other, server, tariff } = await createServer();
+
+      const foreign = db.tariff.create({ data: { ...tariff, programId: other.id } });
+      await expect(foreign).rejects.toThrow(/tariffs_server_id_program_id_fkey|Foreign key/);
+
+      await db.tariff.create({ data: { ...tariff, programId: program.id } });
+      const moved = db.monitoringServer.update({ where: { id: server.id }, data: { programId: other.id } });
+      await expect(moved).rejects.toThrow(/tariffs_server_id_program_id_fkey|Foreign key/);
+    });
+
+    it("keeps every sum above zero and inside what the API can carry", async () => {
+      const { program, tariff } = await createServer();
+      const addon = await db.addon.create({ data: { name: "Послуга", nameNorm: `${NAME_PREFIX} послуга` } });
+      const addonPrice = { addonId: addon.id, validFrom: new Date("2026-01-01") };
+      const cost = { subjectType: "addon", subjectId: addon.id, validFrom: new Date("2026-01-01") } as const;
+
+      for (const kop of [0n, BigInt(MONEY_MAX_KOP) + 1n]) {
+        await expect(db.tariff.create({ data: { ...tariff, programId: program.id, priceKop: kop } })).rejects.toThrow(
+          /tariffs_price_kop_range/,
+        );
+        await expect(db.addonPrice.create({ data: { ...addonPrice, priceKop: kop } })).rejects.toThrow(
+          /addon_prices_price_kop_range/,
+        );
+        await expect(db.costPrice.create({ data: { ...cost, costKop: kop } })).rejects.toThrow(
+          /cost_prices_cost_kop_range/,
+        );
+      }
+
+      // The same limit as the API's: what it accepts must not end as a 500 here
+      const largest = await db.addonPrice.create({ data: { ...addonPrice, priceKop: BigInt(MONEY_MAX_KOP) } });
+      await db.addonPrice.delete({ where: { id: largest.id } });
+    });
+
+    it("keeps a deactivated record in a package of the archive, the only way back", async () => {
+      const lost = db.program.create({
+        data: { name: "Без пакета", nameNorm: `${NAME_PREFIX} без пакета`, isActive: false },
+      });
+      await expect(lost).rejects.toThrow(/programs_inactive_in_package/);
+    });
   });
 
   it("runs on PostgreSQL 18 or newer, which uuidv7() needs", async () => {

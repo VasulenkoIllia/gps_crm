@@ -1,4 +1,5 @@
 import {
+  ACTIVITY_ENTITY_LABEL_FIELD,
   decodeActivityCursor,
   encodeActivityCursor,
   type ActivityActorList,
@@ -53,6 +54,7 @@ function splitPayload(payload: unknown): Pick<ActivityEvent, "changes" | "detail
   const details: ActivityEvent["details"] = [];
   if (typeof payload !== "object" || payload === null) return { changes, details };
   for (const [field, value] of Object.entries(payload)) {
+    if (field === ACTIVITY_ENTITY_LABEL_FIELD) continue;
     if (Array.isArray(value) && value.length === 2) changes.push({ field, before: value[0], after: value[1] });
     else details.push({ field, value });
   }
@@ -90,7 +92,7 @@ export async function listActivity(db: DbOrTx, query: ActivityListQuery): Promis
       e.action,
       e.entity_type AS "entityType",
       e.entity_id::text AS "entityId",
-      target.full_name AS "entityLabel",
+      COALESCE(target.full_name, e.changes ->> ${ACTIVITY_ENTITY_LABEL_FIELD}) AS "entityLabel",
       e.changes AS payload,
       e.ip,
       e.request_id AS "requestId"

@@ -1,11 +1,9 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test } from "@playwright/test";
 import pg from "pg";
-import { ADMIN_SESSION_FILE } from "./support.ts";
+import { ADMIN_SESSION_FILE, expectNoSidewaysScroll, PHONE, TABLET } from "./support.ts";
 
 const NEW_NAME = "Адмін Журналу";
 const JOB_TITLE = "Партиції журналу дій";
-const PHONE = { width: 390, height: 844 };
-const TABLET = { width: 768, height: 1024 };
 
 async function addArchiveBatch(label: string): Promise<void> {
   const client = new pg.Client({ connectionString: process.env.E2E_DATABASE_URL });
@@ -18,13 +16,6 @@ async function addArchiveBatch(label: string): Promise<void> {
   } finally {
     await client.end();
   }
-}
-
-async function expectNoSidewaysScroll(page: Page): Promise<void> {
-  const overflow = await page.evaluate<number>(
-    "document.documentElement.scrollWidth - document.documentElement.clientWidth",
-  );
-  expect(overflow).toBeLessThanOrEqual(0);
 }
 
 // After auth.spec.ts, on its database and its administrator: step 2 has nothing of its own to sign in with

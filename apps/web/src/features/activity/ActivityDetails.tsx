@@ -11,7 +11,7 @@ function eventFacts(event: ActivityEvent): Fact[] {
     { label: "Запис", value: entityText(event) },
     ...event.details.map(({ field, value }) => ({
       label: activityFieldLabel(field),
-      value: formatActivityValue(value),
+      value: formatActivityValue(value, field),
     })),
     { label: "IP", value: code(event.ip) },
     { label: "Номер запиту", value: code(event.requestId) },
@@ -26,8 +26,8 @@ function Changes({ event }: { event: ActivityEvent }) {
         {event.changes.map(({ field, before, after }) => (
           <li key={field}>
             <strong>{activityFieldLabel(field)}</strong>
-            <div>Було: {formatActivityValue(before)}</div>
-            <div>Стало: {formatActivityValue(after)}</div>
+            <div>Було: {formatActivityValue(before, field)}</div>
+            <div>Стало: {formatActivityValue(after, field)}</div>
           </li>
         ))}
       </ul>

@@ -18,6 +18,11 @@ export function formatDateTime(value: string): string {
   return dayjs(value).tz().format(DATE_TIME_FORMAT);
 }
 
+// A business date has no zone to convert, so it is only turned around
+export function formatDate(value: string): string {
+  return value.split("-").reverse().join(".");
+}
+
 // Strict: dayjs alone would roll a thirteenth month over into the next year
 export function isDateValue(value: string): boolean {
   return DATE_VALUE.test(value) && dayjs.utc(value).format(DATE_VALUE_FORMAT) === value;

@@ -13,6 +13,10 @@ export interface ActivityContext {
   requestId: string | null;
 }
 
+export function actorIdOf(context: ActivityContext): string | null {
+  return context.actor.kind === "user" ? context.actor.id : null;
+}
+
 export interface ActivityEventInput {
   action: ActivityAction;
   entityType?: string;
@@ -26,19 +30,16 @@ export interface ActivityEventInput {
 // The one way into the journal (activity.md П1): pass the service's transaction, so a failed record undoes the change.
 // The runtime role may only insert here, a change of a row is refused by the database.
 export async function recordActivity(db: DbOrTx, context: ActivityContext, event: ActivityEventInput): Promise<void> {
-  await db.activityEvent.create({
-    data: {
-      actorKind: context.actor.kind,
-      actorId: context.actor.kind === "user" ? context.actor.id : null,
-      action: event.action,
-      entityType: event.entityType,
-      entityId: event.entityId,
-      changes: toJson(event),
-      ip: context.ip,
-      requestId: context.requestId,
-      retentionClass: event.retentionClass ?? "standard",
-    },
-  });
+  await db.activityEvent.create({ data: toRow(context, event) });
+}
+
+// A package in one statement, so a mass action costs the transaction the same at 5 records and at 5 000 (activity.md §11)
+export async function recordActivities(
+  db: DbOrTx,
+  context: ActivityContext,
+  events: ActivityEventInput[],
+): Promise<void> {
+  await db.activityEvent.createMany({ data: events.map((event) => toRow(context, event)) });
 }
 
 // The month in hand and this many ahead (activity.md П6). The owner's function does the work: the runtime role has no DDL.
@@ -58,6 +59,20 @@ export async function ensureActivityPartitions(
     SELECT created, stranded FROM ensure_activity_partitions(${monthsAhead}::integer)
   `;
   return { created: rows[0]?.created ?? 0, stranded: Number(rows[0]?.stranded ?? 0) };
+}
+
+function toRow(context: ActivityContext, event: ActivityEventInput) {
+  return {
+    actorKind: context.actor.kind,
+    actorId: actorIdOf(context),
+    action: event.action,
+    entityType: event.entityType,
+    entityId: event.entityId,
+    changes: toJson(event),
+    ip: context.ip,
+    requestId: context.requestId,
+    retentionClass: event.retentionClass ?? "standard",
+  };
 }
 
 function toJson(event: ActivityEventInput): Prisma.InputJsonValue | undefined {

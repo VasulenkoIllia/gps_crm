@@ -27,7 +27,15 @@ export const ACTIVITY_ACTIONS = {
   "user.profile_updated": "Зміна профілю",
   "user.blocked": "Блокування",
   "user.unblocked": "Розблокування",
+  "record.archived": "Архівування",
   "record.restored": "Відновлення з архіву",
+  "reference.created": "Новий запис довідника",
+  "reference.updated": "Зміна запису довідника",
+  "reference.deactivated": "Деактивація запису довідника",
+  "reference.restored": "Відновлення запису довідника",
+  "reference.tariff_version_created": "Нова версія тарифу",
+  "reference.price_added": "Нова ціна послуги",
+  "reference.cost_added": "Нова собівартість",
   "job.run_requested": "Ручний запуск задачі",
   "system.deployed": "Нова версія",
 } as const;
@@ -40,6 +48,15 @@ export const ACTIVITY_ENTITY_TYPES = {
   user: "Користувач",
   job: "Фонова задача",
   archive_batch: "Пакет архіву",
+  program: "Програма",
+  monitoring_server: "Сервер",
+  tariff: "Тариф",
+  addon: "Послуга",
+  tracker_model: "Модель трекера",
+  sim_operator: "Оператор SIM",
+  sim_plan: "Тариф оператора SIM",
+  contractor: "Підрядник",
+  disconnect_reason: "Причина відключення",
 } as const;
 
 export type ActivityEntityType = keyof typeof ACTIVITY_ENTITY_TYPES;
@@ -63,7 +80,23 @@ export const ACTIVITY_FIELD_LABELS: Record<string, string> = {
   itemCount: "Кількість записів",
   kind: "Вид записів",
   job: "Задача",
+  name: "Назва",
+  note: "Примітка",
+  sortOrder: "Порядок у списку",
+  url: "Адреса",
+  program: "Програма",
+  programs: "Програми",
+  server: "Сервер",
+  operator: "Оператор",
+  billingModel: "Період",
+  priceKop: "Ціна",
+  costKop: "Собівартість",
+  validFrom: "Діє з",
+  basedOn: "На основі тарифу",
 };
+
+// A detail that names the record: the journal shows it in the column «Запис» and not among the facts (activity.queries.ts)
+export const ACTIVITY_ENTITY_LABEL_FIELD = "label";
 
 // The moment to the microsecond, as text: a Date stops at milliseconds, and a page could then lose a row of the same one
 const ACTIVITY_CURSOR = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}Z_[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}$/;

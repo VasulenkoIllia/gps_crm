@@ -142,6 +142,255 @@
   },
   {
     "method": "GET",
+    "url": "/api/v1/references/addons",
+    "access": "can:subscribers.read"
+  },
+  {
+    "method": "HEAD",
+    "url": "/api/v1/references/addons",
+    "access": "can:subscribers.read",
+    "derived": true
+  },
+  {
+    "method": "POST",
+    "url": "/api/v1/references/addons",
+    "access": "can:references.manage"
+  },
+  {
+    "method": "PATCH",
+    "url": "/api/v1/references/addons/:id",
+    "access": "can:references.manage"
+  },
+  {
+    "method": "POST",
+    "url": "/api/v1/references/addons/:id/deactivate",
+    "access": "can:references.manage"
+  },
+  {
+    "method": "POST",
+    "url": "/api/v1/references/addons/:id/prices",
+    "access": "can:references.manage"
+  },
+  {
+    "method": "GET",
+    "url": "/api/v1/references/contractors",
+    "access": "can:subscribers.read"
+  },
+  {
+    "method": "HEAD",
+    "url": "/api/v1/references/contractors",
+    "access": "can:subscribers.read",
+    "derived": true
+  },
+  {
+    "method": "POST",
+    "url": "/api/v1/references/contractors",
+    "access": "can:references.manage"
+  },
+  {
+    "method": "PATCH",
+    "url": "/api/v1/references/contractors/:id",
+    "access": "can:references.manage"
+  },
+  {
+    "method": "POST",
+    "url": "/api/v1/references/contractors/:id/deactivate",
+    "access": "can:references.manage"
+  },
+  {
+    "method": "POST",
+    "url": "/api/v1/references/cost-prices",
+    "access": "can:references.manage"
+  },
+  {
+    "method": "GET",
+    "url": "/api/v1/references/disconnect-reasons",
+    "access": "can:subscribers.read"
+  },
+  {
+    "method": "HEAD",
+    "url": "/api/v1/references/disconnect-reasons",
+    "access": "can:subscribers.read",
+    "derived": true
+  },
+  {
+    "method": "POST",
+    "url": "/api/v1/references/disconnect-reasons",
+    "access": "can:references.manage"
+  },
+  {
+    "method": "PATCH",
+    "url": "/api/v1/references/disconnect-reasons/:id",
+    "access": "can:references.manage"
+  },
+  {
+    "method": "POST",
+    "url": "/api/v1/references/disconnect-reasons/:id/deactivate",
+    "access": "can:references.manage"
+  },
+  {
+    "method": "GET",
+    "url": "/api/v1/references/programs",
+    "access": "can:subscribers.read"
+  },
+  {
+    "method": "HEAD",
+    "url": "/api/v1/references/programs",
+    "access": "can:subscribers.read",
+    "derived": true
+  },
+  {
+    "method": "POST",
+    "url": "/api/v1/references/programs",
+    "access": "can:references.manage"
+  },
+  {
+    "method": "PATCH",
+    "url": "/api/v1/references/programs/:id",
+    "access": "can:references.manage"
+  },
+  {
+    "method": "POST",
+    "url": "/api/v1/references/programs/:id/deactivate",
+    "access": "can:references.manage"
+  },
+  {
+    "method": "GET",
+    "url": "/api/v1/references/servers",
+    "access": "can:subscribers.read"
+  },
+  {
+    "method": "HEAD",
+    "url": "/api/v1/references/servers",
+    "access": "can:subscribers.read",
+    "derived": true
+  },
+  {
+    "method": "POST",
+    "url": "/api/v1/references/servers",
+    "access": "can:references.manage"
+  },
+  {
+    "method": "PATCH",
+    "url": "/api/v1/references/servers/:id",
+    "access": "can:references.manage"
+  },
+  {
+    "method": "POST",
+    "url": "/api/v1/references/servers/:id/deactivate",
+    "access": "can:references.manage"
+  },
+  {
+    "method": "GET",
+    "url": "/api/v1/references/sim-operators",
+    "access": "can:subscribers.read"
+  },
+  {
+    "method": "HEAD",
+    "url": "/api/v1/references/sim-operators",
+    "access": "can:subscribers.read",
+    "derived": true
+  },
+  {
+    "method": "POST",
+    "url": "/api/v1/references/sim-operators",
+    "access": "can:references.manage"
+  },
+  {
+    "method": "PATCH",
+    "url": "/api/v1/references/sim-operators/:id",
+    "access": "can:references.manage"
+  },
+  {
+    "method": "POST",
+    "url": "/api/v1/references/sim-operators/:id/deactivate",
+    "access": "can:references.manage"
+  },
+  {
+    "method": "GET",
+    "url": "/api/v1/references/sim-plans",
+    "access": "can:subscribers.read"
+  },
+  {
+    "method": "HEAD",
+    "url": "/api/v1/references/sim-plans",
+    "access": "can:subscribers.read",
+    "derived": true
+  },
+  {
+    "method": "POST",
+    "url": "/api/v1/references/sim-plans",
+    "access": "can:references.manage"
+  },
+  {
+    "method": "PATCH",
+    "url": "/api/v1/references/sim-plans/:id",
+    "access": "can:references.manage"
+  },
+  {
+    "method": "POST",
+    "url": "/api/v1/references/sim-plans/:id/deactivate",
+    "access": "can:references.manage"
+  },
+  {
+    "method": "GET",
+    "url": "/api/v1/references/tariffs",
+    "access": "can:subscribers.read"
+  },
+  {
+    "method": "HEAD",
+    "url": "/api/v1/references/tariffs",
+    "access": "can:subscribers.read",
+    "derived": true
+  },
+  {
+    "method": "POST",
+    "url": "/api/v1/references/tariffs",
+    "access": "can:references.manage"
+  },
+  {
+    "method": "PATCH",
+    "url": "/api/v1/references/tariffs/:id",
+    "access": "can:references.manage"
+  },
+  {
+    "method": "POST",
+    "url": "/api/v1/references/tariffs/:id/deactivate",
+    "access": "can:references.manage"
+  },
+  {
+    "method": "POST",
+    "url": "/api/v1/references/tariffs/:id/new-version",
+    "access": "can:references.manage"
+  },
+  {
+    "method": "GET",
+    "url": "/api/v1/references/tracker-models",
+    "access": "can:subscribers.read"
+  },
+  {
+    "method": "HEAD",
+    "url": "/api/v1/references/tracker-models",
+    "access": "can:subscribers.read",
+    "derived": true
+  },
+  {
+    "method": "POST",
+    "url": "/api/v1/references/tracker-models",
+    "access": "can:references.manage"
+  },
+  {
+    "method": "PATCH",
+    "url": "/api/v1/references/tracker-models/:id",
+    "access": "can:references.manage"
+  },
+  {
+    "method": "POST",
+    "url": "/api/v1/references/tracker-models/:id/deactivate",
+    "access": "can:references.manage"
+  },
+  {
+    "method": "GET",
     "url": "/api/v1/system/jobs",
     "access": "can:system.read"
   },

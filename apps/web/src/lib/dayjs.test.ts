@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { formatDateTime, isDateValue, startOfDay, startOfNextDay } from "./dayjs";
+import { formatDate, formatDateTime, isDateValue, startOfDay, startOfNextDay } from "./dayjs";
+
+describe("formatDate", () => {
+  it("turns a business date around, with no zone to shift it", () => {
+    expect(formatDate("2027-03-01")).toBe("01.03.2027");
+  });
+});
 
 describe("formatDateTime", () => {
   it("shows Kyiv time in winter and in summer, whatever the device's zone", () => {

@@ -5,6 +5,8 @@ export const ADMIN_EMAIL = "admin@example.test";
 export const PASSWORD = "довгий пароль для наскрізного тесту";
 // A signed-in administrator for the specs after auth.spec.ts: 2FA codes stay with the Authenticator of that file
 export const ADMIN_SESSION_FILE = ".tmp/e2e-admin-session.json";
+export const PHONE = { width: 390, height: 844 };
+export const TABLET = { width: 768, height: 1024 };
 
 const STEP_MS = 30_000;
 const POLL_MS = 500;
@@ -39,6 +41,13 @@ export class Authenticator {
     this.lastStep = step;
     return hotp(this.key, step);
   }
+}
+
+export async function expectNoSidewaysScroll(page: Page): Promise<void> {
+  const overflow = await page.evaluate<number>(
+    "document.documentElement.scrollWidth - document.documentElement.clientWidth",
+  );
+  expect(overflow).toBeLessThanOrEqual(0);
 }
 
 export async function fillLogin(page: Page, email: string, password: string): Promise<void> {

@@ -1,5 +1,5 @@
 import type { ActivityContext } from "../../core/activity/activity.repository.js";
-import { recordActivity } from "../../core/activity/activity.repository.js";
+import { actorIdOf, recordActivity } from "../../core/activity/activity.repository.js";
 import type { DbClient, DbOrTx } from "../../core/db/client.js";
 import { AppError } from "../../core/errors.js";
 import * as queries from "./activity.queries.js";
@@ -14,17 +14,21 @@ export const listActivity = queries.listActivity;
 export const listActivityActors = queries.listActivityActors;
 export const listArchive = queries.listArchive;
 
-function actorIdOf(context: ActivityContext): string | null {
-  return context.actor.kind === "user" ? context.actor.id : null;
-}
-
-// The entry for a module's own transaction: it then marks its records with this id (activity.md П5)
-export function openArchiveBatch(
+// The entry for a module's own transaction: it then marks its records with this id (activity.md П5). The package gets one
+// line of the journal, and each record writes its own (§11).
+export async function openArchiveBatch(
   tx: DbOrTx,
   context: ActivityContext,
   input: Omit<repo.ArchiveBatchInput, "archivedBy">,
 ): Promise<string> {
-  return repo.createArchiveBatch(tx, { ...input, archivedBy: actorIdOf(context) });
+  const id = await repo.createArchiveBatch(tx, { ...input, archivedBy: actorIdOf(context) });
+  await recordActivity(tx, context, {
+    action: "record.archived",
+    entityType: "archive_batch",
+    entityId: id,
+    details: { label: input.label, kind: input.entityType, itemCount: input.itemCount },
+  });
+  return id;
 }
 
 export async function restoreArchiveBatch(
