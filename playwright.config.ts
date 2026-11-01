@@ -5,6 +5,7 @@ import { defineConfig, devices } from "@playwright/test";
 export const WITH_MAIL_URL = "http://localhost:3198";
 export const NO_MAIL_URL = "http://localhost:3197";
 const BACKUP_STATUS_DIR = join(import.meta.dirname, ".tmp/backup-status");
+const FILES_DIR = join(import.meta.dirname, ".tmp/e2e-files");
 
 const SERVER_START_TIMEOUT_MS = 90_000;
 const TEST_TIMEOUT_MS = 120_000;
@@ -33,6 +34,7 @@ const serverEnv = (url: string): Record<string, string> => ({
   SECRETS_KEY: requireEnv("SECRETS_KEY"),
   APP_VERSION: "sha-e2e",
   BACKUP_STATUS_DIR,
+  FILES_DIR,
 });
 
 export default defineConfig({

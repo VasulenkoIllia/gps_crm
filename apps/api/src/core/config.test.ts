@@ -18,8 +18,21 @@ describe("loadConfig", () => {
       secretsKey: Buffer.alloc(32, 1),
       appVersion: null,
       backupStatusDir: null,
+      files: { storage: "local", dir: expect.stringMatching(/\.tmp\/files$/) as string },
+      crmUrl: null,
       smtp: null,
     });
+  });
+
+  it("needs a folder for the files in production", () => {
+    const production = { ...BASE, NODE_ENV: "production", APP_URL: "https://app.example.test" };
+    expect(() => loadConfig(production)).toThrow("FILES_DIR: required");
+    expect(loadConfig({ ...production, FILES_DIR: "/files" }).files).toEqual({ storage: "local", dir: "/files" });
+  });
+
+  it("takes the address of the CRM, and only a real one", () => {
+    expect(loadConfig({ ...BASE, CRM_URL: "https://crm.example.test" }).crmUrl).toBe("https://crm.example.test");
+    expect(() => loadConfig({ ...BASE, CRM_URL: "crm" })).toThrow("CRM_URL");
   });
 
   it("takes the version and the folder of the backup status", () => {
@@ -68,10 +81,9 @@ describe("loadConfig", () => {
   });
 
   it("needs the address of the app in production", () => {
-    expect(() => loadConfig({ ...BASE, NODE_ENV: "production" })).toThrow(/APP_URL/);
-    expect(loadConfig({ ...BASE, NODE_ENV: "production", APP_URL: "https://app.example.test/" }).appUrl).toBe(
-      "https://app.example.test",
-    );
+    const production = { ...BASE, NODE_ENV: "production", FILES_DIR: "/files" };
+    expect(() => loadConfig(production)).toThrow(/APP_URL/);
+    expect(loadConfig({ ...production, APP_URL: "https://app.example.test/" }).appUrl).toBe("https://app.example.test");
   });
 
   it("reads SMTP as one group", () => {

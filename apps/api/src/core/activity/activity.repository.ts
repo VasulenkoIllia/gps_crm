@@ -21,6 +21,10 @@ export interface ActivityEventInput {
   action: ActivityAction;
   entityType?: string;
   entityId?: string;
+  // The client the record belongs to: what the journal of a card and the level `own` of access go by
+  subscriberId?: string;
+  // The whole record, for what is gone after this line (03-data-model.md §3.5)
+  snapshot?: Prisma.InputJsonValue;
   // { field: [before, after] }, changed fields only; a secret gets the fact of the change and never a value (П3)
   changes?: Record<string, [unknown, unknown]>;
   details?: Record<string, string | number | boolean | null>;
@@ -68,6 +72,8 @@ function toRow(context: ActivityContext, event: ActivityEventInput) {
     action: event.action,
     entityType: event.entityType,
     entityId: event.entityId,
+    subscriberId: event.subscriberId,
+    snapshot: event.snapshot,
     changes: toJson(event),
     ip: context.ip,
     requestId: context.requestId,

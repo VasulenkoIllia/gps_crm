@@ -73,6 +73,20 @@ export function createTariff(
   });
 }
 
+export type SelectedTariff = repo.TariffRow;
+
+// A client or an object takes a tariff, in their own transaction (D55). The mark comes first: taking the row lock only when
+// the tariff is fresh, there is nothing to deadlock on later, and a tariff already chosen costs one read. The condition
+// on selected_at is what the write below it waits on, so the price cannot change once this has committed.
+export async function selectTariff(tx: DbOrTx, programId: string, tariffId: string): Promise<SelectedTariff> {
+  await repo.markTariffSelected(tx, programId, tariffId);
+  const tariff = await repo.findTariff(tx, tariffId);
+  if (tariff?.isActive && tariff.programId === programId) return tariff;
+  const program = await repo.findNamed(tx, "programs", programId);
+  const message = program ? `Оберіть тариф програми ${program.name}` : PROGRAM_REQUIRED;
+  throw new AppError(422, "tariff_unavailable", message, { [program ? "tariffId" : "programId"]: message });
+}
+
 // `selectedAt: null` in the write as well as the check here: a client's form can take the tariff in between, and its
 // transaction does not wait for this lock
 async function writeFrozenFields(

@@ -8,14 +8,20 @@ import {
   DetailDrawer,
   DictSelect,
   EmptyValue,
+  EntityLink,
+  ExternalLink,
   FactList,
+  FileInput,
   FilterBar,
   FilterSelect,
   Money,
   MoneyInput,
   NothingFound,
   Panel,
+  Phone,
+  RemoteSelect,
   RowActions,
+  SearchField,
   StatusTag,
 } from "../../ui";
 
@@ -33,7 +39,11 @@ const SAMPLE_AMOUNT_KOP = 1_234_550;
 const SAMPLE_DATE = "2027-03-01";
 const SAMPLE_ACTIONS = [{ key: "edit", label: "Змінити" }];
 
+const SAMPLE_PHONE = "+380501112233";
+
 const noop = () => undefined;
+const searchSamples = (text: string) =>
+  Promise.resolve(SAMPLE_OPTIONS.filter(({ label }) => label.toLowerCase().includes(text.toLowerCase())));
 
 export function ShowcaseLists() {
   const [choice, setChoice] = useState<string>();
@@ -41,6 +51,9 @@ export function ShowcaseLists() {
   const [isDrawerOpen, setDrawerOpen] = useState(false);
   const [formDate, setFormDate] = useState<string | undefined>(SAMPLE_DATE);
   const [dictValue, setDictValue] = useState("second");
+  const [search, setSearch] = useState<string>();
+  const [remote, setRemote] = useState<string>();
+  const [file, setFile] = useState<File | null>(null);
   const reset = () => {
     setChoice(undefined);
     setDate(undefined);
@@ -85,6 +98,29 @@ export function ShowcaseLists() {
             options={DICT_OPTIONS}
             onChange={setDictValue}
           />
+        </div>
+      </Panel>
+
+      <Panel title="Пошук на сервері, посилання, файл">
+        <FilterBar hasFilters={Boolean(search || remote)} onReset={noop}>
+          <SearchField label="Пошук" placeholder="Із затримкою 300 мс" value={search} onChange={setSearch} />
+        </FilterBar>
+        <FactList
+          items={[
+            { label: "Телефон", value: <Phone value={SAMPLE_PHONE} /> },
+            { label: "Запис", value: <EntityLink to="/ui">Назва запису</EntityLink> },
+            { label: "Зовнішнє посилання", value: <ExternalLink href="https://example.test">Відкрити</ExternalLink> },
+          ]}
+        />
+        <div className="showcase-form">
+          <RemoteSelect
+            aria-label="Вибір із серверного пошуку"
+            name="showcase"
+            value={remote}
+            search={searchSamples}
+            onChange={setRemote}
+          />
+          <FileInput label="Файл" accept=".pdf" value={file} onChange={setFile} />
         </div>
       </Panel>
 

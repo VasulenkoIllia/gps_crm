@@ -14,8 +14,13 @@ describe("activityQuery", () => {
   });
 
   it("passes the other filters and the cursor as they are", () => {
-    const query = activityQuery({ action: "user.blocked", entityType: "user" }, "next");
-    expect(asParams(query)).toEqual({ action: "user.blocked", entityType: "user", cursor: "next" });
+    const query = activityQuery({ action: "user.blocked", entityType: "user", subscriberId: "client" }, "next");
+    expect(asParams(query)).toEqual({
+      action: "user.blocked",
+      entityType: "user",
+      subscriberId: "client",
+      cursor: "next",
+    });
   });
 
   it("leaves out a date edited by hand into something else", () => {

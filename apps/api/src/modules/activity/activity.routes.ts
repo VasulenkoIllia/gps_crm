@@ -7,7 +7,7 @@ import {
   type ArchiveList,
 } from "@gps_crm/shared";
 import type { FastifyInstance } from "fastify";
-import { activityContext, can } from "../../core/access/access.js";
+import { activityContext, can, recordScope } from "../../core/access/access.js";
 import { API_PREFIX, type AppDeps } from "../../core/deps.js";
 import { parseInput } from "../../core/http/validate.js";
 import {
@@ -22,7 +22,7 @@ const NO_CONTENT = 204;
 
 export function registerActivityRoutes(app: FastifyInstance, deps: AppDeps, restorers: ArchiveRestorers): void {
   app.get(`${API_PREFIX}/activity`, { config: { access: can("activity.read") } }, (request): Promise<ActivityList> => {
-    return listActivity(deps.db, parseInput(activityListQuerySchema, request.query));
+    return listActivity(deps.db, parseInput(activityListQuerySchema, request.query), recordScope(request));
   });
 
   // The filter by person: open to whoever reads the journal, unlike the list of users
@@ -33,7 +33,7 @@ export function registerActivityRoutes(app: FastifyInstance, deps: AppDeps, rest
   );
 
   app.get(`${API_PREFIX}/archive`, { config: { access: can("records.archive") } }, (request): Promise<ArchiveList> => {
-    return listArchive(deps.db, parseInput(archiveListQuerySchema, request.query));
+    return listArchive(deps.db, parseInput(archiveListQuerySchema, request.query), recordScope(request));
   });
 
   app.post(
@@ -41,7 +41,7 @@ export function registerActivityRoutes(app: FastifyInstance, deps: AppDeps, rest
     { config: { access: can("records.archive") } },
     async (request, reply) => {
       const { batchId } = parseInput(archiveBatchParamsSchema, request.params);
-      await restoreArchiveBatch(deps.db, restorers, activityContext(request), batchId);
+      await restoreArchiveBatch(deps.db, restorers, activityContext(request), batchId, recordScope(request));
       return reply.code(NO_CONTENT).send();
     },
   );

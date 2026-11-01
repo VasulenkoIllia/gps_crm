@@ -1,5 +1,5 @@
 import { firstOfNextMonth, parseMoneyToKop, todayKyiv, type DatedPrice } from "@gps_crm/shared";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient, type QueryClient } from "@tanstack/react-query";
 import { App, type FormInstance } from "antd";
 import { ApiError } from "../../lib/api";
 import { showFieldErrors } from "../../ui";
@@ -24,11 +24,14 @@ export function toDatedPrice(amount: string, validFrom: string): DatedPrice {
 // What the form cannot put under a field of its own stands on top of it, or it would not show at all
 export function formLevelError(error: unknown, fields: string[], renamed: Record<string, string> = {}): unknown {
   if (!(error instanceof ApiError) || !error.fieldErrors) return error;
-  const isPlaced = Object.keys(error.fieldErrors).every((name) => fields.includes(renamed[name] ?? name));
+  const isPlaced = Object.keys(error.fieldErrors).every((name) => {
+    const [top = ""] = (renamed[name] ?? name).split(".");
+    return fields.includes(top);
+  });
   return isPlaced ? null : error;
 }
 
-interface ReferenceSaveOptions<T> {
+interface ReferenceSaveOptions<T, R> {
   form: FormInstance<T>;
   // A name in the answer that differs from the field of the form (the API speaks kopecks, the form text)
   renamed?: Record<string, string>;
@@ -36,13 +39,21 @@ interface ReferenceSaveOptions<T> {
   clearFields?: string[];
   isNew?: boolean;
   onDone: () => void;
+  // What else a change touches. Without it, the lists of the reference module
+  refresh?: (client: QueryClient) => void;
+  // The label of the second way to save, for a form with a word of its own
+  addAnotherText?: string;
+  // What the toast says, and what follows a save that closes the form
+  savedText?: (result: R) => string;
+  onSaved?: (result: R) => void;
 }
 
-export function useReferenceSave<I, T extends object>(
-  save: (input: I) => Promise<unknown>,
-  options: ReferenceSaveOptions<T>,
+export function useRecordSave<I, T extends object, R>(
+  save: (input: I) => Promise<R>,
+  options: ReferenceSaveOptions<T, R>,
 ) {
-  const { form, renamed, clearFields, isNew, onDone } = options;
+  const { form, renamed, clearFields, isNew, onDone, addAnotherText, savedText, onSaved } = options;
+  const refresh = options.refresh ?? refreshAfterChange;
   const client = useQueryClient();
   const { message } = App.useApp();
 
@@ -56,15 +67,19 @@ export function useReferenceSave<I, T extends object>(
 
   const mutation = useMutation({
     mutationFn: ({ input }: { input: I; isAddingAnother: boolean }) => save(input),
-    onSuccess: (_, { isAddingAnother }) => {
-      refreshAfterChange(client);
-      void message.success(SAVED);
-      if (isAddingAnother) startNextRecord();
-      else onDone();
+    onSuccess: (result, { isAddingAnother }) => {
+      refresh(client);
+      void message.success(savedText?.(result) ?? SAVED);
+      if (isAddingAnother) {
+        startNextRecord();
+        return;
+      }
+      onDone();
+      onSaved?.(result);
     },
     onError: (error) => {
       showFieldErrors(form, error, renamed);
-      if (error instanceof ApiError && STALE_FORM_STATUSES.includes(error.status)) refreshAfterChange(client);
+      if (error instanceof ApiError && STALE_FORM_STATUSES.includes(error.status)) refresh(client);
     },
   });
 
@@ -73,7 +88,7 @@ export function useReferenceSave<I, T extends object>(
     modal: {
       form,
       submitLabel: SAVE_LABEL,
-      addAnotherLabel: isNew ? ADD_ANOTHER_LABEL : undefined,
+      addAnotherLabel: isNew ? (addAnotherText ?? ADD_ANOTHER_LABEL) : undefined,
       isSubmitting: mutation.isPending,
       error: mutation.error && formLevelError(mutation.error, Object.keys(form.getFieldsValue()), renamed),
       onClose: () => {
@@ -82,4 +97,12 @@ export function useReferenceSave<I, T extends object>(
       },
     },
   };
+}
+
+// A create and a change share a form here, so what the save returns differs and nothing reads it
+export function useReferenceSave<I, T extends object>(
+  save: (input: I) => Promise<unknown>,
+  options: ReferenceSaveOptions<T, unknown>,
+) {
+  return useRecordSave(save, options);
 }

@@ -7,10 +7,18 @@ export const ACTIVITY_KEY = ["activity"];
 export const ACTIVITY_ACTORS_KEY = ["activity-actors"];
 export const ARCHIVE_KEY = ["archive"];
 
-export const ACTIVITY_FILTER_KEYS = ["from", "to", "actorId", "action", "entityType", "entityId"] as const;
+export const ACTIVITY_FILTER_KEYS = [
+  "from",
+  "to",
+  "actorId",
+  "subscriberId",
+  "action",
+  "entityType",
+  "entityId",
+] as const;
 export type ActivityFilters = Filters<(typeof ACTIVITY_FILTER_KEYS)[number]>;
 
-const PLAIN_FILTERS = ["actorId", "action", "entityType", "entityId"] as const;
+const PLAIN_FILTERS = ["actorId", "subscriberId", "action", "entityType", "entityId"] as const;
 
 // The screen holds Kyiv dates, the API a period that ends where the next day starts. A date edited by hand into
 // something else is left out here, and the date field shows it as empty.

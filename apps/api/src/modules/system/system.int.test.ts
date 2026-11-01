@@ -203,7 +203,11 @@ describe("the «Система» screen", () => {
     });
 
     it("shows the jobs the app really runs", () => {
-      expect(JOBS.map(({ name }) => name).sort()).toEqual(["activity.partitions", "auth.cleanup"]);
+      expect(JOBS.map(({ name }) => name).sort()).toEqual([
+        "activity.partitions",
+        "auth.cleanup",
+        "subscribers.rollup-reconcile",
+      ]);
     });
   });
 

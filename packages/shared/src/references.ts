@@ -108,6 +108,8 @@ const tariffSchema = z.strictObject({
   priceKop: z.number(),
   // Chosen for a client or an object at least once: from then on the price stands (references.md П9)
   isSelected: z.boolean(),
+  // Clients outside the archive whose latest version of the tariff is this one (references.md §5)
+  clientCount: z.number(),
 });
 export type Tariff = z.infer<typeof tariffSchema>;
 
@@ -127,7 +129,7 @@ const simPlanSchema = z.strictObject({
 });
 export type SimPlan = z.infer<typeof simPlanSchema>;
 
-const pageOf = <T extends z.ZodType>(item: T) =>
+export const pageOf = <T extends z.ZodType>(item: T) =>
   z.strictObject({ items: z.array(item), nextCursor: z.string().nullable() });
 
 export const simpleReferenceListSchema = pageOf(simpleReferenceSchema);
@@ -159,9 +161,9 @@ const programIdSchema = z.uuid(PROGRAM_REQUIRED);
 const serverIdSchema = z.uuid(SERVER_REQUIRED);
 const operatorIdSchema = z.uuid(OPERATOR_REQUIRED);
 
-const emptyToNull = (value: string | null | undefined) => value || null;
+export const emptyToNull = (value: string | null | undefined) => value || null;
 
-const noteTextSchema = z.string().trim().max(NOTE_MAX_LENGTH, LONG_VALUE);
+export const noteTextSchema = z.string().trim().max(NOTE_MAX_LENGTH, LONG_VALUE);
 
 const sortOrderSchema = z
   .number({ error: "Вкажіть ціле число" })
@@ -177,7 +179,7 @@ const urlTextSchema = z
 
 export const serverUrlSchema = urlTextSchema.nullish().transform(emptyToNull);
 
-const versionField = { version: z.number().int().positive() };
+export const versionField = { version: z.number().int().positive() };
 
 // A price or a cost from a date. Past dates are history being typed in, future ones a planned change (references.md П3).
 export const datedPriceSchema = z.strictObject({ amountKop: amountKopSchema, validFrom: businessDateSchema });

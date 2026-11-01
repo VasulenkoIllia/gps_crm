@@ -6,13 +6,13 @@ import { TariffForm, TariffVersionModal } from "./TariffForms";
 
 type TariffAction = "edit" | "version";
 
-// The number of clients on a tariff joins these columns with the clients themselves on step 4 (D55)
 const COLUMNS: DataTableColumn<Tariff>[] = [
   { title: "Програма", dataIndex: "programName" },
   { title: "Сервер", dataIndex: "serverName" },
   { title: "Назва", dataIndex: "name" },
   { title: "Період", dataIndex: "billingModel", render: (value: BillingModel) => BILLING_MODELS[value] },
   { title: "Ціна", dataIndex: "priceKop", align: "right", render: (kop: number) => <Money kop={kop} /> },
+  { title: "Клієнтів", dataIndex: "clientCount", align: "right" },
 ];
 
 export function TariffsTab({ isAdding, canManage, onAdd, onAddClosed }: TabProps) {

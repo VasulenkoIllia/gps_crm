@@ -1,14 +1,16 @@
 import type { PermissionKey } from "@gps_crm/shared";
 import type { FastifyInstance, LightMyRequestResponse } from "fastify";
-import { buildApp } from "../../app.js";
-import type { DbClient } from "../../core/db/client.js";
-import { NO_JOBS, NO_MAIL, testConfig } from "../../core/test-app.js";
-import { api, clearAuthData, createUser, signInWithSetup } from "../../test-auth.js";
+import { buildApp } from "./app.js";
+import type { DbClient } from "./core/db/client.js";
+import { clearClientData } from "./core/db/test-database.js";
+import { NO_JOBS, NO_MAIL, testConfig } from "./core/test-app.js";
+import { api, clearAuthData, createUser, signInWithSetup } from "./test-auth.js";
 
 const FIRST_OF_YEAR = "2026-01-01";
 
 // Dependents first: nothing here cascades, on purpose
 export async function clearReferences(owner: DbClient): Promise<void> {
+  await clearClientData(owner);
   await owner.costPrice.deleteMany();
   await owner.addonPrice.deleteMany();
   await owner.addonProgram.deleteMany();

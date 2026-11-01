@@ -5,6 +5,7 @@ import { OWNED_TABLES as ACCESS_TABLES } from "./modules/access/index.js";
 import { OWNED_TABLES as ACTIVITY_TABLES } from "./modules/activity/index.js";
 import { OWNED_TABLES as AUTH_TABLES } from "./modules/auth/index.js";
 import { OWNED_TABLES as REFERENCES_TABLES } from "./modules/references/index.js";
+import { OWNED_TABLES as SUBSCRIBERS_TABLES } from "./modules/subscribers/index.js";
 import { OWNED_TABLES as SYSTEM_TABLES } from "./modules/system/index.js";
 import { OWNED_TABLES as TWO_FACTOR_TABLES } from "./modules/two-factor/index.js";
 import { OWNED_TABLES as USERS_TABLES } from "./modules/users/index.js";
@@ -15,6 +16,7 @@ const CORE_TABLES = [
   "activity_events",
   "job_health",
   "job_events",
+  "files",
   "_prisma_migrations",
 ];
 
@@ -33,6 +35,7 @@ describe("table ownership", () => {
       ...ACTIVITY_TABLES,
       ...AUTH_TABLES,
       ...REFERENCES_TABLES,
+      ...SUBSCRIBERS_TABLES,
       ...SYSTEM_TABLES,
       ...TWO_FACTOR_TABLES,
       ...USERS_TABLES,

@@ -60,6 +60,39 @@ enum CostSubjectType {
   @@map("cost_subject_type")
 }
 
+enum SubscriberType {
+  B2C
+  B2B
+  B2G
+
+  @@map("subscriber_type")
+}
+
+enum SubscriberStatus {
+  active
+  partially_suspended
+  suspended
+  disconnected
+
+  @@map("subscriber_status")
+}
+
+enum ContactChannel {
+  telegram
+  viber
+  email
+
+  @@map("contact_channel")
+}
+
+enum PaymentMethod {
+  invoice
+  vchasno
+  iban
+
+  @@map("payment_method")
+}
+
 model Role {
   id        String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
   key       String   @unique
@@ -115,6 +148,7 @@ model User {
   authTokens          AuthToken[]
   twoFactorCredential TwoFactorCredential?
   permissionOverrides UserPermissionOverride[]
+  managedSubscribers  Subscriber[]
 
   @@index([roleId])
   @@map("users")
@@ -221,16 +255,22 @@ model ActivityEvent {
 
 // A package of records archived together (activity.md П5). The records themselves carry archive_batch_id.
 model ArchiveBatch {
-  id         String    @id @default(dbgenerated("uuidv7()")) @db.Uuid
-  entityType String    @map("entity_type")
-  label      String
-  itemCount  Int       @map("item_count")
-  archivedAt DateTime  @default(now()) @map("archived_at") @db.Timestamptz
-  archivedBy String?   @map("archived_by") @db.Uuid
-  restoredAt DateTime? @map("restored_at") @db.Timestamptz
-  restoredBy String?   @map("restored_by") @db.Uuid
+  id           String    @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  entityType   String    @map("entity_type")
+  label        String
+  itemCount    Int       @map("item_count")
+  // The client the package belongs to, for the level `own` of access. Empty for the reference lists, and once a client
+  // deleted as a mistake leaves its packages behind.
+  subscriberId String?   @map("subscriber_id") @db.Uuid
+  archivedAt   DateTime  @default(now()) @map("archived_at") @db.Timestamptz
+  archivedBy   String?   @map("archived_by") @db.Uuid
+  restoredAt   DateTime? @map("restored_at") @db.Timestamptz
+  restoredBy   String?   @map("restored_by") @db.Uuid
+
+  subscriber Subscriber? @relation(fields: [subscriberId], references: [id], onDelete: SetNull)
 
   @@index([restoredAt, id(sort: Desc)])
+  @@index([subscriberId])
   @@map("archive_batches")
 }
 
@@ -281,9 +321,10 @@ model Program {
   updatedAt      DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
   updatedBy      String?  @map("updated_by") @db.Uuid
 
-  servers MonitoringServer[]
-  tariffs Tariff[]
-  addons  AddonProgram[]
+  servers     MonitoringServer[]
+  tariffs     Tariff[]
+  addons      AddonProgram[]
+  subscribers Subscriber[]
 
   @@index([sortOrder, nameNorm, id])
   @@index([archiveBatchId])
@@ -338,7 +379,12 @@ model Tariff {
   program Program          @relation(fields: [programId], references: [id], onDelete: Restrict)
   server  MonitoringServer @relation(fields: [serverId, programId], references: [id, programId], onDelete: Restrict, onUpdate: Restrict)
 
+  subscribers       Subscriber[]
+  subscriberPeriods SubscriberTariffPeriod[]
+
   @@unique([serverId, nameNorm, billingModel])
+  // What the foreign key of subscribers points at: a client cannot hold a tariff of another program, whoever writes it
+  @@unique([id, programId])
   @@index([programId, serverId, nameNorm, billingModel, id])
   @@index([archiveBatchId])
   @@map("tariffs")
@@ -509,4 +555,232 @@ model CostPrice {
 
   @@unique([subjectType, subjectId, validFrom])
   @@map("cost_prices")
+}
+
+// A file on the storage of core/files. A contract keeps every file it had: the newest one is the one shown (contracts.md).
+model StoredFile {
+  id           String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  storage      String
+  key          String   @unique
+  originalName String   @map("original_name")
+  // What the content turned out to be, never what the browser said
+  mime         String
+  size         Int
+  sha256       String
+  ownerType    String   @map("owner_type")
+  ownerId      String   @map("owner_id") @db.Uuid
+  uploadedBy   String?  @map("uploaded_by") @db.Uuid
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  @@index([ownerType, ownerId, id(sort: Desc)])
+  @@map("files")
+}
+
+// The ranges of ID the client sets on the screen «Серії ID» (03-data-model.md §3.2, D35)
+model SubscriberIdSeries {
+  id         String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  name       String
+  nameNorm   String   @unique @map("name_norm")
+  rangeFrom  BigInt   @map("range_from")
+  rangeTo    BigInt   @map("range_to")
+  nextNumber BigInt   @map("next_number")
+  version    Int      @default(1)
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz
+  createdBy  String?  @map("created_by") @db.Uuid
+  updatedAt  DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+  updatedBy  String?  @map("updated_by") @db.Uuid
+
+  types SubscriberIdSeriesType[]
+
+  @@map("subscriber_id_series")
+}
+
+// The primary key is what keeps a type in one series
+model SubscriberIdSeriesType {
+  type     SubscriberType @id
+  seriesId String         @map("series_id") @db.Uuid
+
+  series SubscriberIdSeries @relation(fields: [seriesId], references: [id], onDelete: Restrict)
+
+  @@index([seriesId])
+  @@map("subscriber_id_series_types")
+}
+
+// Partial and text_pattern_ops indexes live in the migration, see schema-invariants.int.test.ts
+model Subscriber {
+  id                  String           @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  code                BigInt           @unique
+  legacyCode          String?          @unique @map("legacy_code")
+  type                SubscriberType
+  name                String
+  nameNorm            String           @map("name_norm")
+  taxId               String?          @map("tax_id")
+  // Empty only after the transfer of data, the form asks for it (D36)
+  crmUrl              String?          @map("crm_url")
+  managerId           String           @map("manager_id") @db.Uuid
+  graceDays           Int              @default(0) @map("grace_days")
+  discountKop         BigInt           @default(0) @map("discount_kop")
+  // What the open period of subscriber_tariff_periods says: the filters of the list and the count on a tariff read it
+  // here, and on a million clients a join with the history would cost every page (D60)
+  programId           String           @map("program_id") @db.Uuid
+  tariffId            String           @map("tariff_id") @db.Uuid
+  status              SubscriberStatus @default(disconnected)
+  objectsActive       Int              @default(0) @map("objects_active")
+  objectsSuspended    Int              @default(0) @map("objects_suspended")
+  objectsDisconnected Int              @default(0) @map("objects_disconnected")
+  note                String?
+  version             Int              @default(1)
+  createdAt           DateTime         @default(now()) @map("created_at") @db.Timestamptz
+  createdBy           String?          @map("created_by") @db.Uuid
+  updatedAt           DateTime         @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+  updatedBy           String?          @map("updated_by") @db.Uuid
+  archivedAt          DateTime?        @map("archived_at") @db.Timestamptz
+  archivedBy          String?          @map("archived_by") @db.Uuid
+  archiveBatchId      String?          @map("archive_batch_id") @db.Uuid
+
+  manager User    @relation(fields: [managerId], references: [id], onDelete: Restrict)
+  program Program @relation(fields: [programId], references: [id], onDelete: Restrict)
+  tariff  Tariff  @relation(fields: [tariffId, programId], references: [id, programId], onDelete: Restrict, onUpdate: Restrict)
+
+  tariffPeriods  SubscriberTariffPeriod[]
+  contacts       Contact[]
+  payers         PayerSubscriber[]
+  contracts      Contract[]
+  archiveBatches ArchiveBatch[]
+
+  @@index([tariffId])
+  @@index([programId])
+  @@index([managerId])
+  @@index([archiveBatchId])
+  @@map("subscribers")
+}
+
+// [valid_from, valid_to): an exclusion in the migration keeps the periods of a client from overlapping (§3.4). A version
+// fixed with the same date, or dropped before it began, stays as an empty period: the history of what was entered.
+model SubscriberTariffPeriod {
+  id           String    @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  subscriberId String    @map("subscriber_id") @db.Uuid
+  tariffId     String    @map("tariff_id") @db.Uuid
+  validFrom    DateTime  @map("valid_from") @db.Date
+  validTo      DateTime? @map("valid_to") @db.Date
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  createdBy    String?   @map("created_by") @db.Uuid
+
+  subscriber Subscriber @relation(fields: [subscriberId], references: [id], onDelete: Restrict)
+  tariff     Tariff     @relation(fields: [tariffId], references: [id], onDelete: Restrict)
+
+  @@index([subscriberId, validFrom(sort: Desc), id(sort: Desc)])
+  @@index([tariffId])
+  @@map("subscriber_tariff_periods")
+}
+
+model Contact {
+  id             String          @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  subscriberId   String          @map("subscriber_id") @db.Uuid
+  fullName       String          @map("full_name")
+  fullNameNorm   String          @map("full_name_norm")
+  position       String?
+  phone          String
+  phoneRev       String          @map("phone_rev")
+  phone2         String?
+  phone2Rev      String?         @map("phone2_rev")
+  email          String?
+  telegramChatId String?         @map("telegram_chat_id")
+  viberChatId    String?         @map("viber_chat_id")
+  // These two are empty only after the transfer of data, the form asks for them (D36)
+  channel        ContactChannel?
+  crmUrl         String?         @map("crm_url")
+  isPrimary      Boolean         @default(false) @map("is_primary")
+  billingNotify  Boolean         @default(true) @map("billing_notify")
+  techNotify     Boolean         @default(true) @map("tech_notify")
+  isActive       Boolean         @default(true) @map("is_active")
+  note           String?
+  version        Int             @default(1)
+  createdAt      DateTime        @default(now()) @map("created_at") @db.Timestamptz
+  createdBy      String?         @map("created_by") @db.Uuid
+  updatedAt      DateTime        @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+  updatedBy      String?         @map("updated_by") @db.Uuid
+  archivedAt     DateTime?       @map("archived_at") @db.Timestamptz
+  archivedBy     String?         @map("archived_by") @db.Uuid
+  archiveBatchId String?         @map("archive_batch_id") @db.Uuid
+
+  subscriber Subscriber @relation(fields: [subscriberId], references: [id], onDelete: Restrict)
+
+  @@index([subscriberId])
+  @@index([archiveBatchId])
+  @@map("contacts")
+}
+
+model Payer {
+  id               String        @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  name             String
+  nameNorm         String        @map("name_norm")
+  paymentMethod    PaymentMethod @map("payment_method")
+  legalName        String?       @map("legal_name")
+  taxId            String?       @map("tax_id")
+  vchasnoEmail     String?       @map("vchasno_email")
+  detailsContact   String?       @map("details_contact")
+  paymentTermsNote String?       @map("payment_terms_note")
+  note             String?
+  version          Int           @default(1)
+  createdAt        DateTime      @default(now()) @map("created_at") @db.Timestamptz
+  createdBy        String?       @map("created_by") @db.Uuid
+  updatedAt        DateTime      @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+  updatedBy        String?       @map("updated_by") @db.Uuid
+  archivedAt       DateTime?     @map("archived_at") @db.Timestamptz
+  archivedBy       String?       @map("archived_by") @db.Uuid
+  archiveBatchId   String?       @map("archive_batch_id") @db.Uuid
+
+  subscribers PayerSubscriber[]
+  contracts   Contract[]
+
+  @@index([archiveBatchId])
+  @@map("payers")
+}
+
+// One payer pays for many clients (К6)
+model PayerSubscriber {
+  payerId      String   @map("payer_id") @db.Uuid
+  subscriberId String   @map("subscriber_id") @db.Uuid
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz
+  createdBy    String?  @map("created_by") @db.Uuid
+
+  payer      Payer      @relation(fields: [payerId], references: [id], onDelete: Restrict)
+  subscriber Subscriber @relation(fields: [subscriberId], references: [id], onDelete: Restrict)
+  contracts  Contract[]
+
+  @@id([payerId, subscriberId])
+  @@index([subscriberId])
+  @@map("payer_subscribers")
+}
+
+// The status is worked out from the dates (contracts.md П2а): today moves, so a stored one would go stale overnight
+model Contract {
+  id             String    @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  subscriberId   String    @map("subscriber_id") @db.Uuid
+  payerId        String    @map("payer_id") @db.Uuid
+  number         String
+  numberNorm     String    @map("number_norm")
+  signedOn       DateTime  @map("signed_on") @db.Date
+  validUntil     DateTime  @map("valid_until") @db.Date
+  terminatedOn   DateTime? @map("terminated_on") @db.Date
+  note           String?
+  version        Int       @default(1)
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  createdBy      String?   @map("created_by") @db.Uuid
+  updatedAt      DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+  updatedBy      String?   @map("updated_by") @db.Uuid
+  archivedAt     DateTime? @map("archived_at") @db.Timestamptz
+  archivedBy     String?   @map("archived_by") @db.Uuid
+  archiveBatchId String?   @map("archive_batch_id") @db.Uuid
+
+  subscriber Subscriber @relation(fields: [subscriberId], references: [id], onDelete: Restrict)
+  payer      Payer      @relation(fields: [payerId], references: [id], onDelete: Restrict)
+  // П1: only a payer of this client, whatever the code around it does
+  payerLink  PayerSubscriber @relation(fields: [payerId, subscriberId], references: [payerId, subscriberId], onDelete: Restrict)
+
+  @@index([subscriberId])
+  @@index([payerId])
+  @@index([archiveBatchId])
+  @@map("contracts")
 }

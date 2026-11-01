@@ -1,3 +1,4 @@
+import type { RecordScope } from "../../core/access/access.js";
 import type { ActivityContext } from "../../core/activity/activity.repository.js";
 import { actorIdOf, recordActivity } from "../../core/activity/activity.repository.js";
 import type { DbClient, DbOrTx } from "../../core/db/client.js";
@@ -26,9 +27,31 @@ export async function openArchiveBatch(
     action: "record.archived",
     entityType: "archive_batch",
     entityId: id,
+    subscriberId: input.subscriberId,
     details: { label: input.label, kind: input.entityType, itemCount: input.itemCount },
   });
   return id;
+}
+
+// A package of the reference lists has no client, and so nothing for the level `own`
+async function isVisible(tx: DbOrTx, batch: repo.LockedBatch, scope: RecordScope): Promise<boolean> {
+  if (!scope.managerId) return true;
+  if (!batch.subscriberId) return false;
+  return repo.isManagerOfSubscriber(tx, batch.subscriberId, scope.managerId);
+}
+
+// A client deleted as a mistake leaves nothing to bring back, so its packages must not wait in the archive
+// Before the client, as a restore takes them: the opposite order meets a restore in a deadlock
+export function lockOpenBatches(tx: DbOrTx, subscriberId: string): Promise<void> {
+  return repo.lockOpenBatches(tx, subscriberId);
+}
+
+export function openBatchIdsOf(tx: DbOrTx, subscriberId: string): Promise<string[]> {
+  return repo.findOpenBatchIds(tx, subscriberId);
+}
+
+export async function dropArchiveBatches(tx: DbOrTx, subscriberId: string): Promise<void> {
+  await repo.deleteOpenBatches(tx, subscriberId);
 }
 
 export async function restoreArchiveBatch(
@@ -36,10 +59,11 @@ export async function restoreArchiveBatch(
   restorers: ArchiveRestorers,
   context: ActivityContext,
   batchId: string,
+  scope: RecordScope,
 ): Promise<void> {
   await db.$transaction(async (tx) => {
     const batch = await repo.lockArchiveBatch(tx, batchId);
-    if (!batch) throw new AppError(404, "not_found", "Пакет не знайдено");
+    if (!batch || !(await isVisible(tx, batch, scope))) throw new AppError(404, "not_found", "Пакет не знайдено");
     if (batch.isRestored) throw new AppError(409, "already_restored", "Цей пакет уже відновлено");
     const restore = restorers[batch.entityType];
     if (!restore) throw new AppError(409, "restore_unavailable", "Записи цього виду поки не можна відновити");
@@ -50,6 +74,7 @@ export async function restoreArchiveBatch(
       // The package, not one of its records: the id here is the batch, and each record writes its own line (§11)
       entityType: "archive_batch",
       entityId: batch.id,
+      subscriberId: batch.subscriberId ?? undefined,
       details: { kind: batch.entityType, itemCount: batch.itemCount },
     });
   });

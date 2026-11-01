@@ -1,7 +1,17 @@
 import { REFERENCE_KINDS } from "@gps_crm/shared";
 import { expect, test, type Page } from "@playwright/test";
-import pg from "pg";
-import { ADMIN_SESSION_FILE, expectNoSidewaysScroll, PHONE, TABLET } from "./support.ts";
+import {
+  ADMIN_SESSION_FILE,
+  createClient,
+  expectNoSidewaysScroll,
+  PHONE,
+  pick,
+  pressInForm,
+  rowAction,
+  save,
+  TABLET,
+  typeDate,
+} from "./support.ts";
 
 const PROGRAM = "Програма А";
 const SECOND_PROGRAM = "Програма Б";
@@ -12,39 +22,11 @@ const NEW_TARIFF = "Тариф 1 2027";
 const ADDON = "Послуга 1";
 const OPERATOR = "Оператор 1";
 const PAST_DATE = "01.01.2026";
+const CLIENT_COUNT_COLUMN = 5;
 
 async function openAddForm(page: Page, tab: string, label: string): Promise<void> {
   await page.goto(`/references?tab=${tab}`);
   await page.getByRole("button", { name: label }).first().click();
-}
-
-async function pick(page: Page, label: string, option: string): Promise<void> {
-  await page.getByRole("dialog").getByRole("combobox", { name: label }).click();
-  await page.getByRole("option", { name: option, exact: true }).click();
-}
-
-async function typeDate(page: Page, label: string, date: string): Promise<void> {
-  const field = page.getByRole("dialog").getByLabel(label, { exact: true });
-  await field.fill(date);
-  await field.press("Tab");
-}
-
-async function pressInForm(page: Page, button: string): Promise<void> {
-  // Not exact: after a quick answer antd leaves the name of its spinner on the button, «loading Зберегти»
-  await page
-    .getByRole("dialog")
-    .getByRole("button", { name: new RegExp(`${button}$`) })
-    .click();
-}
-
-async function save(page: Page, button = "Зберегти"): Promise<void> {
-  await pressInForm(page, button);
-  await expect(page.getByRole("dialog")).toHaveCount(0);
-}
-
-async function rowAction(page: Page, rowName: string, action: string): Promise<void> {
-  await page.getByRole("button", { name: `Дії: ${rowName}`, exact: true }).click();
-  await page.getByRole("menuitem", { name: action, exact: true }).click();
 }
 
 async function addNamed(page: Page, tab: string, addLabel: string, name: string): Promise<void> {
@@ -62,17 +44,6 @@ async function addServer(page: Page, name: string): Promise<void> {
   await page.getByRole("dialog").getByLabel("Собівартість ліцензії за 1 об'єкт").fill("12,50");
   await typeDate(page, "Собівартість діє з", PAST_DATE);
   await save(page);
-}
-
-// Stands for a client's form: the column belongs to the clients of step 4, and nothing here writes it yet
-async function markTariffChosen(name: string): Promise<void> {
-  const client = new pg.Client({ connectionString: process.env.E2E_DATABASE_URL });
-  await client.connect();
-  try {
-    await client.query("UPDATE tariffs SET selected_at = now() WHERE name = $1", [name]);
-  } finally {
-    await client.end();
-  }
 }
 
 async function deactivate(page: Page, tab: string, rowName: string): Promise<void> {
@@ -156,18 +127,22 @@ test.describe.serial("the references", () => {
     await expect(page.getByRole("row", { name: new RegExp(TARIFF) })).toContainText("165,50 грн");
   });
 
-  test("a chosen tariff is not rewritten, even from a form opened before", async ({ page }) => {
+  test("a chosen tariff is not rewritten, even from a form opened before", async ({ page, context }) => {
     await page.goto("/references?tab=tariffs");
     await rowAction(page, TARIFF, "Змінити");
     const form = page.getByRole("dialog");
     await form.getByLabel("Ціна за період").fill("170");
 
-    await markTariffChosen(TARIFF);
+    const clientPage = await context.newPage();
+    await createClient(clientPage, { name: "Клієнт тарифу", program: PROGRAM, tariff: new RegExp(`^${TARIFF},`) });
+    await clientPage.close();
     await pressInForm(page, "Зберегти");
     await expect(form.getByText("Тариф уже використовується", { exact: false }).first()).toBeVisible();
 
     await page.reload();
-    await expect(page.getByRole("row", { name: new RegExp(TARIFF) })).toContainText("165,50 грн");
+    const row = page.getByRole("row", { name: new RegExp(TARIFF) });
+    await expect(row).toContainText("165,50 грн");
+    await expect(row.getByRole("cell").nth(CLIENT_COUNT_COLUMN)).toHaveText("1");
     await rowAction(page, TARIFF, "Змінити");
     await expect(form.getByLabel("Ціна за період")).toBeDisabled();
     await expect(form.getByRole("combobox", { name: "Програма" })).toBeDisabled();

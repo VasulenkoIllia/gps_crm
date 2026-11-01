@@ -48,7 +48,11 @@ export function assertVersion(record: { version: number }, version: number): voi
   }
 }
 
-export function changedFields<T extends object>(before: T, after: T, fields: (keyof T & string)[]): FieldChanges {
+export function changedFields<K extends string>(
+  before: Record<K, unknown>,
+  after: Record<K, unknown>,
+  fields: K[],
+): FieldChanges {
   const changes: FieldChanges = {};
   for (const field of fields) {
     if (before[field] !== after[field]) changes[field] = [before[field], after[field]];

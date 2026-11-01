@@ -10,6 +10,7 @@ import {
   type ArchiveListQuery,
 } from "@gps_crm/shared";
 import { Prisma } from "../../generated/prisma/client.js";
+import type { RecordScope } from "../../core/access/access.js";
 import type { DbOrTx } from "../../core/db/client.js";
 
 const ACTORS_MAX = 500;
@@ -30,8 +31,14 @@ interface EventRow {
   requestId: string | null;
 }
 
-function conditionsOf(query: ActivityListQuery): Prisma.Sql[] {
+function conditionsOf(query: ActivityListQuery, scope: RecordScope): Prisma.Sql[] {
   const conditions: Prisma.Sql[] = [];
+  // The level `own`: an event with no client (sign-ins, the reference lists) is nobody's own
+  if (scope.managerId) {
+    conditions.push(
+      Prisma.sql`e.subscriber_id IN (SELECT id FROM subscribers WHERE manager_id = ${scope.managerId}::uuid)`,
+    );
+  }
   if (query.from) conditions.push(Prisma.sql`e.occurred_at >= ${query.from}::timestamptz`);
   if (query.to) conditions.push(Prisma.sql`e.occurred_at < ${query.to}::timestamptz`);
   if (query.actorId) conditions.push(Prisma.sql`e.actor_id = ${query.actorId}::uuid`);
@@ -79,8 +86,8 @@ function toEvent(row: EventRow): ActivityEvent {
 
 // Newest first on the primary key, walked backwards. A count is left out on purpose: a long period would have to read
 // every partition in it (activity.md §11).
-export async function listActivity(db: DbOrTx, query: ActivityListQuery): Promise<ActivityList> {
-  const conditions = conditionsOf(query);
+export async function listActivity(db: DbOrTx, query: ActivityListQuery, scope: RecordScope): Promise<ActivityList> {
+  const conditions = conditionsOf(query, scope);
   const where = conditions.length > 0 ? Prisma.sql`WHERE ${Prisma.join(conditions, " AND ")}` : Prisma.empty;
   const rows = await db.$queryRaw<EventRow[]>`
     SELECT
@@ -122,11 +129,15 @@ export async function listActivityActors(db: DbOrTx): Promise<ActivityActorList>
 }
 
 // Keyset on id: uuidv7 orders by creation
-export async function listArchive(db: DbOrTx, query: ArchiveListQuery): Promise<ArchiveList> {
+export async function listArchive(db: DbOrTx, query: ArchiveListQuery, scope: RecordScope): Promise<ArchiveList> {
   const rows = await db.archiveBatch.findMany({
     orderBy: { id: "desc" },
     take: query.limit + 1,
-    where: { restoredAt: null, ...(query.cursor ? { id: { lt: query.cursor } } : {}) },
+    where: {
+      restoredAt: null,
+      ...(query.cursor ? { id: { lt: query.cursor } } : {}),
+      ...(scope.managerId ? { subscriber: { managerId: scope.managerId } } : {}),
+    },
   });
   const page = rows.slice(0, query.limit);
   const peopleIds = [...new Set(page.flatMap((row) => row.archivedBy ?? []))];

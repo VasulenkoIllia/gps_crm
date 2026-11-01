@@ -113,17 +113,19 @@ export async function listTariffs(db: DbOrTx, query: ReferenceListQuery): Promis
       selectedAt: true,
       program: { select: { name: true } },
       server: { select: { name: true } },
+      _count: { select: { subscribers: { where: { archivedAt: null } } } },
     },
     ...pageArgs(query),
   });
   const { page, nextCursor } = toPage(rows, query.limit);
   return {
-    items: page.map(({ program, server, selectedAt, priceKop, ...row }) => ({
+    items: page.map(({ program, server, selectedAt, priceKop, _count, ...row }) => ({
       ...row,
       priceKop: Number(priceKop),
       isSelected: selectedAt !== null,
       programName: program.name,
       serverName: server.name,
+      clientCount: _count.subscribers,
     })),
     nextCursor,
   };

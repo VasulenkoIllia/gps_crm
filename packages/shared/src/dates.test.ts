@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { businessDateSchema, firstOfNextMonth, todayKyiv } from "./dates.ts";
+import { addDays, businessDateSchema, firstOfNextMonth, todayKyiv } from "./dates.ts";
 
 describe("business dates", () => {
   it("takes the day from Kyiv and not from UTC", () => {
@@ -15,6 +15,11 @@ describe("business dates", () => {
   it("finds the first of the next month over the end of a year", () => {
     expect(firstOfNextMonth("2026-11-15")).toBe("2026-12-01");
     expect(firstOfNextMonth("2026-12-31")).toBe("2027-01-01");
+  });
+
+  it("adds days over the end of a year and over the clock change", () => {
+    expect(addDays("2026-12-31", 1)).toBe("2027-01-01");
+    expect(addDays("2026-03-28", 2)).toBe("2026-03-30");
   });
 
   it.each(["2026-02-30", "0000-01-01", "20270-01-01", "2100-01-01", "1999-12-31", "01.01.2027", ""])(

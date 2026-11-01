@@ -141,3 +141,80 @@ export async function newPerson(browser: Browser, baseUrl: string): Promise<Page
   const context = await browser.newContext({ baseURL: baseUrl, locale: "uk-UA" });
   return context.newPage();
 }
+
+export async function pick(page: Page, label: string, option: string | RegExp): Promise<void> {
+  await page.getByRole("dialog").getByRole("combobox", { name: label }).click();
+  await page.getByRole("option", { name: option, exact: typeof option === "string" }).click();
+}
+
+export async function typeDate(page: Page, label: string, date: string): Promise<void> {
+  const field = page.getByRole("dialog").getByLabel(label, { exact: true });
+  await field.fill(date);
+  await field.press("Tab");
+}
+
+export async function pressInForm(page: Page, button: string): Promise<void> {
+  // Not exact: after a quick answer antd leaves the name of its spinner on the button, «loading Зберегти»
+  await page
+    .getByRole("dialog")
+    .getByRole("button", { name: new RegExp(`${button}$`) })
+    .click();
+}
+
+export async function save(page: Page, button = "Зберегти"): Promise<void> {
+  await pressInForm(page, button);
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+}
+
+export async function rowAction(page: Page, rowName: string, action: string): Promise<void> {
+  await page.getByRole("button", { name: `Дії: ${rowName}`, exact: true }).click();
+  await page.getByRole("menuitem", { name: action, exact: true }).click();
+}
+
+export interface NewClient {
+  name: string;
+  program: string;
+  tariff: RegExp;
+  validFrom?: string;
+  type?: string;
+  taxId?: string;
+  legacyCode?: string;
+  phone?: string;
+}
+
+const PERSON = "Фізична особа (B2C)";
+const PAYER_PHONE = "+380671112233";
+const DEFAULT_PHONE = "+380501112233";
+
+// From the list to the card of a new client, and back with the ID it was given
+export async function createClient(page: Page, client: NewClient): Promise<number> {
+  const type = client.type ?? PERSON;
+  await page.goto("/subscribers");
+  await page.getByRole("button", { name: "Новий клієнт" }).click();
+  const form = page.getByRole("dialog");
+  await pick(page, "Тип клієнта", type);
+  await form.getByLabel("Назва або ПІБ").fill(client.name);
+  if (client.taxId) await form.getByLabel("ЄДРПОУ / ІПН").fill(client.taxId);
+  await form.getByLabel("Посилання на CRM").fill("https://crm.example.test/clients/1");
+  if (client.legacyCode) await form.getByLabel("Старий номер").fill(client.legacyCode);
+  await pick(page, "Програма", client.program);
+  await pick(page, "Тариф", client.tariff);
+  if (client.validFrom) await typeDate(page, "Діє з", client.validFrom);
+  if (type === PERSON) await expect(form.getByLabel("ПІБ", { exact: true })).toHaveValue(client.name);
+  else await form.getByLabel("ПІБ", { exact: true }).fill("Контактна Особа");
+  await form.getByLabel("Телефон").fill(client.phone ?? DEFAULT_PHONE);
+  await form.getByRole("radio", { name: "Telegram" }).check();
+  await form.getByLabel("Telegram Chat ID").fill("123456789");
+  if (type === PERSON) {
+    await pick(page, "Форма оплати", "IBAN-реквізити");
+    await form.getByLabel("Куди надсилати реквізити: телефон або пошта").fill(PAYER_PHONE);
+  } else {
+    await pick(page, "Форма оплати", "Рахунок");
+    await form.getByLabel("Повна назва юрособи").fill(`ТОВ ${client.name}`);
+  }
+  await pressInForm(page, "Створити");
+  const created = page.getByText(/Клієнта створено, ID \d+/);
+  await expect(created).toBeVisible();
+  await expect(page.getByRole("heading", { name: client.name, exact: true })).toBeVisible();
+  return Number(/\d+/.exec((await created.textContent()) ?? "")?.[0]);
+}
