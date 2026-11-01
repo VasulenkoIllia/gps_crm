@@ -14,6 +14,7 @@ import {
   Panel,
   type DataTableColumn,
 } from "../../ui";
+import { REFERENCES_KEY } from "../references/references.api";
 import { ACTIVITY_KEY, ARCHIVE_KEY, fetchArchivePage, restoreBatch } from "./activity.api";
 
 function buildColumns(onRestore: (batch: ArchiveBatch) => void): DataTableColumn<ArchiveBatch>[] {
@@ -54,6 +55,7 @@ function ArchiveScreen() {
     onSuccess: () => {
       void client.invalidateQueries({ queryKey: ARCHIVE_KEY });
       void client.invalidateQueries({ queryKey: ACTIVITY_KEY });
+      void client.invalidateQueries({ queryKey: REFERENCES_KEY });
       setRestoring(null);
       void message.success("Записи відновлено");
     },

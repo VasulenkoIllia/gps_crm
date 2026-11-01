@@ -65,6 +65,13 @@ describe("the runtime role", () => {
     await owner.activityEvent.deleteMany({ where: { action: "user.unblocked" } });
   });
 
+  it("cannot change or delete a price history", async () => {
+    await expect(app.addonPrice.updateMany({ data: { priceKop: 1n } })).rejects.toThrow(DENIED);
+    await expect(app.addonPrice.deleteMany()).rejects.toThrow(DENIED);
+    await expect(app.costPrice.updateMany({ data: { costKop: 1n } })).rejects.toThrow(DENIED);
+    await expect(app.costPrice.deleteMany()).rejects.toThrow(DENIED);
+  });
+
   it("undoes the change when the journal fails in the same transaction", async () => {
     const email = "rollback@example.test";
     const role = await owner.role.findUniqueOrThrow({ where: { key: "manager" } });

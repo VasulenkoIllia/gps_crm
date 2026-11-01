@@ -14,6 +14,7 @@ import { isSpaRoute, registerSpa } from "./core/http/spa.js";
 import { registerAccessRoutes } from "./modules/access/index.js";
 import { registerActivityRoutes, type ArchiveRestorers } from "./modules/activity/index.js";
 import { registerAuthRoutes } from "./modules/auth/index.js";
+import { REFERENCE_RESTORERS, registerReferencesRoutes } from "./modules/references/index.js";
 import { registerSystemRoutes } from "./modules/system/index.js";
 import { registerTwoFactorRoutes } from "./modules/two-factor/index.js";
 import { registerUsersRoutes } from "./modules/users/index.js";
@@ -31,7 +32,7 @@ export interface AppOptions extends Omit<AppDeps, "logger"> {
   webRoot?: string;
   // Rejects with the reason when the app must not take traffic
   checkReady: () => Promise<void>;
-  // How each module brings back what it archived; none of them archives anything before step 3
+  // Beside the ones of the modules: what a test brings back with a restorer of its own
   archiveRestorers?: ArchiveRestorers;
 }
 
@@ -62,7 +63,8 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
   registerTwoFactorRoutes(app, deps);
   registerAuthRoutes(app, deps);
   registerAccessRoutes(app);
-  registerActivityRoutes(app, deps, options.archiveRestorers ?? {});
+  registerActivityRoutes(app, deps, { ...REFERENCE_RESTORERS, ...options.archiveRestorers });
+  registerReferencesRoutes(app, deps);
   registerSystemRoutes(app, deps);
 
   const { webRoot } = options;

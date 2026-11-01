@@ -1,5 +1,6 @@
 // Models go here. Migrations: `npm run db:migrate` locally, additive only (expand / contract).
-// Conventions: time `DateTime @db.Timestamptz`, money `Decimal` (never Float), an index on every FK.
+// Conventions: time `DateTime @db.Timestamptz`, money `BigInt` in kopecks with the suffix `_kop` (never Float), an index
+// on every FK.
 // Objects Prisma cannot describe (exclusion constraints, expression indexes, partitions in schema `part`) go into
 // the SQL part of a migration as a commented block and into schema-invariants.int.test.ts.
 generator client {
@@ -42,6 +43,21 @@ enum ActorKind {
   system
 
   @@map("actor_kind")
+}
+
+enum BillingModel {
+  month
+  year
+
+  @@map("billing_model")
+}
+
+enum CostSubjectType {
+  server
+  sim_plan
+  addon
+
+  @@map("cost_subject_type")
 }
 
 model Role {
@@ -246,4 +262,251 @@ model JobEvent {
 
   @@index([jobName, id(sort: Desc)])
   @@map("job_events")
+}
+
+// The reference lists (references.md). Every table: uuidv7, a name unique within its parent regardless of case, deactivation
+// instead of deletion.
+model Program {
+  id             String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  name           String
+  nameNorm       String   @unique @map("name_norm")
+  note           String?
+  sortOrder      Int      @default(0) @map("sort_order")
+  isActive       Boolean  @default(true) @map("is_active")
+  // Set while deactivated: the package of the archive that brings the record back (references.md П4)
+  archiveBatchId String?  @map("archive_batch_id") @db.Uuid
+  version        Int      @default(1)
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
+  createdBy      String?  @map("created_by") @db.Uuid
+  updatedAt      DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+  updatedBy      String?  @map("updated_by") @db.Uuid
+
+  servers MonitoringServer[]
+  tariffs Tariff[]
+  addons  AddonProgram[]
+
+  @@index([sortOrder, nameNorm, id])
+  @@index([archiveBatchId])
+  @@map("programs")
+}
+
+model MonitoringServer {
+  id             String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  programId      String   @map("program_id") @db.Uuid
+  name           String
+  nameNorm       String   @map("name_norm")
+  url            String?
+  isActive       Boolean  @default(true) @map("is_active")
+  // Set while deactivated: the package of the archive that brings the record back (references.md П4)
+  archiveBatchId String?  @map("archive_batch_id") @db.Uuid
+  version        Int      @default(1)
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
+  createdBy      String?  @map("created_by") @db.Uuid
+  updatedAt      DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+  updatedBy      String?  @map("updated_by") @db.Uuid
+
+  program Program  @relation(fields: [programId], references: [id], onDelete: Restrict)
+  tariffs Tariff[]
+
+  @@unique([programId, nameNorm])
+  // What the foreign key of tariffs points at: a tariff cannot name a server of another program, whoever writes it
+  @@unique([id, programId])
+  @@index([archiveBatchId])
+  @@map("monitoring_servers")
+}
+
+// The name repeats per period: one tariff by the month and by the year (references.md §10, D54)
+model Tariff {
+  id             String       @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  programId      String       @map("program_id") @db.Uuid
+  serverId       String       @map("server_id") @db.Uuid
+  name           String
+  nameNorm       String       @map("name_norm")
+  billingModel   BillingModel @map("billing_model")
+  priceKop       BigInt       @map("price_kop")
+  // The first time a client or an object took it, set by their modules: from then on the price stands (П9)
+  selectedAt     DateTime?    @map("selected_at") @db.Timestamptz
+  isActive       Boolean      @default(true) @map("is_active")
+  // Set while deactivated: the package of the archive that brings the record back (references.md П4)
+  archiveBatchId String?      @map("archive_batch_id") @db.Uuid
+  version        Int          @default(1)
+  createdAt      DateTime     @default(now()) @map("created_at") @db.Timestamptz
+  createdBy      String?      @map("created_by") @db.Uuid
+  updatedAt      DateTime     @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+  updatedBy      String?      @map("updated_by") @db.Uuid
+
+  program Program          @relation(fields: [programId], references: [id], onDelete: Restrict)
+  server  MonitoringServer @relation(fields: [serverId, programId], references: [id, programId], onDelete: Restrict, onUpdate: Restrict)
+
+  @@unique([serverId, nameNorm, billingModel])
+  @@index([programId, serverId, nameNorm, billingModel, id])
+  @@index([archiveBatchId])
+  @@map("tariffs")
+}
+
+model Addon {
+  id             String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  name           String
+  nameNorm       String   @unique @map("name_norm")
+  isActive       Boolean  @default(true) @map("is_active")
+  // Set while deactivated: the package of the archive that brings the record back (references.md П4)
+  archiveBatchId String?  @map("archive_batch_id") @db.Uuid
+  version        Int      @default(1)
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
+  createdBy      String?  @map("created_by") @db.Uuid
+  updatedAt      DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+  updatedBy      String?  @map("updated_by") @db.Uuid
+
+  prices   AddonPrice[]
+  programs AddonProgram[]
+
+  @@index([archiveBatchId])
+  @@map("addons")
+}
+
+// Added and never changed: a row stands until the next date, and a new date comes after the last (references.md П3, D57)
+model AddonPrice {
+  id        String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  addonId   String   @map("addon_id") @db.Uuid
+  priceKop  BigInt   @map("price_kop")
+  validFrom DateTime @map("valid_from") @db.Date
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  createdBy String?  @map("created_by") @db.Uuid
+
+  addon Addon @relation(fields: [addonId], references: [id], onDelete: Restrict)
+
+  @@unique([addonId, validFrom])
+  @@map("addon_prices")
+}
+
+model AddonProgram {
+  addonId   String @map("addon_id") @db.Uuid
+  programId String @map("program_id") @db.Uuid
+
+  addon   Addon   @relation(fields: [addonId], references: [id], onDelete: Restrict)
+  program Program @relation(fields: [programId], references: [id], onDelete: Restrict)
+
+  @@id([addonId, programId])
+  @@index([programId])
+  @@map("addon_programs")
+}
+
+model TrackerModel {
+  id             String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  name           String
+  nameNorm       String   @unique @map("name_norm")
+  note           String?
+  sortOrder      Int      @default(0) @map("sort_order")
+  isActive       Boolean  @default(true) @map("is_active")
+  // Set while deactivated: the package of the archive that brings the record back (references.md П4)
+  archiveBatchId String?  @map("archive_batch_id") @db.Uuid
+  version        Int      @default(1)
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
+  createdBy      String?  @map("created_by") @db.Uuid
+  updatedAt      DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+  updatedBy      String?  @map("updated_by") @db.Uuid
+
+  @@index([sortOrder, nameNorm, id])
+  @@index([archiveBatchId])
+  @@map("tracker_models")
+}
+
+model SimOperator {
+  id             String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  name           String
+  nameNorm       String   @unique @map("name_norm")
+  note           String?
+  sortOrder      Int      @default(0) @map("sort_order")
+  isActive       Boolean  @default(true) @map("is_active")
+  // Set while deactivated: the package of the archive that brings the record back (references.md П4)
+  archiveBatchId String?  @map("archive_batch_id") @db.Uuid
+  version        Int      @default(1)
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
+  createdBy      String?  @map("created_by") @db.Uuid
+  updatedAt      DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+  updatedBy      String?  @map("updated_by") @db.Uuid
+
+  plans SimPlan[]
+
+  @@index([sortOrder, nameNorm, id])
+  @@index([archiveBatchId])
+  @@map("sim_operators")
+}
+
+model SimPlan {
+  id             String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  operatorId     String   @map("operator_id") @db.Uuid
+  name           String
+  nameNorm       String   @map("name_norm")
+  note           String?
+  sortOrder      Int      @default(0) @map("sort_order")
+  isActive       Boolean  @default(true) @map("is_active")
+  // Set while deactivated: the package of the archive that brings the record back (references.md П4)
+  archiveBatchId String?  @map("archive_batch_id") @db.Uuid
+  version        Int      @default(1)
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
+  createdBy      String?  @map("created_by") @db.Uuid
+  updatedAt      DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+  updatedBy      String?  @map("updated_by") @db.Uuid
+
+  operator SimOperator @relation(fields: [operatorId], references: [id], onDelete: Restrict)
+
+  @@unique([operatorId, nameNorm])
+  @@index([operatorId, sortOrder, nameNorm, id])
+  @@index([archiveBatchId])
+  @@map("sim_plans")
+}
+
+model Contractor {
+  id             String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  name           String
+  nameNorm       String   @unique @map("name_norm")
+  note           String?
+  sortOrder      Int      @default(0) @map("sort_order")
+  isActive       Boolean  @default(true) @map("is_active")
+  // Set while deactivated: the package of the archive that brings the record back (references.md П4)
+  archiveBatchId String?  @map("archive_batch_id") @db.Uuid
+  version        Int      @default(1)
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
+  createdBy      String?  @map("created_by") @db.Uuid
+  updatedAt      DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+  updatedBy      String?  @map("updated_by") @db.Uuid
+
+  @@index([sortOrder, nameNorm, id])
+  @@index([archiveBatchId])
+  @@map("contractors")
+}
+
+model DisconnectReason {
+  id             String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  name           String
+  nameNorm       String   @unique @map("name_norm")
+  note           String?
+  sortOrder      Int      @default(0) @map("sort_order")
+  isActive       Boolean  @default(true) @map("is_active")
+  // Set while deactivated: the package of the archive that brings the record back (references.md П4)
+  archiveBatchId String?  @map("archive_batch_id") @db.Uuid
+  version        Int      @default(1)
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
+  createdBy      String?  @map("created_by") @db.Uuid
+  updatedAt      DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+  updatedBy      String?  @map("updated_by") @db.Uuid
+
+  @@index([sortOrder, nameNorm, id])
+  @@index([archiveBatchId])
+  @@map("disconnect_reasons")
+}
+
+// Added and never changed, as addon_prices. The subject is one of three tables, so no foreign key: the service checks it.
+model CostPrice {
+  id          String          @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  subjectType CostSubjectType @map("subject_type")
+  subjectId   String          @map("subject_id") @db.Uuid
+  costKop     BigInt          @map("cost_kop")
+  validFrom   DateTime        @map("valid_from") @db.Date
+  createdAt   DateTime        @default(now()) @map("created_at") @db.Timestamptz
+  createdBy   String?         @map("created_by") @db.Uuid
+
+  @@unique([subjectType, subjectId, validFrom])
+  @@map("cost_prices")
 }

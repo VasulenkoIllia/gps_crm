@@ -376,6 +376,20 @@ a {
   overflow: hidden;
   text-overflow: ellipsis;
 }
+.money {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.form-control-wide {
+  width: 100%;
+}
+
+.form-note {
+  margin: 0 0 16px;
+  color: var(--ink-2);
+}
+
 .table-footer {
   display: flex;
   justify-content: center;

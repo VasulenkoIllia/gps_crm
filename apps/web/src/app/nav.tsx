@@ -29,7 +29,7 @@ export const NAV_ITEMS: NavItem[] = [
   { path: "/contracts", label: "Договори", icon: <FileTextOutlined /> },
   { path: "/payers", label: "Платники", icon: <ApartmentOutlined /> },
   { path: "/equipment", label: "Обладнання та SIM", icon: <HddOutlined /> },
-  { path: "/references", label: "Довідники", icon: <AppstoreOutlined /> },
+  { path: "/references", label: "Довідники", icon: <AppstoreOutlined />, permission: "subscribers.read" },
   { path: "/users", label: "Користувачі", icon: <UserOutlined />, permission: "users.manage" },
   { path: "/activity", label: "Журнал дій", icon: <HistoryOutlined />, permission: "activity.read" },
   { path: "/archive", label: "Архів", icon: <InboxOutlined />, permission: "records.archive" },
