@@ -5,7 +5,7 @@ import { buildApp } from "../../app.js";
 import { isUniqueViolation, type DbClient } from "../../core/db/client.js";
 import { connectTestAppDatabase, connectTestDatabase, testDatabaseUrl } from "../../core/db/test-database.js";
 import { createSession } from "../../core/session/session.repository.js";
-import { captureMailer, NO_MAIL, testConfig, type CapturingMailer } from "../../core/test-app.js";
+import { captureMailer, NO_MAIL, testConfig, NO_JOBS, type CapturingMailer } from "../../core/test-app.js";
 import {
   api,
   clearAuthData,
@@ -33,7 +33,7 @@ describe("users", () => {
   beforeEach(async () => {
     await clearAuthData(owner);
     mailer = captureMailer();
-    app = await buildApp({ db, config: testConfig(), mailer, checkReady: () => Promise.resolve() });
+    app = await buildApp({ db, config: testConfig(), mailer, jobs: NO_JOBS, checkReady: () => Promise.resolve() });
     admin = await createUser(owner, { email: "admin@example.test", roleKey: "admin" });
     ({ cookie } = await signInWithSetup(app, owner, admin));
   });
@@ -80,6 +80,7 @@ describe("users", () => {
       db,
       config: testConfig(),
       mailer: NO_MAIL,
+      jobs: NO_JOBS,
       checkReady: () => Promise.resolve(),
     });
 
@@ -99,6 +100,7 @@ describe("users", () => {
       db,
       config: testConfig(),
       mailer: failing,
+      jobs: NO_JOBS,
       checkReady: () => Promise.resolve(),
     });
 

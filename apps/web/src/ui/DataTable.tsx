@@ -35,13 +35,16 @@ export function DataTable<T extends object>(props: DataTableProps<T>) {
   const shown = useMemo(() => (isPhone ? pinFirst(columns) : columns), [isPhone, columns]);
 
   if (!rows) return error ? <LoadError error={error} onRetry={onRetry} /> : <Skeleton active />;
-  if (rows.length === 0) return <Empty description={empty} />;
 
   return (
     <>
-      {/* The rows stay: a page or a refresh that failed takes nothing away from what is already here */}
+      {/* The rows stay: a page or a refresh that failed takes nothing away from what is already here. It stands above
+          an empty list too, which would otherwise pass for a fresh reading */}
       <FormAlert error={error} />
-      <Table<T> dataSource={rows} columns={shown} rowKey={rowKey} pagination={false} scroll={{ x: "max-content" }} />
+      {rows.length === 0 && <Empty description={empty} />}
+      {rows.length > 0 && (
+        <Table<T> dataSource={rows} columns={shown} rowKey={rowKey} pagination={false} scroll={{ x: "max-content" }} />
+      )}
       {hasMore && (
         <div className="table-footer">
           <Button loading={isLoadingMore} onClick={onLoadMore}>

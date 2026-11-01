@@ -103,6 +103,9 @@ migrate() {
 
 # `--wait` follows the container healthcheck, which calls /health/ready, and fails as soon as it turns unhealthy
 start_app() {
+  # compose.yml mounts this folder and backup.sh makes it, which a new environment has not run yet. 755: the app in the
+  # container reads it as another user. Made here, not by the daemon, whose folder would belong to root.
+  install -d -m 755 "$env_dir/backup-status"
   compose up -d --no-deps --wait --wait-timeout "$READY_TIMEOUT_SECONDS" app
 }
 

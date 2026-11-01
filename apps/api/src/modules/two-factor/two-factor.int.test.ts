@@ -3,7 +3,7 @@ import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { buildApp } from "../../app.js";
 import type { DbClient } from "../../core/db/client.js";
 import { connectTestAppDatabase, connectTestDatabase } from "../../core/db/test-database.js";
-import { NO_MAIL, testConfig } from "../../core/test-app.js";
+import { NO_MAIL, testConfig, NO_JOBS } from "../../core/test-app.js";
 import {
   api,
   clearAuthData,
@@ -23,7 +23,13 @@ describe("two-factor", () => {
 
   beforeEach(async () => {
     await clearAuthData(owner);
-    app = await buildApp({ db, config: testConfig(), mailer: NO_MAIL, checkReady: () => Promise.resolve() });
+    app = await buildApp({
+      db,
+      config: testConfig(),
+      mailer: NO_MAIL,
+      jobs: NO_JOBS,
+      checkReady: () => Promise.resolve(),
+    });
   });
 
   afterAll(async () => {

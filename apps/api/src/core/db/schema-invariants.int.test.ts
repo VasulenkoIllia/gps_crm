@@ -1,11 +1,14 @@
 import { afterAll, describe, expect, it } from "vitest";
+import { APP_ROLE_NAME } from "./app-role.repository.js";
 import type { DbClient } from "./client.js";
 import { connectTestDatabase } from "./test-database.js";
 
 // Every object Prisma cannot describe is registered here, so a migration that loses one fails the build
 const REQUIRED_EXTENSIONS = ["btree_gist", "pg_stat_statements", "pg_trgm"];
-const REQUIRED_SCHEMAS = ["part"];
+// pgboss comes from the setup step and not from a migration
+const REQUIRED_SCHEMAS = ["part", "pgboss"];
 const REQUIRED_CHECKS = ["users_email_lowercase"];
+// The migrations' own: activity.partitions adds months after these, so the list is a floor
 const REQUIRED_PARTITIONS = [
   "activity_events_2026_11",
   "activity_events_2026_12",
@@ -42,8 +45,31 @@ describe("schema invariants", () => {
       WHERE pg_inherits.inhparent = 'public.activity_events'::regclass
       ORDER BY child.relname
     `;
-    expect(rows.map((row) => row.name)).toEqual(REQUIRED_PARTITIONS);
+    expect(rows.map((row) => row.name)).toEqual(expect.arrayContaining(REQUIRED_PARTITIONS));
     expect(new Set(rows.map((row) => row.schema))).toEqual(new Set(["part"]));
+  });
+
+  it("makes partitions through a function that runs as the owner, and only the runtime role may call it", async () => {
+    const rows = await db.$queryRaw<{ isDefiner: boolean; callers: string[]; config: string[] }[]>`
+      SELECT p.prosecdef AS "isDefiner",
+        ARRAY(
+          SELECT grantee::regrole::text FROM aclexplode(p.proacl) WHERE privilege_type = 'EXECUTE' AND grantee <> p.proowner
+        ) AS callers,
+        p.proconfig AS config
+      FROM pg_proc p WHERE p.oid = 'public.ensure_activity_partitions(integer)'::regprocedure
+    `;
+    expect(rows[0]?.isDefiner).toBe(true);
+    expect(rows[0]?.callers).toEqual([APP_ROLE_NAME]);
+    expect(rows[0]?.config).toEqual(
+      expect.arrayContaining(["search_path=pg_catalog, pg_temp", "TimeZone=UTC", "lock_timeout=5s"]),
+    );
+  });
+
+  it("indexes the journal by client only where there is a client", async () => {
+    const rows = await db.$queryRaw<{ definition: string }[]>`
+      SELECT indexdef AS definition FROM pg_indexes WHERE indexname = 'activity_events_subscriber_id_occurred_at_id_idx'
+    `;
+    expect(rows[0]?.definition).toContain("WHERE (subscriber_id IS NOT NULL)");
   });
 
   it("refuses an email that is not lower-case, whoever writes it", async () => {

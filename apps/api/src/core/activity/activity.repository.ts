@@ -1,26 +1,6 @@
+import type { ActivityAction } from "@gps_crm/shared";
 import type { Prisma } from "../../generated/prisma/client.js";
 import type { DbOrTx } from "../db/client.js";
-
-export type ActivityAction =
-  | "auth.login"
-  | "auth.login_failed"
-  | "auth.logout"
-  | "auth.logout_everywhere"
-  | "auth.session_ended"
-  | "auth.password_changed"
-  | "auth.password_reset"
-  | "auth.password_reset_requested"
-  | "auth.password_reset_link_created"
-  | "two_factor.enabled"
-  | "two_factor.reset"
-  | "two_factor.recovery_code_used"
-  | "two_factor.recovery_codes_regenerated"
-  | "user.first_admin_created"
-  | "user.invited"
-  | "user.invitation_accepted"
-  | "user.profile_updated"
-  | "user.blocked"
-  | "user.unblocked";
 
 export type Actor = { kind: "user"; id: string } | { kind: "system" };
 
@@ -61,7 +41,26 @@ export async function recordActivity(db: DbOrTx, context: ActivityContext, event
   });
 }
 
+// The month in hand and this many ahead (activity.md П6). The owner's function does the work: the runtime role has no DDL.
+export const ACTIVITY_MONTHS_AHEAD = 3;
+
+export interface PartitionResult {
+  created: number;
+  // Rows the default partition holds: none is the normal state, and each makes the next ATTACH scan it (03-data-model.md)
+  stranded: number;
+}
+
+export async function ensureActivityPartitions(
+  db: DbOrTx,
+  monthsAhead = ACTIVITY_MONTHS_AHEAD,
+): Promise<PartitionResult> {
+  const rows = await db.$queryRaw<{ created: number; stranded: bigint }[]>`
+    SELECT created, stranded FROM ensure_activity_partitions(${monthsAhead}::integer)
+  `;
+  return { created: rows[0]?.created ?? 0, stranded: Number(rows[0]?.stranded ?? 0) };
+}
+
 function toJson(event: ActivityEventInput): Prisma.InputJsonValue | undefined {
-  if (event.changes) return event.changes as Prisma.InputJsonValue;
-  return event.details;
+  if (!event.changes && !event.details) return undefined;
+  return { ...event.details, ...event.changes } as Prisma.InputJsonValue;
 }

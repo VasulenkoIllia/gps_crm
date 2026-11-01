@@ -16,8 +16,15 @@ describe("loadConfig", () => {
       databaseUrl: DATABASE_URL,
       appUrl: "http://localhost:5173",
       secretsKey: Buffer.alloc(32, 1),
+      appVersion: null,
+      backupStatusDir: null,
       smtp: null,
     });
+  });
+
+  it("takes the version and the folder of the backup status", () => {
+    const config = loadConfig({ ...BASE, APP_VERSION: "sha-1", BACKUP_STATUS_DIR: "/backup-status" });
+    expect(config).toMatchObject({ appVersion: "sha-1", backupStatusDir: "/backup-status" });
   });
 
   it("treats empty values as missing", () => {

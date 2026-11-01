@@ -2,6 +2,7 @@ import { z } from "zod";
 import { emailSchema, fullNameSchema } from "@gps_crm/shared";
 import { setAppRolePassword } from "./core/db/app-role.repository.js";
 import { createDbClient } from "./core/db/client.js";
+import { installJobSchema } from "./core/jobs/queue.js";
 import { createLogger } from "./core/logger.js";
 import { countUsers, ensureFirstAdmin } from "./modules/users/index.js";
 
@@ -27,13 +28,17 @@ if (!parsed.success) {
 }
 const env = parsed.data;
 
-const db = createDbClient(env.MIGRATION_DATABASE_URL ?? env.DATABASE_URL, (error) => {
+const ownerUrl = env.MIGRATION_DATABASE_URL ?? env.DATABASE_URL;
+const db = createDbClient(ownerUrl, (error) => {
   logger.error({ err: error }, "database pool error");
 });
 
 try {
   await setAppRolePassword(db, env.APP_DB_PASSWORD);
   logger.info("runtime role ready");
+
+  await installJobSchema(ownerUrl, db, logger);
+  logger.info("job schema ready");
 
   const { FIRST_ADMIN_EMAIL: email, FIRST_ADMIN_NAME: fullName, FIRST_ADMIN_PASSWORD: password } = env;
   if (email && fullName && password) {

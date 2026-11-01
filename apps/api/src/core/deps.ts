@@ -2,12 +2,14 @@ import type { Logger } from "pino";
 import type { AppConfig } from "./config.js";
 import type { DbClient } from "./db/client.js";
 import type { Mailer } from "./email/mailer.js";
+import type { JobQueue } from "./jobs/job.js";
 
 // What a module's service needs from the app, built once in main.ts and passed down
 export interface AppDeps {
   db: DbClient;
   config: AppConfig;
   mailer: Mailer;
+  jobs: JobQueue;
   logger: Pick<Logger, "info" | "warn" | "error">;
 }
 

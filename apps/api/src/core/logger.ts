@@ -31,9 +31,13 @@ export function requestLine(request: FastifyRequest): Record<string, unknown> {
   };
 }
 
+export function isPrismaError(error: Error): boolean {
+  return error.name.startsWith(PRISMA_ERROR_PREFIX);
+}
+
 // A Prisma error repeats the query arguments in its message and stack: names, phones and IBANs of payers
 function serializeError(error: Error): object {
-  if (!error.name.startsWith(PRISMA_ERROR_PREFIX)) return pino.stdSerializers.err(error);
+  if (!isPrismaError(error)) return pino.stdSerializers.err(error);
   const { code, meta } = error as Error & { code?: string; meta?: { target?: unknown } };
   return { type: error.name, code, target: meta?.target };
 }

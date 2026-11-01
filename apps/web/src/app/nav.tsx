@@ -6,6 +6,7 @@ import {
   FileTextOutlined,
   HddOutlined,
   HistoryOutlined,
+  InboxOutlined,
   SettingOutlined,
   TeamOutlined,
   UserOutlined,
@@ -30,8 +31,9 @@ export const NAV_ITEMS: NavItem[] = [
   { path: "/equipment", label: "Обладнання та SIM", icon: <HddOutlined /> },
   { path: "/references", label: "Довідники", icon: <AppstoreOutlined /> },
   { path: "/users", label: "Користувачі", icon: <UserOutlined />, permission: "users.manage" },
-  { path: "/activity", label: "Журнал дій", icon: <HistoryOutlined /> },
-  { path: "/system", label: "Система", icon: <SettingOutlined /> },
+  { path: "/activity", label: "Журнал дій", icon: <HistoryOutlined />, permission: "activity.read" },
+  { path: "/archive", label: "Архів", icon: <InboxOutlined />, permission: "records.archive" },
+  { path: "/system", label: "Система", icon: <SettingOutlined />, permission: "system.read" },
 ];
 
 export function findActiveKeys(pathname: string): string[] {

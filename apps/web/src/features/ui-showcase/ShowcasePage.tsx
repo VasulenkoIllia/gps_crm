@@ -16,6 +16,7 @@ import {
 } from "../../ui";
 import { ApiStatusPanel } from "./ApiStatusPanel";
 import { ShowcaseForm } from "./ShowcaseForm";
+import { ShowcaseLists } from "./ShowcaseLists";
 
 const SWATCHES = [
   { name: "Основний", color: THEME_COLORS.primary },
@@ -23,6 +24,7 @@ const SWATCHES = [
   { name: "Поверхня", color: THEME_COLORS.surface },
   { name: "Текст", color: THEME_COLORS.ink },
   { name: "Успіх", color: THEME_COLORS.good },
+  { name: "Увага", color: THEME_COLORS.warning },
   { name: "Помилка", color: THEME_COLORS.critical },
 ];
 
@@ -98,6 +100,8 @@ export function ShowcasePage() {
       <Panel title="Таблиця: дані, завантаження, порожньо, помилка">
         <TableStates />
       </Panel>
+
+      <ShowcaseLists />
 
       <Panel title="Дії">
         <div className="showcase-actions">

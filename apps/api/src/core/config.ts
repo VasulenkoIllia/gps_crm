@@ -24,6 +24,10 @@ const envSchema = z.object({
   SECRETS_KEY: z
     .string()
     .refine((value) => Buffer.from(value, "base64").length === SECRETS_KEY_BYTES, "must be 32 bytes in base64"),
+  // What deploy.sh rolled out; empty outside a server, where there is no deploy to record
+  APP_VERSION: withDefault(z.string().optional()),
+  // Read-only mount of backup-status/ (system.md); empty means no backups here
+  BACKUP_STATUS_DIR: withDefault(z.string().optional()),
   SMTP_HOST: withDefault(z.string().optional()),
   SMTP_PORT: withDefault(z.coerce.number().int().min(1).max(MAX_PORT).default(DEFAULT_SMTP_PORT)),
   SMTP_USER: withDefault(z.string().optional()),
@@ -50,6 +54,8 @@ export interface AppConfig {
   // Origin of the web app: the base of the links in letters and what the Origin check compares with
   appUrl: string;
   secretsKey: Buffer;
+  appVersion: string | null;
+  backupStatusDir: string | null;
   // Null means no letters: links are passed by hand (D12)
   smtp: SmtpConfig | null;
 }
@@ -89,6 +95,8 @@ export function loadConfig(env: Record<string, string | undefined>): AppConfig {
     databaseUrl: data.DATABASE_URL,
     appUrl: appUrlOf(data),
     secretsKey: Buffer.from(data.SECRETS_KEY, "base64"),
+    appVersion: data.APP_VERSION ?? null,
+    backupStatusDir: data.BACKUP_STATUS_DIR ?? null,
     smtp: smtpConfigOf(data),
   };
 }

@@ -45,6 +45,9 @@ describe("the runtime role", () => {
     ["reach the migrations", (db) => db.$executeRaw`DELETE FROM _prisma_migrations`],
     ["reach a partition directly", (db) => db.$executeRaw`DELETE FROM part.activity_events_default`],
     ["create a role", (db) => db.$executeRaw`CREATE ROLE stolen`],
+    ["create a table of the queue", (db) => db.$executeRaw`CREATE TABLE pgboss.stolen (id int)`],
+    ["change a table of the queue", (db) => db.$executeRaw`ALTER TABLE pgboss.queue ADD COLUMN stolen text`],
+    ["empty a table of the queue", (db) => db.$executeRaw`TRUNCATE pgboss.job_common`],
   ])("cannot %s", async (_, attempt) => {
     await expect(attempt(app)).rejects.toThrow(DENIED);
   });
@@ -72,6 +75,18 @@ describe("the runtime role", () => {
 
     await expect(attempt).rejects.toThrow(/uuid/i);
     expect(await owner.user.count({ where: { email } })).toBe(0);
+  });
+
+  it("works in the tables of the queue, which the setup step installed as the owner", async () => {
+    const rows = await app.$queryRaw<{ count: bigint }[]>`SELECT count(*) AS count FROM pgboss.job`;
+    expect(rows).toHaveLength(1);
+    const tables = await owner.$queryRaw<{ table_name: string }[]>`
+      SELECT c.relname AS table_name
+      FROM pg_class c
+      WHERE c.relnamespace = 'pgboss'::regnamespace AND c.relkind IN ('r', 'p')
+        AND NOT has_table_privilege(${APP_ROLE_NAME}, c.oid, 'SELECT, INSERT, UPDATE, DELETE')
+    `;
+    expect(tables).toEqual([]);
   });
 
   it("has DML on every table a module owns, so a new table cannot miss its grant", async () => {

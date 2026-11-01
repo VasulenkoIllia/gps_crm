@@ -2,17 +2,15 @@ import { existsSync } from "node:fs";
 import { resolve } from "node:path";
 import { buildApp } from "./app.js";
 import { loadConfig } from "./core/config.js";
-import { createDbClient } from "./core/db/client.js";
+import { createDbClient, DB_PROFILES } from "./core/db/client.js";
 import { listExpectedMigrations } from "./core/db/migration-state.js";
 import { checkDatabaseReady } from "./core/db/readiness.js";
 import { createMailer } from "./core/email/mailer.js";
-import { scheduleNightly } from "./core/jobs/nightly.js";
+import { createJobQueue } from "./core/jobs/queue.js";
 import { createLogger } from "./core/logger.js";
 import { installShutdown } from "./core/shutdown.js";
-import { runAuthCleanup } from "./modules/auth/index.js";
-
-// Outside the clock change window of 03:00-04:59 (03-data-model.md §3.1)
-const AUTH_CLEANUP_HOUR_KYIV = 2;
+import { JOBS } from "./jobs.js";
+import { noteDeployment } from "./modules/system/index.js";
 
 const config = loadConfig(process.env);
 const logger = createLogger(config.logLevel);
@@ -27,31 +25,50 @@ if (!hasWeb && config.isProduction) {
   throw new Error(`${webRoot} is missing: the image was built without the web app`);
 }
 
-const db = createDbClient(config.databaseUrl, (error) => logger.error({ err: error }, "database pool error"));
+const onPoolError = (error: Error) => logger.error({ err: error }, "database pool error");
+const db = createDbClient(config.databaseUrl, onPoolError);
+const jobsDb = createDbClient(config.databaseUrl, onPoolError, DB_PROFILES.worker);
 const expectedMigrations = listExpectedMigrations(migrationsDir);
+const jobs = createJobQueue({
+  connectionString: config.databaseUrl,
+  role: config.appRole,
+  definitions: JOBS,
+  db: jobsDb,
+  logger,
+});
+
+async function checkReady(): Promise<void> {
+  await checkDatabaseReady(db, expectedMigrations);
+  if (!jobs.isStarted()) throw new Error("the job queue is not running");
+}
 
 const app = await buildApp({
   logger,
   db,
   config,
   mailer: createMailer(config.smtp),
+  jobs,
   webRoot: hasWeb ? webRoot : undefined,
-  checkReady: () => checkDatabaseReady(db, expectedMigrations),
+  checkReady,
 });
 
-const stopJobs =
-  config.appRole === "api"
-    ? () => undefined
-    : scheduleNightly(
-        AUTH_CLEANUP_HOUR_KYIV,
-        async () => logger.info(await runAuthCleanup(db), "auth.cleanup finished"),
-        (error) => logger.error({ err: error }, "auth.cleanup failed"),
-      );
-
-installShutdown(app, () => {
-  stopJobs();
-  return db.$disconnect();
+installShutdown(app, async () => {
+  await jobs.stop();
+  await jobsDb.$disconnect();
+  await db.$disconnect();
 });
 
+// HTTP first (02-architecture.md §2.4): /health answers while the queue connects, and /health/ready holds the traffic.
 await app.listen({ host: config.host, port: config.port });
 logger.info({ role: config.appRole }, "started");
+
+// An error here ends the process through the handlers of installShutdown: Docker restarts it, a deploy rolls back
+await jobs.start();
+logger.info("job queue started");
+
+// A failed record costs one line of the journal and must not stop a working version
+if (config.appVersion && config.appRole !== "worker") {
+  await noteDeployment(db, config.appVersion).catch((error: unknown) => {
+    logger.error({ err: error }, "could not record the deployment");
+  });
+}

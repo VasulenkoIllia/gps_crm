@@ -1,4 +1,10 @@
-import { CheckCircleOutlined, ClockCircleOutlined, MinusCircleOutlined, StopOutlined } from "@ant-design/icons";
+import {
+  CheckCircleOutlined,
+  ClockCircleOutlined,
+  ExclamationCircleOutlined,
+  MinusCircleOutlined,
+  StopOutlined,
+} from "@ant-design/icons";
 import type { StatusMeta } from "@gps_crm/shared";
 import { Tag } from "antd";
 import type { ReactNode } from "react";
@@ -7,6 +13,7 @@ import type { ReactNode } from "react";
 const TONES: Record<StatusMeta["tone"], { color: string; icon: ReactNode }> = {
   good: { color: "success", icon: <CheckCircleOutlined /> },
   pending: { color: "processing", icon: <ClockCircleOutlined /> },
+  warning: { color: "warning", icon: <ExclamationCircleOutlined /> },
   critical: { color: "error", icon: <StopOutlined /> },
   neutral: { color: "default", icon: <MinusCircleOutlined /> },
 };

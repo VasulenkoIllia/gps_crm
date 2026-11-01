@@ -1,9 +1,14 @@
-import type { ReactNode } from "react";
+import { useId, type ReactNode } from "react";
 
 export function Panel({ title, children }: { title?: string; children: ReactNode }) {
+  const titleId = useId();
   return (
-    <section className="panel">
-      {title && <h2 className="panel-title">{title}</h2>}
+    <section className="panel" aria-labelledby={title ? titleId : undefined}>
+      {title && (
+        <h2 id={titleId} className="panel-title">
+          {title}
+        </h2>
+      )}
       <div className="panel-body">{children}</div>
     </section>
   );

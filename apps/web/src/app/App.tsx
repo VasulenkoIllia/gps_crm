@@ -18,9 +18,17 @@ const InvitePage = lazyPage(() => import("../features/auth/InvitePage"), "Invite
 const TwoFactorSetupPage = lazyPage(() => import("../features/auth/TwoFactorSetupPage"), "TwoFactorSetupPage");
 const ProfilePage = lazyPage(() => import("../features/profile/ProfilePage"), "ProfilePage");
 const UsersPage = lazyPage(() => import("../features/users/UsersPage"), "UsersPage");
+const ActivityPage = lazyPage(() => import("../features/activity/ActivityPage"), "ActivityPage");
+const ArchivePage = lazyPage(() => import("../features/activity/ArchivePage"), "ArchivePage");
+const SystemPage = lazyPage(() => import("../features/system/SystemPage"), "SystemPage");
 const ShowcasePage = lazyPage(() => import("../features/ui-showcase/ShowcasePage"), "ShowcasePage");
 
-const BUILT_PAGES: Record<string, ReactNode> = { "/users": <UsersPage /> };
+const BUILT_PAGES: Record<string, ReactNode> = {
+  "/users": <UsersPage />,
+  "/activity": <ActivityPage />,
+  "/archive": <ArchivePage />,
+  "/system": <SystemPage />,
+};
 
 export function App() {
   return (

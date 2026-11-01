@@ -11,7 +11,7 @@ export const USER_STATUS = { invited: "invited", active: "active", blocked: "blo
 // One registry for every status of the system: label and tone here, the look of a tone in StatusTag (05-ui-standard.md)
 export interface StatusMeta {
   label: string;
-  tone: "good" | "pending" | "critical" | "neutral";
+  tone: "good" | "pending" | "warning" | "critical" | "neutral";
 }
 
 export type UserStatus = (typeof USER_STATUS)[keyof typeof USER_STATUS];
