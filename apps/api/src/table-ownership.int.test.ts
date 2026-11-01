@@ -4,6 +4,8 @@ import { connectTestDatabase } from "./core/db/test-database.js";
 import { OWNED_TABLES as ACCESS_TABLES } from "./modules/access/index.js";
 import { OWNED_TABLES as ACTIVITY_TABLES } from "./modules/activity/index.js";
 import { OWNED_TABLES as AUTH_TABLES } from "./modules/auth/index.js";
+import { OWNED_TABLES as EQUIPMENT_TABLES } from "./modules/equipment/index.js";
+import { OWNED_TABLES as OBJECTS_TABLES } from "./modules/objects/index.js";
 import { OWNED_TABLES as REFERENCES_TABLES } from "./modules/references/index.js";
 import { OWNED_TABLES as SUBSCRIBERS_TABLES } from "./modules/subscribers/index.js";
 import { OWNED_TABLES as SYSTEM_TABLES } from "./modules/system/index.js";
@@ -34,6 +36,8 @@ describe("table ownership", () => {
       ...ACCESS_TABLES,
       ...ACTIVITY_TABLES,
       ...AUTH_TABLES,
+      ...EQUIPMENT_TABLES,
+      ...OBJECTS_TABLES,
       ...REFERENCES_TABLES,
       ...SUBSCRIBERS_TABLES,
       ...SYSTEM_TABLES,

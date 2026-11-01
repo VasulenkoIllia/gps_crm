@@ -23,6 +23,10 @@ export function notFound(): AppError {
   return new AppError(404, "not_found", "Не знайдено");
 }
 
+export function recordArchived(): AppError {
+  return new AppError(409, "record_archived", "Запис в архіві. Спершу відновіть його");
+}
+
 // Every change of a reference list: the lock first, and a taken name comes back as the text of its list
 export function writeReference<T>(
   deps: Pick<AppDeps, "db">,

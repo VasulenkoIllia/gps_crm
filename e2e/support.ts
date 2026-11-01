@@ -142,7 +142,7 @@ export async function newPerson(browser: Browser, baseUrl: string): Promise<Page
   return context.newPage();
 }
 
-export async function pick(page: Page, label: string, option: string | RegExp): Promise<void> {
+export async function pick(page: Page, label: string | RegExp, option: string | RegExp): Promise<void> {
   await page.getByRole("dialog").getByRole("combobox", { name: label }).click();
   await page.getByRole("option", { name: option, exact: typeof option === "string" }).click();
 }

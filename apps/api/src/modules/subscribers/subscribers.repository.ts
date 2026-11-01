@@ -1,4 +1,4 @@
-import { deriveSubscriberStatus, normalizeName, type SubscriberUpdate } from "@gps_crm/shared";
+import { deriveSubscriberStatus, normalizeName, type ObjectCounts, type SubscriberUpdate } from "@gps_crm/shared";
 import type { RecordScope } from "../../core/access/access.js";
 import type { DbOrTx } from "../../core/db/client.js";
 import { fromDbDate, toDbDate } from "../../core/db/dates.js";
@@ -233,12 +233,13 @@ export function readRollupPage(db: DbOrTx, afterId: string | null, limit: number
   });
 }
 
+// The version does not move: a form of the client has nothing against a change of one of its objects
+export async function writeRollup(tx: DbOrTx, id: string, facts: ObjectCounts): Promise<void> {
+  await tx.subscriber.update({ where: { id }, data: { ...facts, status: deriveSubscriberStatus(facts) } });
+}
+
 // Only when the row still says what was read: a change of an object in between has already put it right
-export async function fixRollup(
-  db: DbOrTx,
-  row: RollupRow,
-  facts: Pick<RollupRow, "objectsActive" | "objectsSuspended" | "objectsDisconnected">,
-): Promise<void> {
+export async function fixRollup(db: DbOrTx, row: RollupRow, facts: ObjectCounts): Promise<void> {
   const { id, ...seen } = row;
   await db.subscriber.updateMany({
     where: { id, ...seen },

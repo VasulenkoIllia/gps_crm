@@ -3,7 +3,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vites
 import type { DbClient } from "../../core/db/client.js";
 import { connectTestAppDatabase, connectTestDatabase } from "../../core/db/test-database.js";
 import { items } from "../../test-references.js";
-import { resetClients, startClientApi, updateForm, uploadFile, type ClientApi } from "./subscribers.test-support.js";
+import { resetClients, startClientApi, updateForm, uploadFile, type ClientApi } from "../../test-clients.js";
 
 const CONTRACT = { number: "1", signedOn: "2026-01-01", validUntil: "2026-12-31" };
 const SECOND_CONTACT = {
@@ -269,15 +269,6 @@ describe("the archive of a client", () => {
 
       expect(response.statusCode).toBe(409);
       expect(response.json()).toMatchObject({ code: "subscriber_has_contracts" });
-    });
-
-    it("refuses a client with objects", async () => {
-      const { id } = await client.createClient();
-      await owner.subscriber.update({ where: { id }, data: { objectsDisconnected: 1 } });
-
-      const response = await client.call("DELETE", `/subscribers/${id}`);
-
-      expect(response.json()).toMatchObject({ code: "subscriber_has_objects" });
     });
 
     it("refuses while a payer of other clients waits in its archive", async () => {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { readFilters, withFilter } from "./url-filters";
+import { readFilters, readSort, withFilter } from "./url-filters";
 
 const KEYS = ["from", "action"] as const;
 
@@ -25,5 +25,22 @@ describe("withFilter", () => {
     const params = new URLSearchParams("from=2026-11-01");
     withFilter(params, "from", undefined);
     expect(params.toString()).toBe("from=2026-11-01");
+  });
+});
+
+describe("readSort", () => {
+  const SORTS = ["name", "createdAt"] as const;
+
+  it("reads a known key and its order", () => {
+    expect(readSort(new URLSearchParams("sort=name&order=desc"), SORTS)).toEqual({ key: "name", order: "desc" });
+  });
+
+  it("goes up unless told otherwise, also on a hand-edited order", () => {
+    expect(readSort(new URLSearchParams("sort=name&order=sideways"), SORTS)).toEqual({ key: "name", order: "asc" });
+  });
+
+  it("leaves the order of the server when the key means nothing", () => {
+    expect(readSort(new URLSearchParams("sort=phone"), SORTS)).toBeUndefined();
+    expect(readSort(new URLSearchParams(), SORTS)).toBeUndefined();
   });
 });

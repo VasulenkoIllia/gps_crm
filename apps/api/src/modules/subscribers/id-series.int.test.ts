@@ -3,7 +3,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import type { DbClient } from "../../core/db/client.js";
 import { connectTestAppDatabase, connectTestDatabase } from "../../core/db/test-database.js";
 import { items, withoutPermission } from "../../test-references.js";
-import { clientForm, resetClients, startClientApi, type ClientApi } from "./subscribers.test-support.js";
+import { clientForm, resetClients, startClientApi, type ClientApi } from "../../test-clients.js";
 
 const PATH = "/subscriber-id-series";
 

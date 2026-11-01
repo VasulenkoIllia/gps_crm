@@ -1,5 +1,9 @@
+import { SORT_ORDERS, type SortOrder } from "@gps_crm/shared";
 import { useCallback, useMemo } from "react";
 import { useSearchParams } from "react-router";
+
+const SORT_PARAM = "sort";
+const ORDER_PARAM = "order";
 
 export type Filters<K extends string> = Partial<Record<K, string>>;
 
@@ -35,4 +39,40 @@ export function useUrlFilters<K extends string>(keys: readonly K[]) {
     setParams((current) => keys.reduce((next, key) => withFilter(next, key, undefined), current), { replace: true });
   }, [keys, setParams]);
   return { filters, hasFilters: Object.keys(filters).length > 0, setFilter, resetFilters };
+}
+
+interface UrlSort {
+  key: string;
+  order: SortOrder;
+}
+
+export function readSort<K extends string>(params: URLSearchParams, keys: readonly K[]): UrlSort | undefined {
+  const key = keys.find((sort) => sort === params.get(SORT_PARAM));
+  const order = SORT_ORDERS.find((value: SortOrder) => value === params.get(ORDER_PARAM)) ?? "asc";
+  return key ? { key, order } : undefined;
+}
+
+// As the filters: a sorted list survives a reload, and Back leaves the list
+export function useUrlSort<K extends string>(keys: readonly K[]) {
+  const [params, setParams] = useSearchParams();
+  const sort = useMemo(() => readSort(params, keys), [params, keys]);
+  const applySort = useCallback(
+    (next: UrlSort | null) => {
+      setParams(
+        (current) => {
+          const updated = new URLSearchParams(current);
+          updated.delete(SORT_PARAM);
+          updated.delete(ORDER_PARAM);
+          if (next) {
+            updated.set(SORT_PARAM, next.key);
+            updated.set(ORDER_PARAM, next.order);
+          }
+          return updated;
+        },
+        { replace: true },
+      );
+    },
+    [setParams],
+  );
+  return { sort, applySort };
 }

@@ -1,9 +1,10 @@
 import { normalizeName, type Payer, type PayerList, type PayerSearchQuery } from "@gps_crm/shared";
 import type { RecordScope } from "../../core/access/access.js";
 import type { DbOrTx } from "../../core/db/client.js";
+import { escapeLike } from "../../core/db/like.js";
 import type { Prisma } from "../../generated/prisma/client.js";
 import { scopedPayer, visibleClient } from "./payers.repository.js";
-import { escapeLike, MIN_NAME_SEARCH } from "./subscribers.queries.js";
+import { MIN_NAME_SEARCH } from "./subscribers.queries.js";
 
 const OTHER_CLIENTS_MAX = 30;
 const CONTRACT_NUMBERS_MAX = 30;
@@ -45,15 +46,42 @@ function viewSelect(ownClientId: string | null, scope: RecordScope) {
 
 type PayerView = Prisma.PayerGetPayload<{ select: ReturnType<typeof viewSelect> }>;
 
-function toPayer({ archivedAt, subscribers, contracts, ...row }: PayerView): Payer {
+function toPayer({ archivedAt, subscribers, contracts, ...row }: PayerView, objectCount: number): Payer {
   return {
     ...row,
     isArchived: archivedAt !== null,
     otherClients: subscribers.map(({ subscriber }) => ({ ...subscriber, code: Number(subscriber.code) })),
-    // Objects come with step 5: until then nothing sits on a payer
-    objectCount: 0,
+    objectCount,
     contractNumbers: contracts.map((contract) => contract.number),
   };
+}
+
+// Apart from the rows and only for this page: a payer search runs on every keystroke, and has no client to narrow it
+async function withObjectCounts(
+  db: DbOrTx,
+  rows: PayerView[],
+  ownClientId: string | null,
+  scope: RecordScope,
+): Promise<Payer[]> {
+  const counts = await db.monitoredObject.groupBy({
+    by: ["payerId"],
+    where: {
+      payerId: { in: rows.map((row) => row.id) },
+      archivedAt: null,
+      ...visibleClient(scope),
+      ...(ownClientId ? { subscriberId: ownClientId } : {}),
+    },
+    _count: { _all: true },
+  });
+  const byPayer = new Map(counts.map(({ payerId, _count }) => [payerId, _count._all]));
+  return rows.map((row) => toPayer(row, byPayer.get(row.id) ?? 0));
+}
+
+// payers.md П6, П11: a disconnected object stands on nobody's money, and leaves a payer free to go
+export function countWorkingObjects(db: DbOrTx, payerId: string, subscriberId?: string): Promise<number> {
+  return db.monitoredObject.count({
+    where: { payerId, archivedAt: null, status: { not: "disconnected" }, ...(subscriberId ? { subscriberId } : {}) },
+  });
 }
 
 export async function listPayersOf(db: DbOrTx, subscriberId: string, scope: RecordScope): Promise<PayerList> {
@@ -63,7 +91,7 @@ export async function listPayersOf(db: DbOrTx, subscriberId: string, scope: Reco
     take: PAYERS_OF_CLIENT_MAX,
     select: viewSelect(subscriberId, scope),
   });
-  return { items: rows.map(toPayer), nextCursor: null };
+  return { items: await withObjectCounts(db, rows, subscriberId, scope), nextCursor: null };
 }
 
 // As in the lists: a name is looked for from three letters, the rest would read the whole table for nothing
@@ -88,7 +116,7 @@ export async function searchPayers(db: DbOrTx, query: PayerSearchQuery, scope: R
   });
   const page = rows.slice(0, query.limit);
   return {
-    items: page.map(toPayer),
+    items: await withObjectCounts(db, page, null, scope),
     nextCursor: rows.length > query.limit ? (page.at(-1)?.id ?? null) : null,
   };
 }

@@ -19,15 +19,19 @@ import {
   type ArchiveRestorers,
 } from "../activity/index.js";
 import { notFound } from "../references/index.js";
+import type { ClientObjects } from "./client-objects.js";
 import * as contacts from "./contacts.repository.js";
 import { lockContact, primaryNeeded } from "./contacts.service.js";
 import * as contractsRepo from "./contracts.repository.js";
 import { lockContract } from "./contracts.service.js";
 import * as payers from "./payers.repository.js";
-import { requireSubscriber } from "./subscribers.helpers.js";
+import { assertNoWorkingObjects } from "./payers.service.js";
+import { refreshRollup, requireSubscriber } from "./subscribers.helpers.js";
+import { countAllObjects } from "./subscribers.queries.js";
 import * as repo from "./subscribers.repository.js";
 
 type ArchiveDeps = Pick<AppDeps, "db">;
+export type PackageDeps = AppDeps & { objects: ClientObjects };
 
 interface PackageItem {
   id: string;
@@ -53,9 +57,10 @@ function blocked(message: string): AppError {
   return new AppError(409, "restore_blocked", message);
 }
 
-// П19. Objects are the one count that stands in the way: disconnected ones go to the archive with their client (step 5)
+// П19. Objects are the one count that stands in the way: disconnected ones go to the archive with their client, and let
+// their equipment go there and then (D71)
 export async function archiveSubscriber(
-  deps: ArchiveDeps,
+  deps: Pick<PackageDeps, "db" | "objects">,
   context: ActivityContext,
   scope: RecordScope,
   id: string,
@@ -74,11 +79,13 @@ export async function archiveSubscriber(
     const batchId = await openArchiveBatch(tx, context, {
       entityType: "subscriber",
       label: `Клієнт: ${subscriber.name}`,
-      itemCount: 1 + contactRows.length + contractRows.length + payerRows.length,
+      itemCount: 1 + contactRows.length + contractRows.length + payerRows.length + subscriber.objectsDisconnected,
       subscriberId: id,
     });
     const actorId = actorIdOf(context);
     await repo.markSubscriberArchived(tx, id, batchId, actorId);
+    const objectRows = await deps.objects.archiveWithClient(tx, id, batchId, actorId);
+    await refreshRollup(tx, id);
     await contacts.archiveContacts(
       tx,
       contactRows.map((row) => row.id),
@@ -99,6 +106,7 @@ export async function archiveSubscriber(
     );
     await recordActivities(tx, context, [
       ...itemEvents("subscriber.archived", "subscriber", [{ id, label: subscriber.name }], id),
+      ...itemEvents("object.archived", "object", objectRows, id),
       ...itemEvents(
         "contact.archived",
         "contact",
@@ -162,7 +170,7 @@ export async function archiveContract(
   });
 }
 
-// payers.md П6 with the objects, step 5. The package goes under the first client, as its events do.
+// payers.md П6. The package goes under the first client, as its events do.
 export async function archivePayer(
   deps: ArchiveDeps,
   context: ActivityContext,
@@ -173,6 +181,7 @@ export async function archivePayer(
     const payer = await payers.lockPayer(tx, id, scope);
     if (!payer) throw notFound();
     if (payer.archivedAt) return;
+    await assertNoWorkingObjects(tx, id);
     const subscriberId = await payers.findFirstClientOf(tx, id, scope);
     const batchId = await openArchiveBatch(tx, context, {
       entityType: "payer",
@@ -227,34 +236,42 @@ function translateNumberHeld(error: unknown): never {
   throw error;
 }
 
-// One restorer for all four kinds: a package holds any of them, and what stands in the way of each is the same (П20)
-const restorePackage: ArchiveRestorer = async (tx, batchId, context) => {
-  await lockPackage(tx, batchId);
-  const subscribers = await repo.findSubscribersOfBatch(tx, batchId);
-  const contactRows = await contacts.findContactsOfBatch(tx, batchId);
-  const payerRows = await payers.findPayersOfBatch(tx, batchId);
-  const contractRows = await contractsRepo.findContractsOfBatch(tx, batchId);
-  const clientsBack = new Set(subscribers.map((subscriber) => subscriber.id));
-  const payersBack = new Set(payerRows.map((payer) => payer.id));
-  for (const contact of contactRows) {
-    if (contact.subscriber.archivedAt && !clientsBack.has(contact.subscriberId)) {
-      throw blocked(`Спершу відновіть клієнта «${contact.subscriber.name}»`);
+// One restorer for all four kinds: a package holds any of them, and what stands in the way of each is the same (П20).
+// Objects come back only with their client: there is a package of their own for one that went alone.
+const restorePackage =
+  (objects: ClientObjects): ArchiveRestorer =>
+  async (tx, batchId, context) => {
+    await lockPackage(tx, batchId);
+    const subscribers = await repo.findSubscribersOfBatch(tx, batchId);
+    const contactRows = await contacts.findContactsOfBatch(tx, batchId);
+    const payerRows = await payers.findPayersOfBatch(tx, batchId);
+    const contractRows = await contractsRepo.findContractsOfBatch(tx, batchId);
+    const clientsBack = new Set(subscribers.map((subscriber) => subscriber.id));
+    const payersBack = new Set(payerRows.map((payer) => payer.id));
+    for (const contact of contactRows) {
+      if (contact.subscriber.archivedAt && !clientsBack.has(contact.subscriberId)) {
+        throw blocked(`Спершу відновіть клієнта «${contact.subscriber.name}»`);
+      }
     }
-  }
-  await assertContractsCanReturn(tx, contractRows, clientsBack, payersBack);
-  const ownerOf = subscribers[0]?.id ?? contactRows[0]?.subscriberId ?? contractRows[0]?.subscriberId;
-  await repo.clearSubscriberBatch(tx, batchId);
-  await payers.clearPayerBatch(tx, batchId);
-  await contacts.clearContactBatch(tx, batchId);
-  await contractsRepo.clearContractBatch(tx, batchId).catch(translateNumberHeld);
-  const subscriberId = ownerOf ?? (await firstClientOfPayers(tx, payerRows));
-  await recordActivities(tx, context, [
-    ...subscribers.map((row) => restoredEvent("subscriber.restored", "subscriber", row.id, row.name, row.id)),
-    ...contactRows.map((row) => restoredEvent("contact.restored", "contact", row.id, row.fullName, row.subscriberId)),
-    ...payerRows.map((row) => restoredEvent("payer.restored", "payer", row.id, row.name, subscriberId)),
-    ...contractRows.map((row) => restoredEvent("contract.restored", "contract", row.id, row.number, row.subscriberId)),
-  ]);
-};
+    await assertContractsCanReturn(tx, contractRows, clientsBack, payersBack);
+    const ownerOf = subscribers[0]?.id ?? contactRows[0]?.subscriberId ?? contractRows[0]?.subscriberId;
+    await repo.clearSubscriberBatch(tx, batchId);
+    const objectRows = await objects.restoreWithClient(tx, batchId);
+    for (const { id } of subscribers) await refreshRollup(tx, id);
+    await payers.clearPayerBatch(tx, batchId);
+    await contacts.clearContactBatch(tx, batchId);
+    await contractsRepo.clearContractBatch(tx, batchId).catch(translateNumberHeld);
+    const subscriberId = ownerOf ?? (await firstClientOfPayers(tx, payerRows));
+    await recordActivities(tx, context, [
+      ...subscribers.map((row) => restoredEvent("subscriber.restored", "subscriber", row.id, row.name, row.id)),
+      ...objectRows.map((row) => restoredEvent("object.restored", "object", row.id, row.label, row.subscriberId)),
+      ...contactRows.map((row) => restoredEvent("contact.restored", "contact", row.id, row.fullName, row.subscriberId)),
+      ...payerRows.map((row) => restoredEvent("payer.restored", "payer", row.id, row.name, subscriberId)),
+      ...contractRows.map((row) =>
+        restoredEvent("contract.restored", "contract", row.id, row.number, row.subscriberId),
+      ),
+    ]);
+  };
 
 function firstClientOfPayers(tx: DbOrTx, rows: { id: string }[]): Promise<string | undefined> {
   const [first] = rows;
@@ -290,21 +307,19 @@ async function assertContractsCanReturn(
   }
 }
 
-export const SUBSCRIBER_RESTORERS: ArchiveRestorers = {
-  subscriber: restorePackage,
-  contact: restorePackage,
-  payer: restorePackage,
-  contract: restorePackage,
-};
+export function subscriberRestorers(objects: ClientObjects): ArchiveRestorers {
+  const restorer = restorePackage(objects);
+  return { subscriber: restorer, contact: restorer, payer: restorer, contract: restorer };
+}
 
 // A record that is not in the archive has nothing to come back from: as a second press of the button, no change
 export async function restoreRecord(
-  deps: ArchiveDeps,
+  deps: Pick<PackageDeps, "db" | "objects">,
   context: ActivityContext,
   scope: RecordScope,
   batchId: string | null,
 ): Promise<void> {
-  if (batchId) await restoreArchiveBatch(deps.db, SUBSCRIBER_RESTORERS, context, batchId, scope);
+  if (batchId) await restoreArchiveBatch(deps.db, subscriberRestorers(deps.objects), context, batchId, scope);
 }
 
 function snapshotOf(subscriber: repo.SubscriberRow) {
@@ -331,8 +346,7 @@ export async function deleteSubscriber(
   await deps.db.$transaction(async (tx) => {
     await lockOpenBatches(tx, id);
     const subscriber = await requireSubscriber(tx, id, scope);
-    const { objectsActive, objectsSuspended, objectsDisconnected } = subscriber;
-    if (objectsActive + objectsSuspended + objectsDisconnected > 0) {
+    if ((await countAllObjects(tx, id)) > 0) {
       throw new AppError(409, "subscriber_has_objects", "Клієнта з об'єктами видалити не можна");
     }
     if ((await repo.countContracts(tx, id)) > 0) {

@@ -6,7 +6,7 @@ import { connectTestAppDatabase, connectTestDatabase } from "../../core/db/test-
 import { testConfig } from "../../core/test-app.js";
 import { api } from "../../test-auth.js";
 import { items } from "../../test-references.js";
-import { resetClients, startClientApi, uploadFile, type ClientApi } from "./subscribers.test-support.js";
+import { resetClients, startClientApi, uploadFile, type ClientApi } from "../../test-clients.js";
 
 const today = todayKyiv();
 const PDF = Buffer.from("%PDF-1.7\nтекст договору");

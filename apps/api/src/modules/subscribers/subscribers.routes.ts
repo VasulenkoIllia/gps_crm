@@ -18,10 +18,10 @@ import {
 } from "@gps_crm/shared";
 import type { FastifyInstance } from "fastify";
 import { activityContext, can, recordScope } from "../../core/access/access.js";
-import { API_PREFIX, type AppDeps } from "../../core/deps.js";
+import { API_PREFIX } from "../../core/deps.js";
 import { parseInput } from "../../core/http/validate.js";
-import { archiveSubscriber, deleteSubscriber, restoreRecord } from "./archive.service.js";
-import { changing, creating, idOf } from "./route-helpers.js";
+import { archiveSubscriber, deleteSubscriber, restoreRecord, type PackageDeps } from "./archive.service.js";
+import { changing, creating, idOf } from "../../core/http/route-helpers.js";
 import {
   changeSubscriberCode,
   changeSubscriberTariff,
@@ -41,7 +41,7 @@ import {
 
 const PATH = `${API_PREFIX}/subscribers`;
 
-export function registerSubscriberRoutes(app: FastifyInstance, deps: AppDeps): void {
+export function registerSubscriberRoutes(app: FastifyInstance, deps: PackageDeps): void {
   const read = { config: { access: can("subscribers.read") } };
   const write = { config: { access: can("subscribers.write") } };
   const changeCode = { config: { access: can("subscribers.code.change") } };

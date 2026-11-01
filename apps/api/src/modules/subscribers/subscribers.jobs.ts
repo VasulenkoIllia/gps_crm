@@ -1,16 +1,12 @@
 import { deriveSubscriberStatus, type ObjectCounts } from "@gps_crm/shared";
 import type { DbOrTx } from "../../core/db/client.js";
 import type { JobDefinition } from "../../core/jobs/job.js";
+import { readObjectFacts } from "./subscribers.queries.js";
 import { fixRollup, readRollupPage, type RollupRow } from "./subscribers.repository.js";
 
 const PAGE_SIZE = 1_000;
 // Three nights of silence, as auth.cleanup: one missed night is nothing to worry about
 const MAX_SILENCE_MS = 3 * 24 * 60 * 60 * 1_000;
-
-// Step 5 reads these from the objects. There is no table yet, and until then a client has no objects.
-function readObjectFacts(): ObjectCounts {
-  return { objectsActive: 0, objectsSuspended: 0, objectsDisconnected: 0 };
-}
 
 function isOutdated(row: RollupRow, facts: ObjectCounts): boolean {
   return (
@@ -28,9 +24,13 @@ export async function reconcileRollups(db: DbOrTx): Promise<{ checked: number; f
   let afterId: string | null = null;
   for (;;) {
     const page: RollupRow[] = await readRollupPage(db, afterId, PAGE_SIZE);
+    const pageFacts = await readObjectFacts(
+      db,
+      page.map((row) => row.id),
+    );
     for (const row of page) {
-      const facts = readObjectFacts();
-      if (!isOutdated(row, facts)) continue;
+      const facts = pageFacts.get(row.id);
+      if (!facts || !isOutdated(row, facts)) continue;
       await fixRollup(db, row, facts);
       fixed += 1;
     }

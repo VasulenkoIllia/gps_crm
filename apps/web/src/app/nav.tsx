@@ -26,10 +26,10 @@ export interface NavItem {
 export const NAV_ITEMS: NavItem[] = [
   { path: "/", label: "Головна", icon: <DashboardOutlined /> },
   { path: "/subscribers", label: "Клієнти", icon: <TeamOutlined /> },
-  { path: "/objects", label: "Об'єкти", icon: <CarOutlined /> },
+  { path: "/objects", label: "Об'єкти", icon: <CarOutlined />, permission: "objects.read" },
   { path: "/contracts", label: "Договори", icon: <FileTextOutlined /> },
   { path: "/payers", label: "Платники", icon: <ApartmentOutlined /> },
-  { path: "/equipment", label: "Обладнання та SIM", icon: <HddOutlined /> },
+  { path: "/equipment", label: "Обладнання та SIM", icon: <HddOutlined />, permission: "equipment.read" },
   { path: "/references", label: "Довідники", icon: <AppstoreOutlined />, permission: "subscribers.read" },
   { path: "/id-series", label: "Серії ID", icon: <BarsOutlined />, permission: "subscribers.read" },
   { path: "/users", label: "Користувачі", icon: <UserOutlined />, permission: "users.manage" },

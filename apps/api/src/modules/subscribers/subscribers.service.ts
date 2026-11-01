@@ -1,5 +1,7 @@
 import {
+  dateText,
   isTariffDateAllowed,
+  planVersion,
   todayKyiv,
   type CreatedSubscriber,
   type IdSeries,
@@ -20,6 +22,7 @@ import { isUniqueViolation, type DbOrTx } from "../../core/db/client.js";
 import type { AppDeps } from "../../core/deps.js";
 import { AppError } from "../../core/errors.js";
 import { assertVersion, changedFields, hasChanges, selectTariff, type SelectedTariff } from "../references/index.js";
+import type { ClientObjects } from "./client-objects.js";
 import * as contacts from "./contacts.repository.js";
 import * as series from "./id-series.repository.js";
 import * as payers from "./payers.repository.js";
@@ -287,30 +290,20 @@ export async function changeSubscriberCode(
     });
 }
 
-function dateText(date: string): string {
-  return date.split("-").reverse().join(".");
-}
-
 // П25, П27. A past version stays as it was: a new one goes on top of what has not begun yet, or replaces the one of the
 // same date. That one, and one that never began, closes on its own start: an empty period that overlaps nothing.
 async function rewritePeriods(tx: DbOrTx, subscriberId: string, validFrom: string, today: string): Promise<void> {
   const periods = await repo.findTariffPeriods(tx, subscriberId);
-  const live = periods.filter((period) => period.validTo === null || period.validTo > period.validFrom);
-  const newer = live.find((period) => period.validFrom > validFrom && period.validFrom <= today);
-  if (newer) {
-    const message = `Вже є версія тарифу від ${dateText(newer.validFrom)}: нова дата має бути не раніше`;
+  const { blockedBy, closings } = planVersion(periods, validFrom, today);
+  if (blockedBy) {
+    const message = `Вже є версія тарифу від ${dateText(blockedBy.validFrom)}: нова дата має бути не раніше`;
     throw new AppError(409, "tariff_date_overlap", message, { validFrom: message });
   }
-  for (const period of live) {
-    if (period.validFrom >= validFrom) await repo.closeTariffPeriod(tx, period.id, period.validFrom);
-    else if (period.validTo === null || period.validTo > validFrom) {
-      await repo.closeTariffPeriod(tx, period.id, validFrom);
-    }
-  }
+  for (const { id, validTo } of closings) await repo.closeTariffPeriod(tx, id, validTo);
 }
 
 export async function changeSubscriberTariff(
-  deps: SubscriberDeps,
+  deps: SubscriberDeps & { objects: ClientObjects },
   context: ActivityContext,
   scope: RecordScope,
   id: string,
@@ -326,6 +319,7 @@ export async function changeSubscriberTariff(
     await rewritePeriods(tx, id, input.validFrom, today);
     await repo.openTariffPeriod(tx, id, tariff.id, input.validFrom, actorId);
     await repo.mirrorTariff(tx, id, { programId: tariff.programId, tariffId: tariff.id }, actorId);
+    await deps.objects.followClientTariff(tx, id, tariff, actorId);
     await recordActivity(tx, context, {
       action: "subscriber.tariff_changed",
       entityType: "subscriber",

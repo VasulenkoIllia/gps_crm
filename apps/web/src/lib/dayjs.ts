@@ -1,4 +1,5 @@
-import dayjs from "dayjs";
+import { todayKyiv } from "@gps_crm/shared";
+import dayjs, { type Dayjs } from "dayjs";
 import "dayjs/locale/uk";
 import timezone from "dayjs/plugin/timezone";
 import utc from "dayjs/plugin/utc";
@@ -35,4 +36,8 @@ export function startOfDay(date: string): string {
 // Counts days on the plain date, so a day of the clock change, 23 or 25 hours long, still ends at midnight
 export function startOfNextDay(date: string): string {
   return startOfDay(dayjs.utc(date).add(1, "day").format(DATE_VALUE_FORMAT));
+}
+
+export function isFutureDay(date: Dayjs): boolean {
+  return dayjs(date).format(DATE_VALUE_FORMAT) > todayKyiv();
 }

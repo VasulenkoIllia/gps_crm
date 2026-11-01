@@ -1,20 +1,17 @@
 import {
-  SORT_ORDERS,
   SUBSCRIBER_SORTS,
   SUBSCRIBER_STATUS_META,
   SUBSCRIBER_TYPES,
   ARCHIVED_STATUS_META,
-  type SortOrder,
   type SubscriberListItem,
-  type SubscriberSort,
 } from "@gps_crm/shared";
 import { keepPreviousData, useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { Button } from "antd";
 import { useMemo, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router";
+import { useNavigate } from "react-router";
 import { listRows } from "../../lib/list-rows";
 import { useCan } from "../../lib/session";
-import { useUrlFilters } from "../../lib/url-filters";
+import { useUrlFilters, useUrlSort } from "../../lib/url-filters";
 import {
   EntityLink,
   FilterBar,
@@ -25,7 +22,6 @@ import {
   SearchField,
   StatusTag,
   type DataTableColumn,
-  type TableSort,
 } from "../../ui";
 import { useReferenceOptions } from "../references/references.api";
 import { tariffLabel, useManagerOptions } from "./subscriber-form";
@@ -38,9 +34,7 @@ import {
   type SubscriberFilters,
 } from "./subscribers.api";
 
-const SEARCH_HINT = "Назва, ID, старий номер, ЄДРПОУ, телефон, email";
-const SORT_PARAM = "sort";
-const ORDER_PARAM = "order";
+const SEARCH_HINT = "Назва, ID, старий номер, ЄДРПОУ, телефон, email, IMEI, SIM";
 const STATUS_OPTIONS = Object.entries(SUBSCRIBER_STATUS_META).map(([value, { label }]) => ({ value, label }));
 const TYPE_OPTIONS = Object.entries(SUBSCRIBER_TYPES).map(([value, label]) => ({ value, label }));
 const ARCHIVE_OPTIONS = [{ value: "true", label: "В архіві" }];
@@ -95,12 +89,6 @@ const COLUMNS: DataTableColumn<SubscriberListItem>[] = [
   },
   { title: "Менеджер", dataIndex: "managerName" },
 ];
-
-function readSort(params: URLSearchParams): TableSort | undefined {
-  const key = SUBSCRIBER_SORTS.find((sort: SubscriberSort) => sort === params.get(SORT_PARAM));
-  const order = SORT_ORDERS.find((value: SortOrder) => value === params.get(ORDER_PARAM)) ?? "asc";
-  return key ? { key, order } : undefined;
-}
 
 interface ListFiltersProps {
   filters: SubscriberFilters;
@@ -180,8 +168,7 @@ function SubscribersScreen() {
   const canWrite = useCan("subscribers.write");
   const [isCreating, setCreating] = useState(false);
   const { filters, hasFilters, setFilter, resetFilters } = useUrlFilters(SUBSCRIBER_FILTER_KEYS);
-  const [params, setParams] = useSearchParams();
-  const sort = useMemo(() => readSort(params), [params]);
+  const { sort, applySort } = useUrlSort(SUBSCRIBER_SORTS);
 
   const pages = useInfiniteQuery({
     queryKey: [...SUBSCRIBERS_KEY, "list", filters, sort],
@@ -197,22 +184,6 @@ function SubscribersScreen() {
     placeholderData: keepPreviousData,
   });
   const rows = useMemo(() => listRows(pages.data, pages.isPlaceholderData), [pages.data, pages.isPlaceholderData]);
-
-  function applySort(next: TableSort | null) {
-    setParams(
-      (current) => {
-        const updated = new URLSearchParams(current);
-        updated.delete(SORT_PARAM);
-        updated.delete(ORDER_PARAM);
-        if (next) {
-          updated.set(SORT_PARAM, next.key);
-          updated.set(ORDER_PARAM, next.order);
-        }
-        return updated;
-      },
-      { replace: true },
-    );
-  }
 
   return (
     <>

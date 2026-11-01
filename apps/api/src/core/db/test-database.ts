@@ -55,6 +55,16 @@ const STARTING_SERIES = [
 // Everything of the clients, and the series as the migration left them. Here and not in the module: the tables hold
 // users and tariffs by foreign keys, so the helpers that clear those come through this first.
 export async function clearClientData(owner: DbClient): Promise<void> {
+  await owner.sensorInstallation.deleteMany();
+  await owner.simInstallation.deleteMany();
+  await owner.deviceInstallation.deleteMany();
+  await owner.objectAddonPeriod.deleteMany();
+  await owner.objectServiceTerm.deleteMany();
+  await owner.objectStatusPeriod.deleteMany();
+  await owner.monitoredObject.deleteMany();
+  await owner.device.deleteMany();
+  await owner.sim.deleteMany();
+  await owner.sensor.deleteMany();
   await owner.storedFile.deleteMany();
   await owner.contract.deleteMany();
   await owner.contact.deleteMany();

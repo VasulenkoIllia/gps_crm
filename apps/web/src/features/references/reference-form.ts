@@ -36,7 +36,9 @@ interface ReferenceSaveOptions<T, R> {
   // A name in the answer that differs from the field of the form (the API speaks kopecks, the form text)
   renamed?: Record<string, string>;
   // Offers «Зберегти й додати ще», which clears these and keeps the rest for the next record of a list (§5.4)
-  clearFields?: string[];
+  clearFields?: (string | string[])[];
+  // Where the next record starts. Without it, the name
+  firstField?: string | string[];
   isNew?: boolean;
   onDone: () => void;
   // What else a change touches. Without it, the lists of the reference module
@@ -53,6 +55,7 @@ export function useRecordSave<I, T extends object, R>(
   options: ReferenceSaveOptions<T, R>,
 ) {
   const { form, renamed, clearFields, isNew, onDone, addAnotherText, savedText, onSaved } = options;
+  const firstField = options.firstField ?? "name";
   const refresh = options.refresh ?? refreshAfterChange;
   const client = useQueryClient();
   const { message } = App.useApp();
@@ -62,7 +65,7 @@ export function useRecordSave<I, T extends object, R>(
     // What stays for the next record is not unsaved work: closing now loses nothing
     const kept = Object.keys(form.getFieldsValue()).map((name) => ({ name, touched: false }));
     form.setFields(kept as Parameters<typeof form.setFields>[0]);
-    form.focusField("name" as Parameters<typeof form.focusField>[0]);
+    form.focusField(firstField as Parameters<typeof form.focusField>[0]);
   }
 
   const mutation = useMutation({

@@ -142,6 +142,75 @@
     "derived": true
   },
   {
+    "method": "GET",
+    "url": "/api/v1/devices",
+    "access": "can:equipment.read"
+  },
+  {
+    "method": "HEAD",
+    "url": "/api/v1/devices",
+    "access": "can:equipment.read",
+    "derived": true
+  },
+  {
+    "method": "POST",
+    "url": "/api/v1/devices",
+    "access": "can:equipment.write"
+  },
+  {
+    "method": "DELETE",
+    "url": "/api/v1/devices/:id",
+    "access": "can:records.delete"
+  },
+  {
+    "method": "GET",
+    "url": "/api/v1/devices/:id",
+    "access": "can:equipment.read"
+  },
+  {
+    "method": "HEAD",
+    "url": "/api/v1/devices/:id",
+    "access": "can:equipment.read",
+    "derived": true
+  },
+  {
+    "method": "PATCH",
+    "url": "/api/v1/devices/:id",
+    "access": "can:equipment.write"
+  },
+  {
+    "method": "POST",
+    "url": "/api/v1/devices/:id/archive",
+    "access": "can:records.archive"
+  },
+  {
+    "method": "POST",
+    "url": "/api/v1/devices/:id/restore",
+    "access": "can:records.archive"
+  },
+  {
+    "method": "GET",
+    "url": "/api/v1/devices/available",
+    "access": "can:equipment.read"
+  },
+  {
+    "method": "HEAD",
+    "url": "/api/v1/devices/available",
+    "access": "can:equipment.read",
+    "derived": true
+  },
+  {
+    "method": "GET",
+    "url": "/api/v1/devices/imei-check",
+    "access": "can:equipment.read"
+  },
+  {
+    "method": "HEAD",
+    "url": "/api/v1/devices/imei-check",
+    "access": "can:equipment.read",
+    "derived": true
+  },
+  {
     "method": "POST",
     "url": "/api/v1/invitations/accept",
     "access": "public"
@@ -217,6 +286,121 @@
     "method": "DELETE",
     "url": "/api/v1/me/sessions/:id",
     "access": "authenticated"
+  },
+  {
+    "method": "GET",
+    "url": "/api/v1/objects",
+    "access": "can:objects.read"
+  },
+  {
+    "method": "HEAD",
+    "url": "/api/v1/objects",
+    "access": "can:objects.read",
+    "derived": true
+  },
+  {
+    "method": "POST",
+    "url": "/api/v1/objects",
+    "access": "can:objects.write"
+  },
+  {
+    "method": "DELETE",
+    "url": "/api/v1/objects/:id",
+    "access": "can:records.delete"
+  },
+  {
+    "method": "GET",
+    "url": "/api/v1/objects/:id",
+    "access": "can:objects.read"
+  },
+  {
+    "method": "HEAD",
+    "url": "/api/v1/objects/:id",
+    "access": "can:objects.read",
+    "derived": true
+  },
+  {
+    "method": "PATCH",
+    "url": "/api/v1/objects/:id",
+    "access": "can:objects.write"
+  },
+  {
+    "method": "GET",
+    "url": "/api/v1/objects/:id/activity",
+    "access": "can:activity.read"
+  },
+  {
+    "method": "HEAD",
+    "url": "/api/v1/objects/:id/activity",
+    "access": "can:activity.read",
+    "derived": true
+  },
+  {
+    "method": "POST",
+    "url": "/api/v1/objects/:id/addons",
+    "access": "can:objects.write"
+  },
+  {
+    "method": "POST",
+    "url": "/api/v1/objects/:id/archive",
+    "access": "can:records.archive"
+  },
+  {
+    "method": "GET",
+    "url": "/api/v1/objects/:id/history",
+    "access": "can:objects.read"
+  },
+  {
+    "method": "HEAD",
+    "url": "/api/v1/objects/:id/history",
+    "access": "can:objects.read",
+    "derived": true
+  },
+  {
+    "method": "POST",
+    "url": "/api/v1/objects/:id/replace-device",
+    "access": "can:equipment.write"
+  },
+  {
+    "method": "POST",
+    "url": "/api/v1/objects/:id/replace-sim",
+    "access": "can:equipment.write"
+  },
+  {
+    "method": "POST",
+    "url": "/api/v1/objects/:id/restore",
+    "access": "can:records.archive"
+  },
+  {
+    "method": "POST",
+    "url": "/api/v1/objects/:id/sensors",
+    "access": "can:equipment.write"
+  },
+  {
+    "method": "POST",
+    "url": "/api/v1/objects/:id/sensors/:sensorId/remove",
+    "access": "can:equipment.write"
+  },
+  {
+    "method": "POST",
+    "url": "/api/v1/objects/:id/status",
+    "access": "can:objects.status.change"
+  },
+  {
+    "method": "POST",
+    "url": "/api/v1/objects/:id/terms",
+    "access": "can:objects.write"
+  },
+  {
+    "method": "GET",
+    "url": "/api/v1/objects/count",
+    "access": "can:objects.read"
+  },
+  {
+    "method": "HEAD",
+    "url": "/api/v1/objects/count",
+    "access": "can:objects.read",
+    "derived": true
   },
   {
     "method": "GET",
@@ -492,6 +676,122 @@
     "method": "POST",
     "url": "/api/v1/references/tracker-models/:id/deactivate",
     "access": "can:references.manage"
+  },
+  {
+    "method": "GET",
+    "url": "/api/v1/sensors",
+    "access": "can:equipment.read"
+  },
+  {
+    "method": "HEAD",
+    "url": "/api/v1/sensors",
+    "access": "can:equipment.read",
+    "derived": true
+  },
+  {
+    "method": "POST",
+    "url": "/api/v1/sensors",
+    "access": "can:equipment.write"
+  },
+  {
+    "method": "DELETE",
+    "url": "/api/v1/sensors/:id",
+    "access": "can:records.delete"
+  },
+  {
+    "method": "PATCH",
+    "url": "/api/v1/sensors/:id",
+    "access": "can:equipment.write"
+  },
+  {
+    "method": "POST",
+    "url": "/api/v1/sensors/:id/archive",
+    "access": "can:records.archive"
+  },
+  {
+    "method": "POST",
+    "url": "/api/v1/sensors/:id/restore",
+    "access": "can:records.archive"
+  },
+  {
+    "method": "GET",
+    "url": "/api/v1/sensors/available",
+    "access": "can:equipment.read"
+  },
+  {
+    "method": "HEAD",
+    "url": "/api/v1/sensors/available",
+    "access": "can:equipment.read",
+    "derived": true
+  },
+  {
+    "method": "GET",
+    "url": "/api/v1/sims",
+    "access": "can:equipment.read"
+  },
+  {
+    "method": "HEAD",
+    "url": "/api/v1/sims",
+    "access": "can:equipment.read",
+    "derived": true
+  },
+  {
+    "method": "POST",
+    "url": "/api/v1/sims",
+    "access": "can:equipment.write"
+  },
+  {
+    "method": "DELETE",
+    "url": "/api/v1/sims/:id",
+    "access": "can:records.delete"
+  },
+  {
+    "method": "GET",
+    "url": "/api/v1/sims/:id",
+    "access": "can:equipment.read"
+  },
+  {
+    "method": "HEAD",
+    "url": "/api/v1/sims/:id",
+    "access": "can:equipment.read",
+    "derived": true
+  },
+  {
+    "method": "PATCH",
+    "url": "/api/v1/sims/:id",
+    "access": "can:equipment.write"
+  },
+  {
+    "method": "POST",
+    "url": "/api/v1/sims/:id/archive",
+    "access": "can:records.archive"
+  },
+  {
+    "method": "POST",
+    "url": "/api/v1/sims/:id/restore",
+    "access": "can:records.archive"
+  },
+  {
+    "method": "GET",
+    "url": "/api/v1/sims/available",
+    "access": "can:equipment.read"
+  },
+  {
+    "method": "HEAD",
+    "url": "/api/v1/sims/available",
+    "access": "can:equipment.read",
+    "derived": true
+  },
+  {
+    "method": "GET",
+    "url": "/api/v1/sims/iccid-check",
+    "access": "can:equipment.read"
+  },
+  {
+    "method": "HEAD",
+    "url": "/api/v1/sims/iccid-check",
+    "access": "can:equipment.read",
+    "derived": true
   },
   {
     "method": "GET",

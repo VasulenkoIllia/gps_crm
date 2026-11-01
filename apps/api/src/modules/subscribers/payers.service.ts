@@ -1,5 +1,5 @@
 import type { PayerCreate, PayerList, PayerSearchQuery, PayerUpdate } from "@gps_crm/shared";
-import type { RecordScope } from "../../core/access/access.js";
+import { ALL_RECORDS, type RecordScope } from "../../core/access/access.js";
 import {
   actorIdOf,
   recordActivity,
@@ -9,12 +9,13 @@ import {
 import type { DbOrTx } from "../../core/db/client.js";
 import type { AppDeps } from "../../core/deps.js";
 import { AppError } from "../../core/errors.js";
-import { assertVersion, changedFields, hasChanges, notFound } from "../references/index.js";
-import { listPayersOf, searchPayers } from "./payers.queries.js";
+import { assertVersion, changedFields, hasChanges, notFound, recordArchived } from "../references/index.js";
+import { countWorkingObjects, listPayersOf, searchPayers } from "./payers.queries.js";
 import * as repo from "./payers.repository.js";
-import { recordArchived, requireLiveSubscriber } from "./subscribers.helpers.js";
+import { requireLiveSubscriber } from "./subscribers.helpers.js";
 import { findVisibleId } from "./subscribers.repository.js";
 
+const PAYER_OF_CLIENT = "Оберіть платника цього клієнта";
 const UPDATED_FIELDS = [
   "name",
   "paymentMethod",
@@ -67,6 +68,35 @@ export function createPayer(
   });
 }
 
+// П6, П11
+export async function assertNoWorkingObjects(tx: DbOrTx, payerId: string, subscriberId?: string): Promise<void> {
+  const objects = await countWorkingObjects(tx, payerId, subscriberId);
+  if (objects === 0) return;
+  const message = `За платником є діючі об'єкти (${objects}): спершу змініть їм платника`;
+  throw new AppError(409, "payer_in_use", message);
+}
+
+// objects.md П4: a payer of an object is one of the client, and it stays alive under the lock until the transaction ends
+// Under a lock: whoever archives or unlinks a payer counts its working objects after this one is done
+export async function lockClientPayer(
+  tx: DbOrTx,
+  subscriberId: string,
+  payerId: string,
+): Promise<{ id: string; name: string } | null> {
+  const payer = await repo.lockPayer(tx, payerId, ALL_RECORDS);
+  return payer && !payer.archivedAt && (await repo.isLinked(tx, payerId, subscriberId)) ? payer : null;
+}
+
+export async function requireClientPayer(
+  tx: DbOrTx,
+  subscriberId: string,
+  payerId: string,
+): Promise<{ id: string; name: string }> {
+  const payer = await lockClientPayer(tx, subscriberId, payerId);
+  if (payer) return payer;
+  throw new AppError(422, "payer_unavailable", PAYER_OF_CLIENT, { payerId: PAYER_OF_CLIENT });
+}
+
 async function requireLivePayer(tx: DbOrTx, id: string, scope: RecordScope): Promise<repo.PayerRow> {
   const payer = await repo.lockPayer(tx, id, scope);
   if (!payer) throw notFound();
@@ -107,6 +137,7 @@ export async function unlinkPayerFromSubscriber(
       const message = `За платником у цього клієнта є договори, також в архіві (${contracts}): спершу перенесіть їх на іншого платника`;
       throw new AppError(409, "payer_in_use", message);
     }
+    await assertNoWorkingObjects(tx, payerId, subscriberId);
     if (await repo.unlinkPayer(tx, payerId, subscriberId)) {
       await recordActivity(tx, context, payerEvent("payer.unlinked", payer, subscriberId));
     }

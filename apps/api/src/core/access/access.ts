@@ -53,6 +53,17 @@ export function recordScope(request: FastifyRequest): RecordScope {
   return { managerId: accessScope === "own" ? requireAuth(request).userId : null };
 }
 
+// A route opened by one permission on records of another: `equipment.write` is for everything by nature, the object it
+// reaches stays behind the level of `key`, and of `narrowedBy` where the person has it: who sees all and changes their
+// own changes their own here too
+export function recordScopeOf(request: FastifyRequest, key: PermissionKey, narrowedBy?: PermissionKey): RecordScope {
+  const auth = requireAuth(request);
+  const scope = auth.permissions.get(key);
+  if (!scope) throw new AppError(403, "forbidden", "Недостатньо прав для цієї дії");
+  const isOwn = scope === "own" || (narrowedBy && auth.permissions.get(narrowedBy) === "own");
+  return { managerId: isOwn ? auth.userId : null };
+}
+
 function actorOf(request: FastifyRequest): Actor {
   return request.auth ? { kind: "user", id: request.auth.userId } : SYSTEM_ACTOR;
 }

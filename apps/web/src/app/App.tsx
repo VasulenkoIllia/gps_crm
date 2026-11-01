@@ -21,6 +21,9 @@ const UsersPage = lazyPage(() => import("../features/users/UsersPage"), "UsersPa
 const ReferencesPage = lazyPage(() => import("../features/references/ReferencesPage"), "ReferencesPage");
 const SubscribersPage = lazyPage(() => import("../features/subscribers/SubscribersPage"), "SubscribersPage");
 const SubscriberPage = lazyPage(() => import("../features/subscribers/SubscriberPage"), "SubscriberPage");
+const ObjectsPage = lazyPage(() => import("../features/objects/ObjectsPage"), "ObjectsPage");
+const ObjectPage = lazyPage(() => import("../features/objects/ObjectPage"), "ObjectPage");
+const EquipmentPage = lazyPage(() => import("../features/equipment/EquipmentPage"), "EquipmentPage");
 const ContractsPage = lazyPage(() => import("../features/contracts/ContractsPage"), "ContractsPage");
 const IdSeriesPage = lazyPage(() => import("../features/id-series/IdSeriesPage"), "IdSeriesPage");
 const ActivityPage = lazyPage(() => import("../features/activity/ActivityPage"), "ActivityPage");
@@ -30,6 +33,8 @@ const ShowcasePage = lazyPage(() => import("../features/ui-showcase/ShowcasePage
 
 const BUILT_PAGES: Record<string, ReactNode> = {
   "/subscribers": <SubscribersPage />,
+  "/objects": <ObjectsPage />,
+  "/equipment": <EquipmentPage />,
   "/contracts": <ContractsPage />,
   "/references": <ReferencesPage />,
   "/id-series": <IdSeriesPage />,
@@ -63,6 +68,7 @@ export function App() {
             />
           ))}
           <Route path="/subscribers/:id" element={<SubscriberPage />} />
+          <Route path="/objects/:id" element={<ObjectPage />} />
           <Route path="/profile" element={<ProfilePage />} />
           <Route path="/ui" element={<ShowcasePage />} />
           <Route path="*" element={<NotFoundPage />} />

@@ -17,8 +17,10 @@ import { isSpaRoute, registerSpa } from "./core/http/spa.js";
 import { registerAccessRoutes } from "./modules/access/index.js";
 import { registerActivityRoutes, type ArchiveRestorers } from "./modules/activity/index.js";
 import { registerAuthRoutes } from "./modules/auth/index.js";
+import { EQUIPMENT_RESTORERS, registerEquipmentRoutes } from "./modules/equipment/index.js";
+import { CLIENT_OBJECTS, OBJECT_RESTORERS, registerObjectRoutes } from "./modules/objects/index.js";
 import { REFERENCE_RESTORERS, registerReferencesRoutes } from "./modules/references/index.js";
-import { registerSubscribersRoutes, SUBSCRIBER_RESTORERS } from "./modules/subscribers/index.js";
+import { registerSubscribersRoutes, subscriberRestorers } from "./modules/subscribers/index.js";
 import { registerSystemRoutes } from "./modules/system/index.js";
 import { registerTwoFactorRoutes } from "./modules/two-factor/index.js";
 import { registerUsersRoutes } from "./modules/users/index.js";
@@ -71,9 +73,17 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
   registerTwoFactorRoutes(app, deps);
   registerAuthRoutes(app, deps);
   registerAccessRoutes(app);
-  registerActivityRoutes(app, deps, { ...REFERENCE_RESTORERS, ...SUBSCRIBER_RESTORERS, ...options.archiveRestorers });
+  registerActivityRoutes(app, deps, {
+    ...REFERENCE_RESTORERS,
+    ...subscriberRestorers(CLIENT_OBJECTS),
+    ...EQUIPMENT_RESTORERS,
+    ...OBJECT_RESTORERS,
+    ...options.archiveRestorers,
+  });
   registerReferencesRoutes(app, deps);
-  registerSubscribersRoutes(app, deps);
+  registerSubscribersRoutes(app, deps, CLIENT_OBJECTS);
+  registerEquipmentRoutes(app, deps);
+  registerObjectRoutes(app, deps);
   registerSystemRoutes(app, deps);
 
   const { webRoot } = options;
