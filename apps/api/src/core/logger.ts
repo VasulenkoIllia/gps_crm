@@ -1,7 +1,21 @@
 import type { FastifyRequest } from "fastify";
 import { pino, type DestinationStream, type Logger } from "pino";
+import { clientIp } from "./http/client-ip.js";
 
-const SECRET_KEYS = ["password", "passwordHash", "token", "secret", "apiKey", "cookie", "authorization"];
+const SECRET_KEYS = [
+  "password",
+  "passwordHash",
+  "newPassword",
+  "currentPassword",
+  "token",
+  "challenge",
+  "secret",
+  "secretEncrypted",
+  "recoveryCodes",
+  "apiKey",
+  "cookie",
+  "authorization",
+];
 const REDACTED_PATHS = SECRET_KEYS.flatMap((key) => [key, `*.${key}`]);
 const PRISMA_ERROR_PREFIX = "PrismaClient";
 
@@ -12,7 +26,7 @@ export function requestLine(request: FastifyRequest): Record<string, unknown> {
     method: request.method,
     url: request.url.split("?", 1)[0] ?? request.url,
     host: request.host,
-    remoteAddress: request.ip,
+    remoteAddress: clientIp(request),
     remotePort: request.socket?.remotePort,
   };
 }

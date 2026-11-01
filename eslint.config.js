@@ -42,7 +42,7 @@ export default defineConfig(
       parserOptions: { projectService: true, tsconfigRootDir: import.meta.dirname },
     },
   },
-  { files: ["**/*.{js,cjs}"], extends: [tseslint.configs.disableTypeChecked] },
+  { files: ["**/*.{js,cjs,mjs}"], extends: [tseslint.configs.disableTypeChecked] },
   { files: ["**/*.cjs"], languageOptions: { sourceType: "commonjs" } },
   {
     files: API_SOURCES,

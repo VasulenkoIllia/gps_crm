@@ -5,6 +5,11 @@ const REQUEST_TIMEOUT_MS = 15_000;
 const CLIENT_ERROR_MIN = 400;
 const SERVER_ERROR_MIN = 500;
 const UNEXPECTED_ERROR = "Сталася помилка. Спробуйте ще раз.";
+const API_BASE = "/api/v1";
+
+interface Parser<T> {
+  parse: (value: unknown) => T;
+}
 
 export class ApiError extends Error {
   readonly status: number;
@@ -45,6 +50,27 @@ export async function apiFetch(path: string, init: RequestInit = {}): Promise<Re
   const response = await fetch(path, { ...init, signal: withTimeout(init.signal ?? undefined) });
   if (!response.ok) throw await toApiError(response);
   return response;
+}
+
+export async function apiGet<T>(path: string, schema: Parser<T>, signal?: AbortSignal): Promise<T> {
+  const response = await apiFetch(`${API_BASE}${path}`, { signal });
+  return schema.parse(await response.json());
+}
+
+// The header only with a body: Fastify refuses an empty body declared as JSON
+function writeInit(method: string, body: unknown): RequestInit {
+  if (body === undefined) return { method };
+  return { method, headers: { "content-type": "application/json" }, body: JSON.stringify(body) };
+}
+
+export async function apiPost<T>(path: string, schema: Parser<T>, body?: unknown): Promise<T> {
+  const response = await apiFetch(`${API_BASE}${path}`, writeInit("POST", body));
+  return schema.parse(await response.json());
+}
+
+// For the answers with no body
+export async function apiSend(method: "POST" | "PATCH" | "DELETE", path: string, body?: unknown): Promise<void> {
+  await apiFetch(`${API_BASE}${path}`, writeInit(method, body));
 }
 
 // 503 is a valid answer here: the body says the app is up but not ready, which the caller shows as a state

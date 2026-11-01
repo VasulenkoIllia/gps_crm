@@ -53,6 +53,7 @@ jobs:
     env:
       DATABASE_URL: postgresql://ci:ci@127.0.0.1:5432/gps_crm_test
       TEST_DATABASE_URL: postgresql://ci:ci@127.0.0.1:5432/gps_crm_test
+      APP_DB_PASSWORD: ciruntimerolepassword
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -67,6 +68,51 @@ jobs:
         run: npm run test:integration
       - name: Migrations match schema.prisma
         run: npm run db:drift -w @gps_crm/api
+
+  e2e:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_DB: gps_crm_e2e
+          POSTGRES_USER: ci
+          POSTGRES_PASSWORD: ci
+        ports:
+          - 127.0.0.1:5432:5432
+        options: >-
+          --health-cmd "pg_isready -h 127.0.0.1 -U ci -d gps_crm_e2e"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+      mailpit:
+        image: axllent/mailpit:v1.31.6
+        ports:
+          - 127.0.0.1:1025:1025
+          - 127.0.0.1:8025:8025
+    env:
+      E2E_DATABASE_URL: postgresql://ci:ci@127.0.0.1:5432/gps_crm_e2e
+      E2E_ADMIN_PASSWORD: administrator password of a throwaway run
+      E2E_SMTP_PORT: "1025"
+      E2E_MAILPIT_URL: http://127.0.0.1:8025
+      APP_DB_PASSWORD: ciruntimerolepassword
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - run: npx playwright install --with-deps chromium
+      - name: Key of this run only
+        run: echo "SECRETS_KEY=$(openssl rand -base64 32)" >>"$GITHUB_ENV"
+      - run: npm run test:e2e
 
   security:
     runs-on: ubuntu-24.04
@@ -97,7 +143,7 @@ jobs:
 
   image:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    needs: [verify, integration, security]
+    needs: [verify, integration, e2e, security]
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     permissions:

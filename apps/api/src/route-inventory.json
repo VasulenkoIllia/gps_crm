@@ -1,0 +1,168 @@
+[
+  {
+    "method": "POST",
+    "url": "/api/v1/auth/2fa",
+    "access": "public"
+  },
+  {
+    "method": "POST",
+    "url": "/api/v1/auth/login",
+    "access": "public"
+  },
+  {
+    "method": "POST",
+    "url": "/api/v1/auth/logout",
+    "access": "authenticated",
+    "beforeTwoFactor": true
+  },
+  {
+    "method": "POST",
+    "url": "/api/v1/auth/password-reset",
+    "access": "public"
+  },
+  {
+    "method": "POST",
+    "url": "/api/v1/auth/password-reset/confirm",
+    "access": "public"
+  },
+  {
+    "method": "POST",
+    "url": "/api/v1/invitations/accept",
+    "access": "public"
+  },
+  {
+    "method": "GET",
+    "url": "/api/v1/me",
+    "access": "authenticated",
+    "beforeTwoFactor": true
+  },
+  {
+    "method": "HEAD",
+    "url": "/api/v1/me",
+    "access": "authenticated",
+    "beforeTwoFactor": true,
+    "derived": true
+  },
+  {
+    "method": "PATCH",
+    "url": "/api/v1/me",
+    "access": "authenticated"
+  },
+  {
+    "method": "POST",
+    "url": "/api/v1/me/2fa/confirm",
+    "access": "authenticated",
+    "beforeTwoFactor": true
+  },
+  {
+    "method": "POST",
+    "url": "/api/v1/me/2fa/recovery-codes",
+    "access": "authenticated"
+  },
+  {
+    "method": "POST",
+    "url": "/api/v1/me/2fa/setup",
+    "access": "authenticated",
+    "beforeTwoFactor": true
+  },
+  {
+    "method": "POST",
+    "url": "/api/v1/me/password",
+    "access": "authenticated"
+  },
+  {
+    "method": "GET",
+    "url": "/api/v1/me/permissions",
+    "access": "authenticated"
+  },
+  {
+    "method": "HEAD",
+    "url": "/api/v1/me/permissions",
+    "access": "authenticated",
+    "derived": true
+  },
+  {
+    "method": "DELETE",
+    "url": "/api/v1/me/sessions",
+    "access": "authenticated"
+  },
+  {
+    "method": "GET",
+    "url": "/api/v1/me/sessions",
+    "access": "authenticated"
+  },
+  {
+    "method": "HEAD",
+    "url": "/api/v1/me/sessions",
+    "access": "authenticated",
+    "derived": true
+  },
+  {
+    "method": "DELETE",
+    "url": "/api/v1/me/sessions/:id",
+    "access": "authenticated"
+  },
+  {
+    "method": "GET",
+    "url": "/api/v1/users",
+    "access": "can:users.manage"
+  },
+  {
+    "method": "HEAD",
+    "url": "/api/v1/users",
+    "access": "can:users.manage",
+    "derived": true
+  },
+  {
+    "method": "POST",
+    "url": "/api/v1/users/:id/block",
+    "access": "can:users.manage"
+  },
+  {
+    "method": "POST",
+    "url": "/api/v1/users/:id/password-reset",
+    "access": "can:users.manage"
+  },
+  {
+    "method": "POST",
+    "url": "/api/v1/users/:id/reinvite",
+    "access": "can:users.manage"
+  },
+  {
+    "method": "POST",
+    "url": "/api/v1/users/:id/reset-2fa",
+    "access": "can:users.manage"
+  },
+  {
+    "method": "POST",
+    "url": "/api/v1/users/:id/unblock",
+    "access": "can:users.manage"
+  },
+  {
+    "method": "POST",
+    "url": "/api/v1/users/invitations",
+    "access": "can:users.manage"
+  },
+  {
+    "method": "GET",
+    "url": "/health",
+    "access": "public"
+  },
+  {
+    "method": "HEAD",
+    "url": "/health",
+    "access": "public",
+    "derived": true
+  },
+  {
+    "method": "GET",
+    "url": "/health/ready",
+    "access": "public"
+  },
+  {
+    "method": "HEAD",
+    "url": "/health/ready",
+    "access": "public",
+    "derived": true
+  }
+]

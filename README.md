@@ -36,9 +36,11 @@ infra               Dockerfile, compose.yml, compose.dev.yml, scripts/
 
 ```bash
 npm ci
-cp .env.example .env     # задати POSTGRES_PASSWORD і підставити його в DATABASE_URL
+cp .env.example .env     # задати POSTGRES_PASSWORD, APP_DB_PASSWORD, SECRETS_KEY, FIRST_ADMIN_*,
+                         # підставити паролі в DATABASE_URL і MIGRATION_DATABASE_URL
 npm run db:up            # PostgreSQL 18 і Mailpit з infra/compose.dev.yml
 npm run db:deploy        # застосувати міграції
+npm run db:setup         # пароль ролі застосунку й перший адміністратор
 npm run dev              # API на :3000, інтерфейс на http://localhost:5173
 ```
 
@@ -50,8 +52,11 @@ npm run dev              # API на :3000, інтерфейс на http://localh
 | -------------------------- | -------------------------------------------------------------------------------------------- |
 | `npm run verify`           | те саме, що job `verify` у CI: формат, ESLint, залежності, compose, типи, unit-тести, збірка |
 | `npm run test:integration` | міграції та інтеграційні тести на PostgreSQL (потрібні `db:up` і `TEST_DATABASE_URL`)        |
+| `npm run test:e2e`         | Playwright на зібраному застосунку (потрібні `build`, `db:up`, змінні `E2E_*`)               |
 | `npm run format`           | відформатувати код                                                                           |
 | `npm run db:migrate`       | нова міграція локально (`prisma migrate dev`)                                                |
+| `npm run db:setup`         | пароль ролі застосунку й перший адміністратор (те саме робить `migrate` на сервері)          |
+| `npm run routes:update`    | оновити перелік маршрутів `route-inventory.json` (запуск з `-w @gps_crm/api`)                |
 | `npm run db:down`          | зупинити локальні сервіси                                                                    |
 
 Git-хуків немає: `.npmrc` вимикає install-скрипти (`ignore-scripts=true`), тому ворота тримає CI.
@@ -63,10 +68,11 @@ Git-хуків немає: `.npmrc` вимикає install-скрипти (`igno
 1. `verify`: `npm run verify`.
 2. `integration`: PostgreSQL 18, міграції з нуля, тест інваріантів схеми, інтеграційні тести, збіг міграцій зі схемою.
 3. `security`: gitleaks, `npm audit --omit=dev` (high блокує), перевірка авторів комітів.
-4. `image`, лише push у `main`, після трьох попередніх: збірка, Trivy (critical блокує), запуск образу з перевіркою
+4. `e2e`: зібраний застосунок з PostgreSQL 18 і Mailpit, Playwright у Chromium.
+5. `image`, лише push у `main`, після чотирьох попередніх: збірка, Trivy (critical блокує), запуск образу з перевіркою
    `/health`, публікація в GHCR з тегом `sha-<коміт>`.
-5. `clean-images`: у GHCR лишаються останні 30 версій.
-6. `deploy-staging`, лише коли змінна репозиторію `STAGING_DEPLOY_ENABLED` дорівнює `true`.
+6. `clean-images`: у GHCR лишаються останні 30 версій.
+7. `deploy-staging`, лише коли змінна репозиторію `STAGING_DEPLOY_ENABLED` дорівнює `true`.
 
 `.github/workflows/deploy-production.yml` запускається вручну з `main` з тегом образу. Він відмовляє, поки змінна
 репозиторію `PRODUCTION_ENABLED` не дорівнює `true` і якщо цей тег не пройшов `deploy-staging`.

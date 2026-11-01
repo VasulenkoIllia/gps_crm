@@ -10,12 +10,15 @@ import {
   TeamOutlined,
   UserOutlined,
 } from "@ant-design/icons";
+import type { PermissionKey } from "@gps_crm/shared";
 import type { ReactNode } from "react";
 
 export interface NavItem {
   path: string;
   label: string;
   icon: ReactNode;
+  // Without it the item is for everyone who signed in
+  permission?: PermissionKey;
 }
 
 export const NAV_ITEMS: NavItem[] = [
@@ -26,7 +29,7 @@ export const NAV_ITEMS: NavItem[] = [
   { path: "/payers", label: "Платники", icon: <ApartmentOutlined /> },
   { path: "/equipment", label: "Обладнання та SIM", icon: <HddOutlined /> },
   { path: "/references", label: "Довідники", icon: <AppstoreOutlined /> },
-  { path: "/users", label: "Користувачі", icon: <UserOutlined /> },
+  { path: "/users", label: "Користувачі", icon: <UserOutlined />, permission: "users.manage" },
   { path: "/activity", label: "Журнал дій", icon: <HistoryOutlined /> },
   { path: "/system", label: "Система", icon: <SettingOutlined /> },
 ];

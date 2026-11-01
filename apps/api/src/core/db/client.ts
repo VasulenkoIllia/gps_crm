@@ -1,5 +1,5 @@
 import { PrismaPg } from "@prisma/adapter-pg";
-import { PrismaClient } from "../../generated/prisma/client.js";
+import { Prisma, PrismaClient } from "../../generated/prisma/client.js";
 
 // 06-quality.md §6.1: pool and timeouts of the API process
 const POOL_MAX_CONNECTIONS = 15;
@@ -10,6 +10,14 @@ const QUERY_TIMEOUT_MS = 6_000;
 const IDLE_IN_TRANSACTION_TIMEOUT_MS = 30_000;
 
 export type DbClient = PrismaClient;
+// What a repository takes, so one function works inside a service's transaction and outside it
+export type DbOrTx = PrismaClient | Prisma.TransactionClient;
+
+const UNIQUE_VIOLATION = "P2002";
+
+export function isUniqueViolation(error: unknown): boolean {
+  return error instanceof Prisma.PrismaClientKnownRequestError && error.code === UNIQUE_VIOLATION;
+}
 
 // onError gets errors of idle pooled connections (database restart, dropped network);
 // without it they would crash the process or go unseen

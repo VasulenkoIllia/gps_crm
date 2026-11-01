@@ -1,5 +1,6 @@
 import { HEALTH_STATUS, type HealthResponse } from "@gps_crm/shared";
 import type { FastifyInstance } from "fastify";
+import { publicRoute } from "../access/access.js";
 
 const SERVICE_UNAVAILABLE = 503;
 // The container healthcheck calls these every few seconds: a request line each time would flood the rotated log
@@ -34,9 +35,11 @@ function sharedCheck(checkReady: () => Promise<void>): () => Promise<void> {
 export function registerHealthRoutes(app: FastifyInstance, checkReady: () => Promise<void>): void {
   const check = sharedCheck(checkReady);
 
-  app.get("/health", { logLevel: ROUTE_LOG_LEVEL }, (): HealthResponse => ({ status: HEALTH_STATUS.ok }));
+  const options = { logLevel: ROUTE_LOG_LEVEL, config: { access: publicRoute() } } as const;
 
-  app.get("/health/ready", { logLevel: ROUTE_LOG_LEVEL }, async (request, reply): Promise<HealthResponse> => {
+  app.get("/health", options, (): HealthResponse => ({ status: HEALTH_STATUS.ok }));
+
+  app.get("/health/ready", options, async (request, reply): Promise<HealthResponse> => {
     try {
       await check();
       return { status: HEALTH_STATUS.ok };

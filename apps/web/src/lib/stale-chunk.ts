@@ -12,3 +12,11 @@ export function reloadOnStaleChunk(): void {
     window.location.reload();
   });
 }
+
+// Back after signing out would otherwise bring the page and its data out of the browser's memory, on a shared computer
+// too. A reload asks the server, and a session that is gone leads to the sign-in.
+export function reloadWhenRestoredFromHistory(): void {
+  window.addEventListener("pageshow", (event) => {
+    if (event.persisted) window.location.reload();
+  });
+}

@@ -1,5 +1,19 @@
+import { USER_STATUS_META } from "@gps_crm/shared";
 import { Button } from "antd";
-import { PageHeader, Panel, THEME_COLORS } from "../../ui";
+import { useState } from "react";
+import {
+  ConfirmAction,
+  CopyButton,
+  DataTable,
+  DateTimeText,
+  LoadError,
+  NoAccess,
+  PageHeader,
+  Panel,
+  StatusTag,
+  THEME_COLORS,
+  type DataTableColumn,
+} from "../../ui";
 import { ApiStatusPanel } from "./ApiStatusPanel";
 import { ShowcaseForm } from "./ShowcaseForm";
 
@@ -12,7 +26,35 @@ const SWATCHES = [
   { name: "Помилка", color: THEME_COLORS.critical },
 ];
 
+interface SampleRow {
+  id: string;
+  name: string;
+  seenAt: string | null;
+}
+
+const SAMPLE_ROWS: SampleRow[] = [
+  { id: "1", name: "Перший рядок", seenAt: "2027-01-15T10:30:00.000Z" },
+  { id: "2", name: "Другий рядок", seenAt: null },
+];
+const SAMPLE_COLUMNS: DataTableColumn<SampleRow>[] = [
+  { title: "Назва", dataIndex: "name" },
+  { title: "Дата", dataIndex: "seenAt", render: (value: string | null) => <DateTimeText value={value} /> },
+];
+
+function TableStates() {
+  const noop = () => undefined;
+  return (
+    <>
+      <DataTable rows={SAMPLE_ROWS} columns={SAMPLE_COLUMNS} rowKey="id" error={null} empty="" onRetry={noop} />
+      <DataTable rows={undefined} columns={SAMPLE_COLUMNS} rowKey="id" error={null} empty="" onRetry={noop} />
+      <DataTable rows={[]} columns={SAMPLE_COLUMNS} rowKey="id" error={null} empty="Записів ще немає" onRetry={noop} />
+      <LoadError error={null} onRetry={noop} />
+    </>
+  );
+}
+
 export function ShowcasePage() {
+  const [isConfirming, setConfirming] = useState(false);
   return (
     <>
       <PageHeader
@@ -43,6 +85,38 @@ export function ShowcasePage() {
           <Button disabled>Недоступно</Button>
           <Button loading>Зберігаю</Button>
         </div>
+      </Panel>
+
+      <Panel title="Статуси">
+        <div className="showcase-actions">
+          {Object.values(USER_STATUS_META).map((status) => (
+            <StatusTag key={status.label} status={status} />
+          ))}
+        </div>
+      </Panel>
+
+      <Panel title="Таблиця: дані, завантаження, порожньо, помилка">
+        <TableStates />
+      </Panel>
+
+      <Panel title="Дії">
+        <div className="showcase-actions">
+          <CopyButton value="Текст для копіювання" />
+          <Button onClick={() => setConfirming(true)}>Небезпечна дія</Button>
+        </div>
+        <ConfirmAction
+          title="Підтвердити дію?"
+          consequence="Тут одне речення про наслідок."
+          actionLabel="Підтвердити"
+          open={isConfirming}
+          isPending={false}
+          onConfirm={() => setConfirming(false)}
+          onClose={() => setConfirming(false)}
+        />
+      </Panel>
+
+      <Panel title="Немає доступу">
+        <NoAccess />
       </Panel>
 
       <Panel title="Стан API">

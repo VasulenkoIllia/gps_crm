@@ -1,5 +1,6 @@
 import { existsSync } from "node:fs";
 import { resolve } from "node:path";
+import { APP_ROLE_NAME } from "./app-role.repository.js";
 import { createDbClient, type DbClient } from "./client.js";
 
 const LOCAL_ENV_FILE = resolve(import.meta.dirname, "../../../../../.env");
@@ -18,9 +19,26 @@ export function testDatabaseUrl(): string {
   return databaseUrl;
 }
 
-// infra/compose.dev.yml locally, a service container in CI
+export function testAppRolePassword(): string {
+  testDatabaseUrl();
+  const password = process.env.APP_DB_PASSWORD;
+  if (!password) throw new Error("APP_DB_PASSWORD is not set: tests connect as the runtime role");
+  return password;
+}
+
+function failOnPoolError(error: Error): never {
+  throw error;
+}
+
+// The schema owner: infra/compose.dev.yml locally, a service container in CI. For setting a test up, not for the app.
 export function connectTestDatabase(): DbClient {
-  return createDbClient(testDatabaseUrl(), (error) => {
-    throw error;
-  });
+  return createDbClient(testDatabaseUrl(), failOnPoolError);
+}
+
+// What the app itself connects as: every route is tested with the grants production has
+export function connectTestAppDatabase(): DbClient {
+  const url = new URL(testDatabaseUrl());
+  url.username = APP_ROLE_NAME;
+  url.password = testAppRolePassword();
+  return createDbClient(url.toString(), failOnPoolError);
 }

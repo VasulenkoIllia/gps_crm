@@ -3,17 +3,17 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Writable } from "node:stream";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
-import { buildApp } from "./app.js";
 import { AppError } from "./core/errors.js";
 import { READY_TIMEOUT_MS } from "./core/http/health.js";
 import { createLogger } from "./core/logger.js";
+import { buildTestApp } from "./core/test-app.js";
 
 const READY = () => Promise.resolve();
 const NOT_READY = () => Promise.reject(new Error("pending migration: x"));
 
 describe("health", () => {
   it("answers /health without touching the readiness check", async () => {
-    const app = await buildApp({ checkReady: NOT_READY });
+    const app = await buildTestApp({ checkReady: NOT_READY });
     const response = await app.inject({ method: "GET", url: "/health" });
     expect(response.statusCode).toBe(200);
     expect(response.json()).toEqual({ status: "ok" });
@@ -21,7 +21,7 @@ describe("health", () => {
   });
 
   it("answers /health/ready with 200 when ready", async () => {
-    const app = await buildApp({ checkReady: READY });
+    const app = await buildTestApp({ checkReady: READY });
     const response = await app.inject({ method: "GET", url: "/health/ready" });
     expect(response.statusCode).toBe(200);
     expect(response.json()).toEqual({ status: "ok" });
@@ -29,7 +29,7 @@ describe("health", () => {
   });
 
   it("answers /health/ready with 503 and no reason when not ready", async () => {
-    const app = await buildApp({ checkReady: NOT_READY });
+    const app = await buildTestApp({ checkReady: NOT_READY });
     const response = await app.inject({ method: "GET", url: "/health/ready" });
     expect(response.statusCode).toBe(503);
     expect(response.json()).toEqual({ status: "unavailable" });
@@ -38,7 +38,7 @@ describe("health", () => {
 
   it("asks the database once for a burst of /health/ready", async () => {
     const checkReady = vi.fn(READY);
-    const app = await buildApp({ checkReady });
+    const app = await buildTestApp({ checkReady });
     await Promise.all([1, 2, 3].map(() => app.inject({ method: "GET", url: "/health/ready" })));
     expect(checkReady).toHaveBeenCalledOnce();
     await app.close();
@@ -46,7 +46,7 @@ describe("health", () => {
 
   it("does not let a hanging check hold /health/ready", async () => {
     vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
-    const app = await buildApp({ checkReady: () => new Promise(() => undefined) });
+    const app = await buildTestApp({ checkReady: () => new Promise(() => undefined) });
     const pending = app.inject({ method: "GET", url: "/health/ready" });
     await vi.advanceTimersByTimeAsync(READY_TIMEOUT_MS);
     vi.useRealTimers();
@@ -57,7 +57,7 @@ describe("health", () => {
 
 describe("errors", () => {
   it("answers 500 in the common format without the details", async () => {
-    const app = await buildApp({ checkReady: READY });
+    const app = await buildTestApp({ checkReady: READY });
     app.get("/boom", () => {
       throw new Error("database password rejected");
     });
@@ -69,7 +69,7 @@ describe("errors", () => {
   });
 
   it("sends an AppError as it is", async () => {
-    const app = await buildApp({ checkReady: READY });
+    const app = await buildTestApp({ checkReady: READY });
     app.get("/taken", () => {
       throw new AppError(409, "code_taken", "Такий ID уже є", { code: "Такий ID уже є" });
     });
@@ -84,7 +84,7 @@ describe("errors", () => {
   });
 
   it("sends the code and the text of an AppError with a 5xx status", async () => {
-    const app = await buildApp({ checkReady: READY });
+    const app = await buildTestApp({ checkReady: READY });
     app.get("/mail", () => {
       throw new AppError(503, "integration_unavailable", "Пошта тимчасово не працює");
     });
@@ -95,7 +95,7 @@ describe("errors", () => {
   });
 
   it("answers a failed schema check with validation_failed and the fields", async () => {
-    const app = await buildApp({ checkReady: READY });
+    const app = await buildTestApp({ checkReady: READY });
     const schema = { type: "object", required: ["name"], properties: { name: { type: "string" } } };
     app.post("/items", { schema: { body: schema } }, () => ({}));
     const response = await app.inject({ method: "POST", url: "/items", payload: {} });
@@ -107,7 +107,7 @@ describe("errors", () => {
   });
 
   it("keeps the status of a library error but not its message", async () => {
-    const app = await buildApp({ checkReady: READY });
+    const app = await buildTestApp({ checkReady: READY });
     app.get("/denied", () => {
       throw Object.assign(new Error("GET https://api.example.test/?key=k123 failed"), { statusCode: 403 });
     });
@@ -123,7 +123,7 @@ describe("errors", () => {
     [599, 599],
     [600, 500],
   ])("answers a library status %i with %i", async (thrown, sent) => {
-    const app = await buildApp({ checkReady: READY });
+    const app = await buildTestApp({ checkReady: READY });
     app.get("/upstream", () => {
       throw Object.assign(new Error(`upstream answered ${thrown}`), { statusCode: thrown });
     });
@@ -134,7 +134,7 @@ describe("errors", () => {
   });
 
   it("answers broken JSON with 400 in the common format", async () => {
-    const app = await buildApp({ checkReady: READY });
+    const app = await buildTestApp({ checkReady: READY });
     app.post("/echo", (request) => request.body);
     const response = await app.inject({
       method: "POST",
@@ -148,7 +148,7 @@ describe("errors", () => {
   });
 
   it("answers 404 in the common format", async () => {
-    const app = await buildApp({ checkReady: READY });
+    const app = await buildTestApp({ checkReady: READY });
     const response = await app.inject({ method: "GET", url: "/api/v1/missing" });
     expect(response.statusCode).toBe(404);
     expect(response.json()).toMatchObject({ code: "not_found" });
@@ -165,7 +165,7 @@ describe("request log", () => {
         callback();
       },
     });
-    const app = await buildApp({ checkReady: READY, logger: createLogger("info", stream) });
+    const app = await buildTestApp({ checkReady: READY, logger: createLogger("info", stream) });
     await app.inject({
       method: "GET",
       url: "/orders?token=query-secret",
@@ -187,7 +187,7 @@ describe("request log", () => {
         callback();
       },
     });
-    const app = await buildApp({ checkReady: READY, logger: createLogger("info", stream) });
+    const app = await buildTestApp({ checkReady: READY, logger: createLogger("info", stream) });
     app.get("/payers", () => {
       throw Object.assign(new Error("Invalid invocation: { iban: 'UA213223130000026007233566001' }"), {
         name: "PrismaClientKnownRequestError",
@@ -205,7 +205,7 @@ describe("request log", () => {
 
 describe("security headers", () => {
   it("sets the policy on API answers", async () => {
-    const app = await buildApp({ checkReady: READY });
+    const app = await buildTestApp({ checkReady: READY });
     const { headers } = await app.inject({ method: "GET", url: "/health" });
     expect(headers["content-security-policy"]).toContain("default-src 'self'");
     expect(headers["content-security-policy"]).toContain("frame-ancestors 'none'");
@@ -222,10 +222,10 @@ describe("web app", () => {
   writeFileSync(join(webRoot, ".secret"), "hidden-file-content");
   mkdirSync(join(webRoot, "assets"));
   writeFileSync(join(webRoot, "assets", "app-1a2b.js"), "export {};");
-  let app: Awaited<ReturnType<typeof buildApp>>;
+  let app: Awaited<ReturnType<typeof buildTestApp>>;
 
   beforeAll(async () => {
-    app = await buildApp({ checkReady: READY, webRoot });
+    app = await buildTestApp({ checkReady: READY, webRoot });
   });
 
   afterAll(async () => {
