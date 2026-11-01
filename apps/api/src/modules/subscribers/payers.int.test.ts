@@ -8,6 +8,8 @@ import { companyForm, EDRPOU, OTHER_EDRPOU, resetClients, startClientApi, type C
 const INVOICE = { name: "Платник", paymentMethod: "invoice", legalName: "Повна назва", taxId: OTHER_EDRPOU };
 const UNKNOWN_ID = "019a0000-0000-7000-8000-000000000000";
 
+const LAST_ID = "ffffffff-ffff-7fff-bfff-ffffffffffff";
+
 describe("payers", () => {
   const owner: DbClient = connectTestDatabase();
   const db: DbClient = connectTestAppDatabase();
@@ -36,6 +38,13 @@ describe("payers", () => {
     await client.app.close();
     await db.$disconnect();
     await owner.$disconnect();
+  });
+
+  it("finds nothing by too short a name, also from the middle of a list", async () => {
+    const from = await client.call("GET", `/payers?q=ab&cursor=${LAST_ID}`);
+
+    expect(from.statusCode).toBe(200);
+    expect(items<Payer>(from)).toEqual([]);
   });
 
   it("adds a payer with a form of payment and its fields", async () => {

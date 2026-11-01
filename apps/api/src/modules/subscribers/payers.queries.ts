@@ -108,7 +108,8 @@ export async function searchPayers(db: DbOrTx, query: PayerSearchQuery, scope: R
       ...scopedPayer(scope),
       archivedAt: null,
       ...(query.q ? searchWhere(query.q) : {}),
-      ...(query.cursor ? { id: { lt: query.cursor } } : {}),
+      // Under AND: a search too short for anything is a filter on id too, and it must not be overwritten
+      ...(query.cursor ? { AND: [{ id: { lt: query.cursor } }] } : {}),
     },
     orderBy: { id: "desc" },
     take: query.limit + 1,
