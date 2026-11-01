@@ -12,7 +12,9 @@ import { registerOriginCheck } from "./core/http/origin.js";
 import { registerSecurityHeaders } from "./core/http/security.js";
 import { isSpaRoute, registerSpa } from "./core/http/spa.js";
 import { registerAccessRoutes } from "./modules/access/index.js";
+import { registerActivityRoutes, type ArchiveRestorers } from "./modules/activity/index.js";
 import { registerAuthRoutes } from "./modules/auth/index.js";
+import { registerSystemRoutes } from "./modules/system/index.js";
 import { registerTwoFactorRoutes } from "./modules/two-factor/index.js";
 import { registerUsersRoutes } from "./modules/users/index.js";
 
@@ -29,6 +31,8 @@ export interface AppOptions extends Omit<AppDeps, "logger"> {
   webRoot?: string;
   // Rejects with the reason when the app must not take traffic
   checkReady: () => Promise<void>;
+  // How each module brings back what it archived; none of them archives anything before step 3
+  archiveRestorers?: ArchiveRestorers;
 }
 
 export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
@@ -42,8 +46,8 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
     genReqId: () => randomUUID(),
     trustProxy: ["loopback", "linklocal", "uniquelocal"],
   });
-  const { db, config, mailer } = options;
-  const deps: AppDeps = { db, config, mailer, logger: app.log };
+  const { db, config, mailer, jobs } = options;
+  const deps: AppDeps = { db, config, mailer, jobs, logger: app.log };
 
   registerErrorHandling(app);
   collectRouteInventory(app);
@@ -58,6 +62,8 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
   registerTwoFactorRoutes(app, deps);
   registerAuthRoutes(app, deps);
   registerAccessRoutes(app);
+  registerActivityRoutes(app, deps, options.archiveRestorers ?? {});
+  registerSystemRoutes(app, deps);
 
   const { webRoot } = options;
   if (webRoot) await registerSpa(app, webRoot);

@@ -196,5 +196,54 @@ model ActivityEvent {
   retentionClass String    @default("standard") @map("retention_class")
 
   @@id([occurredAt, id])
+  @@index([actorId, occurredAt(sort: Desc), id(sort: Desc)])
+  @@index([action, occurredAt(sort: Desc), id(sort: Desc)])
+  @@index([entityType, occurredAt(sort: Desc), id(sort: Desc)])
+  @@index([entityId, occurredAt(sort: Desc), id(sort: Desc)])
   @@map("activity_events")
+}
+
+// A package of records archived together (activity.md П5). The records themselves carry archive_batch_id.
+model ArchiveBatch {
+  id         String    @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  entityType String    @map("entity_type")
+  label      String
+  itemCount  Int       @map("item_count")
+  archivedAt DateTime  @default(now()) @map("archived_at") @db.Timestamptz
+  archivedBy String?   @map("archived_by") @db.Uuid
+  restoredAt DateTime? @map("restored_at") @db.Timestamptz
+  restoredBy String?   @map("restored_by") @db.Uuid
+
+  @@index([restoredAt, id(sort: Desc)])
+  @@map("archive_batches")
+}
+
+// Filled by runJob only (system.md П1): one row per registered job
+model JobHealth {
+  name          String    @id
+  registeredAt  DateTime  @default(now()) @map("registered_at") @db.Timestamptz
+  runningSince  DateTime? @map("running_since") @db.Timestamptz
+  lastSuccessAt DateTime? @map("last_success_at") @db.Timestamptz
+  lastFailureAt DateTime? @map("last_failure_at") @db.Timestamptz
+  failureStreak Int       @default(0) @map("failure_streak")
+  skippedItems  Int       @default(0) @map("skipped_items")
+  lastError     String?   @map("last_error")
+
+  @@map("job_health")
+}
+
+// One row per attempt, the newest few per job: see JOB_EVENTS_KEPT in job.repository.ts
+model JobEvent {
+  id           String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  jobName      String   @map("job_name")
+  trigger      String
+  isSuccess    Boolean  @map("is_success")
+  startedAt    DateTime @map("started_at") @db.Timestamptz
+  finishedAt   DateTime @map("finished_at") @db.Timestamptz
+  skippedItems Int      @default(0) @map("skipped_items")
+  summary      Json?
+  error        String?
+
+  @@index([jobName, id(sort: Desc)])
+  @@map("job_events")
 }

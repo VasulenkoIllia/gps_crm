@@ -5,7 +5,7 @@ import { buildApp } from "../../app.js";
 import type { DbClient } from "../../core/db/client.js";
 import { connectTestAppDatabase, connectTestDatabase } from "../../core/db/test-database.js";
 import { finalizeInventory } from "../../core/access/route-inventory.js";
-import { NO_MAIL, testConfig } from "../../core/test-app.js";
+import { NO_MAIL, testConfig, NO_JOBS } from "../../core/test-app.js";
 import { api, clearAuthData, createUser, signInWithSetup } from "../../test-auth.js";
 
 const ZERO_ID = "019a0000-0000-7000-8000-000000000000";
@@ -38,7 +38,13 @@ describe("the route × role matrix (stage 1: everything is allowed, D14)", () =>
 
   beforeAll(async () => {
     await clearAuthData(owner);
-    app = await buildApp({ db, config: testConfig(), mailer: NO_MAIL, checkReady: () => Promise.resolve() });
+    app = await buildApp({
+      db,
+      config: testConfig(),
+      mailer: NO_MAIL,
+      jobs: NO_JOBS,
+      checkReady: () => Promise.resolve(),
+    });
     await app.ready();
     for (const roleKey of ROLE_KEYS) {
       const user = await createUser(owner, { email: `${roleKey}@example.test`, roleKey });

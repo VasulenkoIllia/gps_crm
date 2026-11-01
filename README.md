@@ -3,21 +3,22 @@
 Система обліку клієнтів для компанії, що надає послуги GPS-моніторингу: клієнти, контактні особи, платники, договори,
 об'єкти, обладнання, SIM-картки й довідники.
 
-**Поточний стан:** фундамент застосунку (каркас, health, CI/CD, оболонка інтерфейсу). Бізнес-модулів, входу й доменних
-таблиць ще немає. Клікабельний демо-прототип збережений у тезі `demo`.
+**Поточний стан:** фундамент застосунку (каркас, health, CI/CD, оболонка інтерфейсу), вхід із 2FA, користувачі й ролі,
+журнал дій, архів, екран «Система» і фонові задачі. Бізнес-модулів і доменних таблиць ще немає. Клікабельний
+демо-прототип збережений у тезі `demo`.
 
 ## Стек
 
 - Node.js 24, TypeScript 6, ESM, npm workspaces
-- API: Fastify 5, Zod 4, pino, Prisma 7 з адаптером `pg`, PostgreSQL 18
+- API: Fastify 5, Zod 4, pino, Prisma 7 з адаптером `pg`, PostgreSQL 18, pg-boss 12
 - Web: React 19, Vite 8, Ant Design 6 (`uk_UA`), React Router, TanStack Query
-- Перевірки: Vitest, ESLint, dependency-cruiser, Prettier
+- Перевірки: Vitest, Playwright, ESLint, dependency-cruiser, Prettier
 - Запуск: один Docker-образ, Docker Compose, Traefik, образи в GHCR, GitHub Actions
 
 ## Структура
 
 ```
-apps/api            API: src/core (конфіг, БД, помилки, http), prisma/ (схема і міграції)
+apps/api            API: src/core (конфіг, БД, помилки, http, задачі), src/modules, src/jobs.ts, prisma/ (схема і міграції)
 apps/web            SPA: src/app (оболонка, маршрути), src/ui (тема, кит), src/lib, src/features
 packages/shared     спільний код, використовується як вихідний TypeScript без збірки
 infra               Dockerfile, compose.yml, compose.dev.yml, scripts/
@@ -40,7 +41,7 @@ cp .env.example .env     # задати POSTGRES_PASSWORD, APP_DB_PASSWORD, SECR
                          # підставити паролі в DATABASE_URL і MIGRATION_DATABASE_URL
 npm run db:up            # PostgreSQL 18 і Mailpit з infra/compose.dev.yml
 npm run db:deploy        # застосувати міграції
-npm run db:setup         # пароль ролі застосунку й перший адміністратор
+npm run db:setup         # пароль ролі застосунку, схема черги й перший адміністратор
 npm run dev              # API на :3000, інтерфейс на http://localhost:5173
 ```
 
@@ -55,7 +56,7 @@ npm run dev              # API на :3000, інтерфейс на http://localh
 | `npm run test:e2e`         | Playwright на зібраному застосунку (потрібні `build`, `db:up`, змінні `E2E_*`)               |
 | `npm run format`           | відформатувати код                                                                           |
 | `npm run db:migrate`       | нова міграція локально (`prisma migrate dev`)                                                |
-| `npm run db:setup`         | пароль ролі застосунку й перший адміністратор (те саме робить `migrate` на сервері)          |
+| `npm run db:setup`         | пароль ролі, схема черги, перший адміністратор (те саме робить `migrate` на сервері)         |
 | `npm run routes:update`    | оновити перелік маршрутів `route-inventory.json` (запуск з `-w @gps_crm/api`)                |
 | `npm run db:down`          | зупинити локальні сервіси                                                                    |
 
@@ -101,12 +102,19 @@ Git-хуків немає: `.npmrc` вимикає install-скрипти (`igno
 Базовий образ закріплений за digest в `infra/Dockerfile`. Новий digest:
 `docker buildx imagetools inspect node:24-alpine --format '{{json .Manifest.Digest}}'`.
 
+## Фонові задачі
+
+Задачі виконує pg-boss, оголошені вони в `apps/api/src/jobs.ts`. Схему `pgboss` і права ставить крок `setup` під власником
+схеми, застосунок працює під роллю без DDL. HTTP відповідає кожен процес, а `APP_ROLE` вибирає решту: `all` (так на
+сервері) і `worker` виконують задачі, `api` лише ставить їх у чергу. Запис про нову версію робить `all` або `api`. Стан
+задач, черг, бекапів і версії показує екран «Система».
+
 ## Бекапи
 
 Окрім дампу перед деплоєм, `infra/scripts/backup.sh` за розкладом cron робить дамп кожні 6 годин із повним читанням і
 ротацією, а раз на місяць перевіряє відновлення в тимчасовій базі без мережі. Скрипт встановлюється на сервер вручну, як
-`deploy-entry.sh`: реліз його не оновлює. `compose.yml` і `deploy.sh` він не змінює. Покрокове відновлення:
-[RESTORE.md](RESTORE.md).
+`deploy-entry.sh`: реліз його не оновлює. `compose.yml` і `deploy.sh` він не змінює. Результати скрипт пише в
+`backup-status/`, застосунок читає цю теку лише на читання. Покрокове відновлення: [RESTORE.md](RESTORE.md).
 
 ## Правила репозиторію
 

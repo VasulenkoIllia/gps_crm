@@ -26,6 +26,13 @@ export function testAppRolePassword(): string {
   return password;
 }
 
+export function testAppDatabaseUrl(): string {
+  const url = new URL(testDatabaseUrl());
+  url.username = APP_ROLE_NAME;
+  url.password = testAppRolePassword();
+  return url.toString();
+}
+
 function failOnPoolError(error: Error): never {
   throw error;
 }
@@ -36,9 +43,6 @@ export function connectTestDatabase(): DbClient {
 }
 
 // What the app itself connects as: every route is tested with the grants production has
-export function connectTestAppDatabase(): DbClient {
-  const url = new URL(testDatabaseUrl());
-  url.username = APP_ROLE_NAME;
-  url.password = testAppRolePassword();
-  return createDbClient(url.toString(), failOnPoolError);
+export function connectTestAppDatabase(profile?: Parameters<typeof createDbClient>[2]): DbClient {
+  return createDbClient(testAppDatabaseUrl(), failOnPoolError, profile);
 }

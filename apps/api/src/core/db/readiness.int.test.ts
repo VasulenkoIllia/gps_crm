@@ -1,11 +1,11 @@
 import { resolve } from "node:path";
 import { afterAll, describe, expect, it } from "vitest";
 import { buildTestApp } from "../test-app.js";
-import type { DbClient } from "./client.js";
+import { DB_PROFILES, type DbClient } from "./client.js";
 import { findMigrationProblem, listExpectedMigrations } from "./migration-state.js";
 import { readMigrationRows } from "./migrations.queries.js";
 import { checkDatabaseReady } from "./readiness.js";
-import { connectTestDatabase } from "./test-database.js";
+import { connectTestAppDatabase, connectTestDatabase } from "./test-database.js";
 
 const MIGRATIONS_DIR = resolve(import.meta.dirname, "../../../prisma/migrations");
 const FAILED_MIGRATION = "00000000000000_failed_in_test";
@@ -53,5 +53,15 @@ describe("database readiness", () => {
              current_setting('idle_in_transaction_session_timeout') AS "idleInTransaction"
     `;
     expect(rows[0]).toEqual({ statement: "5s", idleInTransaction: "30s" });
+  });
+
+  it("gives the worker room for long statements", async () => {
+    const worker = connectTestAppDatabase(DB_PROFILES.worker);
+    const rows = await worker.$queryRaw<{ statement: string; idleInTransaction: string }[]>`
+      SELECT current_setting('statement_timeout') AS statement,
+             current_setting('idle_in_transaction_session_timeout') AS "idleInTransaction"
+    `;
+    await worker.$disconnect();
+    expect(rows[0]).toEqual({ statement: "5min", idleInTransaction: "1min" });
   });
 });

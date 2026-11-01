@@ -1,4 +1,4 @@
-export { runAuthCleanup } from "./auth.jobs.js";
+export { AUTH_CLEANUP_JOB, runAuthCleanup } from "./auth.jobs.js";
 export { registerAuthRoutes } from "./auth.routes.js";
 
 export const OWNED_TABLES: string[] = [];

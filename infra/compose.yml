@@ -44,11 +44,22 @@ services:
       HOST: 0.0.0.0
       PORT: "3000"
       LOG_LEVEL: ${LOG_LEVEL:-info}
+      APP_VERSION: ${IMAGE_TAG:?}
+      BACKUP_STATUS_DIR: /backup-status
       SMTP_HOST: ${SMTP_HOST:-}
       SMTP_PORT: ${SMTP_PORT:-}
       SMTP_USER: ${SMTP_USER:-}
       SMTP_PASSWORD: ${SMTP_PASSWORD:-}
       SMTP_FROM: ${SMTP_FROM:-}
+    # The screen «Система» reads what backup.sh writes. deploy.sh makes the folder: one made by the daemon would belong to
+    # root, and backup.sh, which runs as the deploy user, could no longer write into it
+    volumes:
+      - type: bind
+        source: ../backup-status
+        target: /backup-status
+        read_only: true
+        bind:
+          create_host_path: false
     # No published port: Traefik reaches the app over the proxy network
     networks:
       - app-net

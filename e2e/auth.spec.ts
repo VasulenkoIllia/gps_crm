@@ -2,6 +2,7 @@ import { expect, test, type Page } from "@playwright/test";
 import { NO_MAIL_URL, WITH_MAIL_URL } from "../playwright.config.ts";
 import {
   acceptInvitation,
+  ADMIN_SESSION_FILE,
   Authenticator,
   enterCode,
   fillLogin,
@@ -27,6 +28,10 @@ test.describe.serial("sign-in and users", () => {
 
   test.beforeAll(async ({ browser }) => {
     admin = await newPerson(browser, WITH_MAIL_URL);
+  });
+
+  test.afterAll(async () => {
+    await admin.context().storageState({ path: ADMIN_SESSION_FILE });
   });
 
   test("a stranger meets the sign-in page, and it remembers the address", async ({ page }) => {

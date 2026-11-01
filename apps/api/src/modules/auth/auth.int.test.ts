@@ -5,7 +5,14 @@ import { SYSTEM_ACTOR } from "../../core/activity/activity.repository.js";
 import { buildApp } from "../../app.js";
 import type { DbClient } from "../../core/db/client.js";
 import { connectTestAppDatabase, connectTestDatabase } from "../../core/db/test-database.js";
-import { captureMailer, NO_MAIL, TEST_APP_URL, testConfig, type CapturingMailer } from "../../core/test-app.js";
+import {
+  captureMailer,
+  NO_MAIL,
+  TEST_APP_URL,
+  testConfig,
+  type CapturingMailer,
+  NO_JOBS,
+} from "../../core/test-app.js";
 import {
   api,
   clearAuthData,
@@ -49,7 +56,7 @@ describe("sign-in", () => {
   beforeEach(async () => {
     await clearAuthData(owner);
     mailer = captureMailer();
-    app = await buildApp({ db, config: testConfig(), mailer, checkReady: () => Promise.resolve() });
+    app = await buildApp({ db, config: testConfig(), mailer, jobs: NO_JOBS, checkReady: () => Promise.resolve() });
   });
 
   afterAll(async () => {
@@ -292,7 +299,13 @@ describe("sessions", () => {
 
   beforeEach(async () => {
     await clearAuthData(owner);
-    app = await buildApp({ db, config: testConfig(), mailer: NO_MAIL, checkReady: () => Promise.resolve() });
+    app = await buildApp({
+      db,
+      config: testConfig(),
+      mailer: NO_MAIL,
+      jobs: NO_JOBS,
+      checkReady: () => Promise.resolve(),
+    });
   });
 
   afterAll(async () => {
@@ -325,6 +338,7 @@ describe("sessions", () => {
       db,
       config: testConfig({ isProduction: true }),
       mailer: NO_MAIL,
+      jobs: NO_JOBS,
       checkReady: () => Promise.resolve(),
     });
     await createUser(owner, { email: "secure@example.test" });
@@ -428,7 +442,7 @@ describe("passwords", () => {
   beforeEach(async () => {
     await clearAuthData(owner);
     mailer = captureMailer();
-    app = await buildApp({ db, config: testConfig(), mailer, checkReady: () => Promise.resolve() });
+    app = await buildApp({ db, config: testConfig(), mailer, jobs: NO_JOBS, checkReady: () => Promise.resolve() });
   });
 
   afterAll(async () => {
@@ -442,7 +456,7 @@ describe("passwords", () => {
   const context = { actor: SYSTEM_ACTOR, ip: null, requestId: null };
   // The route answers before this work ends, so a test that expects nothing to happen has to wait for it directly
   const requestReset = (email: string) =>
-    requestPasswordReset({ db, config: testConfig(), mailer, logger }, context, email);
+    requestPasswordReset({ db, config: testConfig(), mailer, jobs: NO_JOBS, logger }, context, email);
   const rewindLetters = (ageMs: number) =>
     owner.signInThrottle.updateMany({ data: { lastFailureAt: new Date(Date.now() - ageMs) } });
 
@@ -559,6 +573,7 @@ describe("passwords", () => {
       db,
       config: testConfig(),
       mailer: NO_MAIL,
+      jobs: NO_JOBS,
       checkReady: () => Promise.resolve(),
     });
     const admin = await createUser(owner, { email: "admin@example.test", roleKey: "admin" });

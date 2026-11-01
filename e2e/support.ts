@@ -3,6 +3,8 @@ import { base32Decode, hotp, stepAt } from "../apps/api/src/modules/two-factor/t
 
 export const ADMIN_EMAIL = "admin@example.test";
 export const PASSWORD = "довгий пароль для наскрізного тесту";
+// A signed-in administrator for the specs after auth.spec.ts: 2FA codes stay with the Authenticator of that file
+export const ADMIN_SESSION_FILE = ".tmp/e2e-admin-session.json";
 
 const STEP_MS = 30_000;
 const POLL_MS = 500;

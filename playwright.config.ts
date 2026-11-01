@@ -1,8 +1,10 @@
+import { join } from "node:path";
 import { defineConfig, devices } from "@playwright/test";
 
 // Two copies of the built app on one database: the same app with mail and without it (D12)
 export const WITH_MAIL_URL = "http://localhost:3198";
 export const NO_MAIL_URL = "http://localhost:3197";
+const BACKUP_STATUS_DIR = join(import.meta.dirname, ".tmp/backup-status");
 
 const SERVER_START_TIMEOUT_MS = 90_000;
 const TEST_TIMEOUT_MS = 120_000;
@@ -29,6 +31,8 @@ const serverEnv = (url: string): Record<string, string> => ({
   APP_URL: url,
   DATABASE_URL: runtimeDatabaseUrl(),
   SECRETS_KEY: requireEnv("SECRETS_KEY"),
+  APP_VERSION: "sha-e2e",
+  BACKUP_STATUS_DIR,
 });
 
 export default defineConfig({

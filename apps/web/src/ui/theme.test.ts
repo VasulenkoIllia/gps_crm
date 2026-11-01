@@ -25,9 +25,25 @@ describe("buildTheme", () => {
     }
   });
 
-  it.each(["primary", "good", "critical"] as const)("%s reads as text on the page and on a panel", (name) => {
-    expect(contrast(THEME_COLORS[name], THEME_COLORS.page)).toBeGreaterThanOrEqual(MIN_TEXT_CONTRAST);
-    expect(contrast(THEME_COLORS[name], THEME_COLORS.surface)).toBeGreaterThanOrEqual(MIN_TEXT_CONTRAST);
+  it.each(["primary", "good", "warning", "critical"] as const)(
+    "%s reads as text on the page and on a panel",
+    (name) => {
+      expect(contrast(THEME_COLORS[name], THEME_COLORS.page)).toBeGreaterThanOrEqual(MIN_TEXT_CONTRAST);
+      expect(contrast(THEME_COLORS[name], THEME_COLORS.surface)).toBeGreaterThanOrEqual(MIN_TEXT_CONTRAST);
+    },
+  );
+
+  it.each([
+    ["good", "goodSoft"],
+    ["warning", "warningSoft"],
+    ["critical", "criticalSoft"],
+    ["primary", "infoSoft"],
+  ] as const)("%s reads as text on its tag, %s", (text, background) => {
+    expect(contrast(THEME_COLORS[text], THEME_COLORS[background])).toBeGreaterThanOrEqual(MIN_TEXT_CONTRAST);
+  });
+
+  it("keeps a placeholder readable on a field", () => {
+    expect(contrast(THEME_COLORS.placeholder, THEME_COLORS.surface)).toBeGreaterThanOrEqual(MIN_TEXT_CONTRAST);
   });
 
   it("matches the colors in styles.css", () => {

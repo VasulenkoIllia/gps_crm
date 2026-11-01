@@ -1,13 +1,22 @@
 import { PrismaPg } from "@prisma/adapter-pg";
 import { Prisma, PrismaClient } from "../../generated/prisma/client.js";
 
-// 06-quality.md §6.1: pool and timeouts of the API process
-const POOL_MAX_CONNECTIONS = 15;
 const CONNECT_TIMEOUT_MS = 5_000;
-const STATEMENT_TIMEOUT_MS = 5_000;
 // On the client too: the server's statement_timeout never fires on a half-open socket
-const QUERY_TIMEOUT_MS = 6_000;
-const IDLE_IN_TRANSACTION_TIMEOUT_MS = 30_000;
+const CLIENT_TIMEOUT_MARGIN_MS = 1_000;
+
+interface DbProfile {
+  maxConnections: number;
+  statementTimeoutMs: number;
+  idleInTransactionTimeoutMs: number;
+}
+
+// 06-quality.md §6.1. A request answers in seconds or it has failed; a background job does its work in batches, each
+// of which may take minutes, and pg-boss runs one job at a time per queue, so it needs few connections.
+export const DB_PROFILES = {
+  api: { maxConnections: 15, statementTimeoutMs: 5_000, idleInTransactionTimeoutMs: 30_000 },
+  worker: { maxConnections: 5, statementTimeoutMs: 300_000, idleInTransactionTimeoutMs: 60_000 },
+} as const satisfies Record<string, DbProfile>;
 
 export type DbClient = PrismaClient;
 // What a repository takes, so one function works inside a service's transaction and outside it
@@ -21,16 +30,20 @@ export function isUniqueViolation(error: unknown): boolean {
 
 // onError gets errors of idle pooled connections (database restart, dropped network);
 // without it they would crash the process or go unseen
-export function createDbClient(databaseUrl: string, onError: (error: Error) => void): DbClient {
+export function createDbClient(
+  databaseUrl: string,
+  onError: (error: Error) => void,
+  profile: DbProfile = DB_PROFILES.api,
+): DbClient {
   const adapter = new PrismaPg(
     {
       connectionString: databaseUrl,
-      max: POOL_MAX_CONNECTIONS,
+      max: profile.maxConnections,
       connectionTimeoutMillis: CONNECT_TIMEOUT_MS,
       keepAlive: true,
-      statement_timeout: STATEMENT_TIMEOUT_MS,
-      query_timeout: QUERY_TIMEOUT_MS,
-      idle_in_transaction_session_timeout: IDLE_IN_TRANSACTION_TIMEOUT_MS,
+      statement_timeout: profile.statementTimeoutMs,
+      query_timeout: profile.statementTimeoutMs + CLIENT_TIMEOUT_MARGIN_MS,
+      idle_in_transaction_session_timeout: profile.idleInTransactionTimeoutMs,
     },
     { onPoolError: onError, onConnectionError: onError },
   );
