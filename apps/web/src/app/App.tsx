@@ -1,23 +1,54 @@
-import { lazy } from "react";
+import { lazy, type ComponentType, type ReactNode } from "react";
 import { Route, Routes } from "react-router";
+import { AuthLayout } from "../features/auth/AuthLayout";
 import { AppShell } from "./AppShell";
 import { NAV_ITEMS } from "./nav";
 import { NotFoundPage } from "./NotFoundPage";
 import { PlaceholderPage } from "./PlaceholderPage";
+import { RequireSession } from "./RequireSession";
 
-const ShowcasePage = lazy(() =>
-  import("../features/ui-showcase/ShowcasePage").then((module) => ({ default: module.ShowcasePage })),
-);
+function lazyPage<K extends string>(load: () => Promise<Record<K, ComponentType>>, name: K) {
+  return lazy(() => load().then((module) => ({ default: module[name] })));
+}
+
+const LoginPage = lazyPage(() => import("../features/auth/LoginPage"), "LoginPage");
+const ForgotPasswordPage = lazyPage(() => import("../features/auth/ForgotPasswordPage"), "ForgotPasswordPage");
+const ResetPasswordPage = lazyPage(() => import("../features/auth/ResetPasswordPage"), "ResetPasswordPage");
+const InvitePage = lazyPage(() => import("../features/auth/InvitePage"), "InvitePage");
+const TwoFactorSetupPage = lazyPage(() => import("../features/auth/TwoFactorSetupPage"), "TwoFactorSetupPage");
+const ProfilePage = lazyPage(() => import("../features/profile/ProfilePage"), "ProfilePage");
+const UsersPage = lazyPage(() => import("../features/users/UsersPage"), "UsersPage");
+const ShowcasePage = lazyPage(() => import("../features/ui-showcase/ShowcasePage"), "ShowcasePage");
+
+const BUILT_PAGES: Record<string, ReactNode> = { "/users": <UsersPage /> };
 
 export function App() {
   return (
     <Routes>
-      <Route element={<AppShell />}>
-        {NAV_ITEMS.map((item) => (
-          <Route key={item.path} path={item.path} element={<PlaceholderPage title={item.label} />} />
-        ))}
-        <Route path="/ui" element={<ShowcasePage />} />
-        <Route path="*" element={<NotFoundPage />} />
+      <Route element={<AuthLayout />}>
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
+        <Route path="/invite" element={<InvitePage />} />
+      </Route>
+      <Route element={<AuthLayout />}>
+        <Route element={<RequireSession isSetupPage />}>
+          <Route path="/setup-2fa" element={<TwoFactorSetupPage />} />
+        </Route>
+      </Route>
+      <Route element={<RequireSession />}>
+        <Route element={<AppShell />}>
+          {NAV_ITEMS.map((item) => (
+            <Route
+              key={item.path}
+              path={item.path}
+              element={BUILT_PAGES[item.path] ?? <PlaceholderPage title={item.label} />}
+            />
+          ))}
+          <Route path="/profile" element={<ProfilePage />} />
+          <Route path="/ui" element={<ShowcasePage />} />
+          <Route path="*" element={<NotFoundPage />} />
+        </Route>
       </Route>
     </Routes>
   );

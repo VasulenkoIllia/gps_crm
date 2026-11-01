@@ -27,20 +27,25 @@ case "$*" in
     [ ! -e "$FAKE_DIR/restored" ] || exit "$FAKE_RM_AFTER_RESTORE_EXIT"
     exit "$FAKE_RM_EXIT" ;;
   *pg_isready*) ;;
+  *"printenv POSTGRES_USER"*) echo gps_crm; exit "$FAKE_OWNER_EXIT" ;;
   *pg_dump*) printf 'dump bytes'; exit "$FAKE_DUMP_EXIT" ;;
   *"pg_restore -f /dev/null"*) cat >/dev/null; exit "$FAKE_READ_BACK_EXIT" ;;
   *pg_restore*)
     cat >/dev/null
+    [ -e "$FAKE_DIR/roles" ] || { echo "restored before the roles exist" >&2; exit 98; }
     : >"$FAKE_DIR/restored"
     [ "$FAKE_RESTORE_EXIT" = 0 ] || echo 'pg_restore: error: COPY failed for table "payers": ERROR: value UA123456' >&2
     exit "$FAKE_RESTORE_EXIT" ;;
   *restore-check*psql*)
     case "$(cat)" in
+      *"create role"*) : >"$FAKE_DIR/roles"; exit "$FAKE_ROLES_EXIT" ;;
+      *aclexplode*) printf '%b\\n' "$FAKE_RESTORED_GRANTS" ;;
       *_prisma_migrations*) echo "$FAKE_RESTORED_HEAD" ;;
       *) printf '%b\\n' "$FAKE_RESTORED_ROWS" ;;
     esac ;;
   *psql*)
     case "$(cat)" in
+      *aclexplode*) printf '%b\\n' "$FAKE_LIVE_GRANTS" ;;
       *_prisma_migrations*) echo "$FAKE_LIVE_HEAD" ;;
       *) printf '%b\\n' "$FAKE_LIVE_ROWS" ;;
     esac ;;
@@ -105,6 +110,10 @@ describe("backup.sh", () => {
         FAKE_DUMP_EXIT: "0",
         FAKE_READ_BACK_EXIT: "0",
         FAKE_RESTORE_EXIT: "0",
+        FAKE_OWNER_EXIT: "0",
+        FAKE_ROLES_EXIT: "0",
+        FAKE_LIVE_GRANTS: "users\tINSERT,SELECT",
+        FAKE_RESTORED_GRANTS: "users\tINSERT,SELECT",
         FAKE_LIVE_HEAD: "20261031120000_foundation",
         FAKE_RESTORED_HEAD: "20261031120000_foundation",
         FAKE_LIVE_ROWS: "public._prisma_migrations\t1\npublic.users\t100",
@@ -306,6 +315,46 @@ describe("backup.sh", () => {
       expect(calls).toContain("--network none");
       expect(calls).toContain("default_transaction_read_only=on");
       expect(calls.trim().split("\n").at(-1)).toBe("rm -f -v gps_crm_staging-restore-check");
+    });
+
+    it("restores with owners and privileges, after creating the roles the dump names", () => {
+      expect(run("check").status).toBe(0);
+
+      const calls = dockerCalls();
+      expect(calls).toContain("printenv POSTGRES_USER");
+      expect(calls).toContain("-v owner=gps_crm");
+      expect(calls).not.toContain("--no-owner");
+      expect(calls).not.toContain("--no-privileges");
+    });
+
+    it("fails when the owner role of the live database cannot be read", () => {
+      expect(run("check", { FAKE_OWNER_EXIT: "1" }).status).toBe(1);
+
+      expect(status("check")).toMatchObject({ ok: false, reason: "live" });
+    });
+
+    it("fails when the roles cannot be created", () => {
+      expect(run("check", { FAKE_ROLES_EXIT: "1" }).status).toBe(1);
+
+      expect(status("check")).toMatchObject({ ok: false, reason: "restore" });
+    });
+
+    it("fails when the runtime role lost a grant at the same migration", () => {
+      const result = run("check", { FAKE_RESTORED_GRANTS: "users\tSELECT" });
+
+      expect(result.status).toBe(1);
+      expect(status("check")).toMatchObject({ ok: false, reason: "grants" });
+      expect(result.stderr).toContain("users");
+    });
+
+    it("does not compare the grants of a dump that predates the live migration", () => {
+      const result = run("check", {
+        FAKE_LIVE_HEAD: "20261101120000_next",
+        FAKE_LIVE_GRANTS: "users\tINSERT,SELECT\nnew_table\tSELECT",
+      });
+
+      expect(result.status).toBe(0);
+      expect(status("check").tablesCompared).toBe(false);
     });
 
     it("does not take a deploy dump for a good one", () => {

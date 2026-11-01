@@ -1,34 +1,43 @@
 import { MenuOutlined } from "@ant-design/icons";
 import { Button, Drawer, Grid, Layout, Menu, Skeleton } from "antd";
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { Link, NavLink, Outlet, useLocation } from "react-router";
-import { ErrorBoundary } from "../ui";
-import { findActiveKeys, NAV_ITEMS } from "./nav";
+import { usePermissions } from "../lib/session";
+import { BrandMark, ErrorBoundary } from "../ui";
+import { findActiveKeys, NAV_ITEMS, type NavItem } from "./nav";
+import { UserMenu } from "./UserMenu";
 
 const SIDER_WIDTH_PX = 236;
 const DRAWER_WIDTH_PX = 300;
 const DRAWER_BODY_PADDING_PX = 8;
 const MAIN_ID = "main";
 
-const MENU_ITEMS = NAV_ITEMS.map((item) => ({
-  key: item.path,
-  icon: item.icon,
-  label: (
-    <NavLink to={item.path} end={item.path === "/"}>
-      {item.label}
-    </NavLink>
-  ),
-}));
+function toMenuItem(item: NavItem) {
+  return {
+    key: item.path,
+    icon: item.icon,
+    label: (
+      <NavLink to={item.path} end={item.path === "/"}>
+        {item.label}
+      </NavLink>
+    ),
+  };
+}
 
 function AppMenu({ onSelect }: { onSelect?: () => void }) {
   const { pathname } = useLocation();
+  const { data: permissions } = usePermissions();
+  const items = useMemo(
+    () => NAV_ITEMS.filter((item) => !item.permission || permissions?.has(item.permission)).map(toMenuItem),
+    [permissions],
+  );
   return (
     <nav aria-label="Основне меню">
       <Menu
         mode="inline"
         selectedKeys={findActiveKeys(pathname)}
         onClick={onSelect}
-        items={MENU_ITEMS}
+        items={items}
         style={{ borderInlineEnd: 0 }}
       />
     </nav>
@@ -89,7 +98,10 @@ export function AppShell() {
         </Layout.Sider>
       )}
       <Layout>
-        <Layout.Header className="app-header">{isMobile && <MobileNav />}</Layout.Header>
+        <Layout.Header className="app-header">
+          {isMobile && <MobileNav />}
+          <UserMenu />
+        </Layout.Header>
         <Layout.Content id={MAIN_ID} className="app-content">
           {/* The key resets the error when the user leaves the broken page, and the menu keeps working around it */}
           <ErrorBoundary key={pathname}>
@@ -106,8 +118,7 @@ export function AppShell() {
 function Brand({ isCompact = false }: { isCompact?: boolean }) {
   return (
     <Link to="/" className={isCompact ? "brand brand-compact" : "brand"}>
-      <span className="brand-mark">GPS</span>
-      <span className="brand-name">Облік</span>
+      <BrandMark />
     </Link>
   );
 }

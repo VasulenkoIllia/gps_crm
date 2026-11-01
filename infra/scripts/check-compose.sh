@@ -3,7 +3,7 @@
 set -euo pipefail
 
 export APP_NAME=gps_crm_check APP_DOMAIN=check.example.com IMAGE_TAG=sha-0000000
-export POSTGRES_DB=check POSTGRES_USER=check POSTGRES_PASSWORD=check
+export POSTGRES_DB=check POSTGRES_USER=check POSTGRES_PASSWORD=check APP_DB_PASSWORD=check SECRETS_KEY=check
 
 docker compose -f infra/compose.yml config -q
 docker compose -f infra/compose.dev.yml config -q

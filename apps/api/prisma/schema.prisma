@@ -13,3 +13,188 @@ generator client {
 datasource db {
   provider = "postgresql"
 }
+
+enum UserStatus {
+  invited
+  active
+  blocked
+
+  @@map("user_status")
+}
+
+enum AccessScope {
+  all
+  own
+
+  @@map("access_scope")
+}
+
+enum AuthTokenType {
+  invitation
+  password_reset
+  two_factor_challenge
+
+  @@map("auth_token_type")
+}
+
+enum ActorKind {
+  user
+  system
+
+  @@map("actor_kind")
+}
+
+model Role {
+  id        String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  key       String   @unique
+  name      String
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  permissions RolePermission[]
+  users       User[]
+
+  @@map("roles")
+}
+
+model RolePermission {
+  roleId String      @map("role_id") @db.Uuid
+  key    String
+  scope  AccessScope
+
+  role Role @relation(fields: [roleId], references: [id])
+
+  @@id([roleId, key])
+  @@map("role_permissions")
+}
+
+// Empty until the «Ролі та права» module: nothing reads it yet
+model UserPermissionOverride {
+  userId    String       @map("user_id") @db.Uuid
+  key       String
+  scope     AccessScope?
+  isAllowed Boolean      @map("is_allowed")
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@id([userId, key])
+  @@map("user_permission_overrides")
+}
+
+// The email is stored lower-case (a CHECK in the migration), so @unique means unique regardless of case (П3)
+model User {
+  id           String     @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  email        String     @unique
+  fullName     String     @map("full_name")
+  roleId       String     @map("role_id") @db.Uuid
+  status       UserStatus @default(invited)
+  passwordHash String?    @map("password_hash")
+  lastLoginAt  DateTime?  @map("last_login_at") @db.Timestamptz
+  createdAt    DateTime   @default(now()) @map("created_at") @db.Timestamptz
+  createdBy    String?    @map("created_by") @db.Uuid
+  updatedAt    DateTime   @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+  updatedBy    String?    @map("updated_by") @db.Uuid
+
+  role                Role                     @relation(fields: [roleId], references: [id])
+  sessions            Session[]
+  authTokens          AuthToken[]
+  twoFactorCredential TwoFactorCredential?
+  permissionOverrides UserPermissionOverride[]
+
+  @@index([roleId])
+  @@map("users")
+}
+
+// The cookie holds a random token, the table only its hash: a dump opens no session
+model Session {
+  id         String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  tokenHash  String   @unique @map("token_hash")
+  userId     String   @map("user_id") @db.Uuid
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz
+  lastSeenAt DateTime @default(now()) @map("last_seen_at") @db.Timestamptz
+  expiresAt  DateTime @map("expires_at") @db.Timestamptz
+  ip         String?
+  userAgent  String?  @map("user_agent")
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@index([lastSeenAt])
+  @@map("sessions")
+}
+
+model AuthToken {
+  id        String        @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  userId    String        @map("user_id") @db.Uuid
+  type      AuthTokenType
+  tokenHash String        @unique @map("token_hash")
+  expiresAt DateTime      @map("expires_at") @db.Timestamptz
+  usedAt    DateTime?     @map("used_at") @db.Timestamptz
+  attempts  Int           @default(0)
+  createdBy String?       @map("created_by") @db.Uuid
+  createdAt DateTime      @default(now()) @map("created_at") @db.Timestamptz
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId, type])
+  @@index([expiresAt])
+  @@map("auth_tokens")
+}
+
+model SignInThrottle {
+  key            String   @id
+  failures       Int
+  firstFailureAt DateTime @map("first_failure_at") @db.Timestamptz
+  lastFailureAt  DateTime @map("last_failure_at") @db.Timestamptz
+
+  @@index([lastFailureAt])
+  @@map("sign_in_throttle")
+}
+
+model TwoFactorCredential {
+  id              String    @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  userId          String    @unique @map("user_id") @db.Uuid
+  secretEncrypted String    @map("secret_encrypted")
+  confirmedAt     DateTime? @map("confirmed_at") @db.Timestamptz
+  // The newest TOTP step spent: a code is accepted once, and only a later step after it (П7)
+  lastStep        Int?      @map("last_step")
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz
+
+  user          User                    @relation(fields: [userId], references: [id])
+  recoveryCodes TwoFactorRecoveryCode[]
+
+  @@map("two_factor_credentials")
+}
+
+model TwoFactorRecoveryCode {
+  id           String    @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  credentialId String    @map("credential_id") @db.Uuid
+  codeHash     String    @map("code_hash")
+  usedAt       DateTime? @map("used_at") @db.Timestamptz
+
+  credential TwoFactorCredential @relation(fields: [credentialId], references: [id], onDelete: Cascade)
+
+  @@unique([credentialId, codeHash])
+  @@map("two_factor_recovery_codes")
+}
+
+// Partitioned by month in the migration; the partitions live in schema `part`, which Prisma does not describe.
+// The runtime role may only insert and read here (06-quality.md §6.2.10), so nothing but core/activity writes.
+model ActivityEvent {
+  occurredAt     DateTime  @default(now()) @map("occurred_at") @db.Timestamptz
+  id             String    @default(dbgenerated("uuidv7()")) @db.Uuid
+  actorKind      ActorKind @map("actor_kind")
+  actorId        String?   @map("actor_id") @db.Uuid
+  action         String
+  entityType     String?   @map("entity_type")
+  entityId       String?   @map("entity_id") @db.Uuid
+  subscriberId   String?   @map("subscriber_id") @db.Uuid
+  changes        Json?
+  snapshot       Json?
+  ip             String?
+  requestId      String?   @map("request_id")
+  retentionClass String    @default("standard") @map("retention_class")
+
+  @@id([occurredAt, id])
+  @@map("activity_events")
+}

@@ -1,6 +1,6 @@
 import { resolve } from "node:path";
 import { afterAll, describe, expect, it } from "vitest";
-import { buildApp } from "../../app.js";
+import { buildTestApp } from "../test-app.js";
 import type { DbClient } from "./client.js";
 import { findMigrationProblem, listExpectedMigrations } from "./migration-state.js";
 import { readMigrationRows } from "./migrations.queries.js";
@@ -19,14 +19,16 @@ describe("database readiness", () => {
   afterAll(() => db.$disconnect());
 
   it("is ready on a migrated database", async () => {
-    const app = await buildApp({ checkReady: () => checkDatabaseReady(db, expected) });
+    const app = await buildTestApp({ checkReady: () => checkDatabaseReady(db, expected) });
     const response = await app.inject({ method: "GET", url: "/health/ready" });
     expect(response.statusCode).toBe(200);
     await app.close();
   });
 
   it("is not ready while a migration of this image is pending", async () => {
-    const app = await buildApp({ checkReady: () => checkDatabaseReady(db, [...expected, "99999999999999_pending"]) });
+    const app = await buildTestApp({
+      checkReady: () => checkDatabaseReady(db, [...expected, "99999999999999_pending"]),
+    });
     const response = await app.inject({ method: "GET", url: "/health/ready" });
     expect(response.statusCode).toBe(503);
     await app.close();

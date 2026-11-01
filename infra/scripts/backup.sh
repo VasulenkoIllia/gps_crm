@@ -35,6 +35,17 @@ readonly ROWS_COMPARED_FROM=20
 # The newest migration a database has finished: what tells a dump that predates a deploy from a broken one
 readonly LATEST_MIGRATION_SQL="select coalesce(max(migration_name), '') from _prisma_migrations
   where finished_at is not null and rolled_back_at is null;"
+# What the runtime role may do to each table. The catalog, not information_schema: that one shows a grant only to the role
+# that made it, and the two databases are read by different users.
+readonly GRANTS_SQL="select c.oid::regclass::text || chr(9) || string_agg(a.privilege_type, ',' order by a.privilege_type)
+  from pg_class c cross join lateral aclexplode(c.relacl) a
+  join pg_roles r on r.oid = a.grantee
+  where r.rolname = 'gps_crm_app' and c.relkind in ('r', 'p')
+  group by c.oid;"
+# Before the restore: a dump holds no roles, and the throwaway cluster has only its own superuser
+readonly CREATE_ROLES_SQL="select format('create role %I', name)
+  from unnest(array[:'owner', 'gps_crm_app']) as name
+  where not exists (select 1 from pg_roles where rolname = name) \\gexec"
 # Every table and its row count. It names no table: a list here is how a future table would be missed.
 readonly TABLE_ROWS_SQL="select format('%I.%I', schemaname, tablename) || chr(9) ||
     (xpath('/row/c/text()', query_to_xml(format('select count(*) as c from %I.%I', schemaname, tablename),
@@ -237,16 +248,25 @@ start_check_db() {
   fail restore "the throwaway database did not become ready"
 }
 
-# The owner of the throwaway database is postgres and the roles of the dump do not exist there, hence --no-owner and
-# --no-privileges. Errors go to a file: in a line of pg_restore the server goes on to quote the failing row after the
-# colon, and rows hold personal data, so the log gets only the start of it. Anything else, such as docker's own error,
-# stays whole.
+# The two roles every restore has to find: RESTORE.md. A dump that names a third one fails here, which is the point.
+create_check_roles() {
+  local owner
+  owner=$(timed docker exec "$db" printenv POSTGRES_USER) || fail live "could not read the owner role of $db"
+  timed docker exec -i "$check_container" psql -U postgres -d restore_check -v ON_ERROR_STOP=1 -X -q \
+    -v owner="$owner" <<<"$CREATE_ROLES_SQL" || fail restore "the roles of the dump could not be created"
+}
+
+# With owners and privileges, the way RESTORE.md restores: a copy that drops them would pass with the grants of the
+# runtime role gone. Errors go to a file: in a line of pg_restore the server goes on to quote the failing row after the
+# colon, and rows hold personal data, so the log gets only the start of it and the entry that failed, which names a
+# table and no row. A first line of another kind, such as docker's own error, stays whole.
 restore_dump() {
   local dump=$1 code=0
   timed docker exec -i "$check_container" pg_restore -U postgres -d restore_check \
-    --no-owner --no-privileges --exit-on-error --single-transaction <"$dump" 2>"$scratch/restore-errors" || code=$?
+    --exit-on-error --single-transaction <"$dump" 2>"$scratch/restore-errors" || code=$?
   [ "$code" -ne 0 ] || return 0
-  sed -n '1{s/^\(pg_restore: error: [^:]*\):.*/\1/;p;}' "$scratch/restore-errors" >&2
+  sed -n -e 's/^\(pg_restore: error: [^:]*\):.*/\1/p' -e '/^pg_restore: from TOC entry/p' \
+    -e '1{/^pg_restore: /!p;}' "$scratch/restore-errors" >&2
   fail restore "$(basename "$dump") did not restore, exit $code"
 }
 
@@ -273,6 +293,10 @@ compare_with_live() {
   if [ "$live_head" = "$restored_head" ]; then
     differ=$(comm -3 <(cut -f1 "$scratch/live") <(cut -f1 "$scratch/restored") | tr -d '\t' | tr '\n' ' ')
     [ -z "$differ" ] || fail tables "the restored tables differ from the live ones: $differ"
+    live_sql <<<"$GRANTS_SQL" | sort >"$scratch/live-grants" || fail live "could not read the live grants"
+    restored_sql <<<"$GRANTS_SQL" | sort >"$scratch/restored-grants" || fail grants "could not read the restored grants"
+    differ=$(comm -3 "$scratch/live-grants" "$scratch/restored-grants" | tr -s '\t\n' ' ')
+    [ -z "$differ" ] || fail grants "the grants of the runtime role differ from the live ones: $differ"
     tables_compared=true
   elif [[ "$restored_head" < "$live_head" ]]; then
     # Normal right after a deploy: the sets of tables are not comparable then
@@ -304,6 +328,7 @@ check_restore() {
   image=$(docker inspect -f '{{.Config.Image}}' "$db") || fail live "could not read the image of $db"
   scratch=$(mktemp -d)
   start_check_db "$image"
+  create_check_roles
   say "restoring $dump_name into a throwaway database"
   restore_dump "$dump"
   # Only now: a long restore must not hold up a deploy, and the comparison must not meet the db container being replaced

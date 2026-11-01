@@ -20,6 +20,8 @@ export default defineConfig({
           include: [INTEGRATION_TESTS],
           globalSetup: ["src/core/db/test-setup.ts"],
           fileParallelism: false,
+          // A sign-in hashes for real, and each test signs several people in
+          testTimeout: 20_000,
         },
       },
     ],

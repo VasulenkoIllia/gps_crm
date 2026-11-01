@@ -27,7 +27,7 @@ const INTERNAL_ERROR: ApiErrorBody = { code: "internal_error", message: "Ста�
 export const NOT_FOUND_ERROR: ApiErrorBody = { code: "not_found", message: "Не знайдено" };
 const CLIENT_ERRORS: Record<number, ApiErrorBody> = {
   401: { code: "unauthorized", message: "Потрібно увійти в систему" },
-  403: { code: "forbidden", message: "Немає доступу" },
+  403: { code: "forbidden", message: "Недостатньо прав для цієї дії" },
   404: NOT_FOUND_ERROR,
   405: { code: "method_not_allowed", message: "Цей метод не підтримується" },
   413: { code: "payload_too_large", message: "Завеликий запит" },
