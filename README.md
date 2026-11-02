@@ -120,6 +120,31 @@ Git-хуків немає: `.npmrc` вимикає install-скрипти (`igno
 `backup-status/`, застосунок читає цю теку лише на читання. Файли договорів лежать у томі `files-data` і в дамп не
 входять. Покрокове відновлення: [RESTORE.md](RESTORE.md).
 
+## Перевірка масштабу
+
+Цілі продуктивності на 1 млн клієнтів перевіряються на окремій базі з назвою `*_scale`, ніколи на staging. Сид бере лише
+`SCALE_DATABASE_URL` (`.env.example`), відмовляє базі з клієнтами поза своєю тестовою серією ID із 7 цифр і після зупинки
+продовжує з того місця. На 1 млн він іде близько 40 хвилин і займає 16 ГБ, ще до 8 ГБ WAL під час запису; `--clients 10000`
+перевіряє скрипт за хвилину.
+
+```bash
+# база *_scale спершу отримує міграції й setup, як на деплої (з apps/api, DATABASE_URL на неї);
+# SCALE_DATABASE_URL на ту саму базу задається в середовищі оболонки
+npm run seed:scale -w @gps_crm/api -- --dry-run
+npm run seed:scale -w @gps_crm/api
+# сесії 20 користувачів сиду й вибірки для k6, файл із токенами лише локально
+npm run seed:scale -w @gps_crm/api -- --prepare-run <абсолютний шлях>.json
+```
+
+Застосунок запускається зібраним з `NODE_ENV=production` на цій базі, окремо `APP_ROLE=api` і `APP_ROLE=worker`. Далі k6
+(шляхи абсолютні): `apps/api/scripts/k6/probes.js` проходить важкі запити по одному, `workday.js` дає робочий день
+20 користувачів і експорт 100 тис. рядків.
+
+```bash
+k6 run -e BASE_URL=http://127.0.0.1:<порт> -e DATA=<шлях> -e SUMMARY=<шлях> apps/api/scripts/k6/probes.js
+k6 run -e BASE_URL=http://127.0.0.1:<порт> -e DATA=<шлях> -e SUMMARY=<шлях> -e DURATION=10m apps/api/scripts/k6/workday.js
+```
+
 ## Правила репозиторію
 
 - Документація не комітиться, окрім цього README і `RESTORE.md`: `docs/` і службові файли у `.gitignore`.

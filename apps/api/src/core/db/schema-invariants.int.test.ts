@@ -177,10 +177,24 @@ describe("schema invariants", () => {
     ["objects_connected_on_id_idx", "WHERE (archived_at IS NULL)"],
     ["objects_subscriber_id_id_idx", "WHERE (archived_at IS NULL)"],
     ["objects_subscriber_id_name_norm_id_idx", "WHERE (archived_at IS NULL)"],
-    ["objects_status_program_id_idx", "WHERE (archived_at IS NULL)"],
+    ["objects_status_program_id_model_id_id_idx", "WHERE (archived_at IS NULL)"],
     ["objects_payer_id_status_idx", "WHERE (archived_at IS NULL)"],
     ["objects_archived_name_norm_id_idx", "WHERE (archived_at IS NOT NULL)"],
     ["objects_name_norm_trgm_idx", "gin_trgm_ops"],
+    ["subscribers_archived_name_norm_trgm_idx", "gin_trgm_ops"],
+    ["objects_archived_name_norm_trgm_idx", "gin_trgm_ops"],
+    ["contacts_archived_full_name_norm_trgm_idx", "gin_trgm_ops"],
+    ["contacts_archived_phone_rev_idx", "text_pattern_ops"],
+    ["contacts_archived_phone2_rev_idx", "text_pattern_ops"],
+    ["devices_archived_imei_idx", "text_pattern_ops"],
+    ["devices_archived_imei_rev_idx", "text_pattern_ops"],
+    ["sims_archived_iccid_idx", "text_pattern_ops"],
+    ["sims_archived_iccid_rev_idx", "text_pattern_ops"],
+    ["sims_archived_msisdn_rev_idx", "text_pattern_ops"],
+    ["objects_model_id_id_idx", "WHERE (archived_at IS NULL)"],
+    ["objects_manager_id_status_id_idx", "WHERE (archived_at IS NULL)"],
+    ["objects_manager_id_id_idx", "WHERE (archived_at IS NULL)"],
+    ["objects_manager_id_name_norm_id_idx", "WHERE (archived_at IS NULL)"],
   ])("has index %s with %s", async (name, part) => {
     const rows = await db.$queryRaw<{ definition: string }[]>`
       SELECT indexdef AS definition FROM pg_indexes WHERE indexname = ${name}
@@ -204,6 +218,25 @@ describe("schema invariants", () => {
     expect(rows[0]?.definition).toContain("WHERE (archived_at IS NULL)");
   });
 
+  // D84: a search in the archive has indexes of its own, as small as the archive, and the live ones stay without it
+  it.each([
+    "subscribers_archived_name_norm_trgm_idx",
+    "objects_archived_name_norm_trgm_idx",
+    "contacts_archived_full_name_norm_trgm_idx",
+    "contacts_archived_phone_rev_idx",
+    "contacts_archived_phone2_rev_idx",
+    "devices_archived_imei_idx",
+    "devices_archived_imei_rev_idx",
+    "sims_archived_iccid_idx",
+    "sims_archived_iccid_rev_idx",
+    "sims_archived_msisdn_rev_idx",
+  ])("keeps only archived records in %s", async (name) => {
+    const rows = await db.$queryRaw<{ definition: string }[]>`
+      SELECT indexdef AS definition FROM pg_indexes WHERE indexname = ${name}
+    `;
+    expect(rows[0]?.definition).toContain("WHERE (archived_at IS NOT NULL)");
+  });
+
   it.each(["contacts_one_primary_idx", "contracts_payer_id_number_norm_idx"])("%s is unique", async (name) => {
     const rows = await db.$queryRaw<{ definition: string }[]>`
       SELECT indexdef AS definition FROM pg_indexes WHERE indexname = ${name}
@@ -217,6 +250,38 @@ describe("schema invariants", () => {
     `;
     expect(rows[0]?.definition).toContain("WHERE (subscriber_id IS NOT NULL)");
   });
+
+  // D85: the copies of the tracker's model and the client's manager on an object live only as long as these do
+  it.each([
+    ["objects", "objects_copy_filters"],
+    ["devices", "devices_copy_model"],
+    ["subscribers", "subscribers_copy_manager"],
+  ])("keeps the copies on objects by a trigger on %s", async (table, name) => {
+    const rows = await db.$queryRaw<{ name: string }[]>`
+      SELECT t.tgname AS name FROM pg_trigger t
+      WHERE t.tgrelid = ${`public.${table}`}::regclass AND t.tgname = ${name} AND t.tgenabled = 'O'
+    `;
+    expect(rows).toHaveLength(1);
+  });
+
+  it("knows which combinations of the filters of objects exist", async () => {
+    const rows = await db.$queryRaw<{ name: string }[]>`
+      SELECT stxname AS name FROM pg_statistic_ext WHERE stxname = 'objects_filters_stats'
+    `;
+    expect(rows).toHaveLength(1);
+  });
+
+  // D86: a value of a filter by an enum is a constant at planning, so the statistics above see it
+  it.each(["subscriber_status", "subscriber_type", "object_status", "device_status", "sim_status"])(
+    "reads text into %s through an immutable cast",
+    async (type) => {
+      const rows = await db.$queryRaw<{ volatility: string }[]>`
+        SELECT p.provolatile::text AS volatility FROM pg_cast c JOIN pg_proc p ON p.oid = c.castfunc
+        WHERE c.castsource = 'text'::regtype AND c.casttarget = ${`public.${type}`}::regtype
+      `;
+      expect(rows).toEqual([{ volatility: "i" }]);
+    },
+  );
 
   it("refuses an email that is not lower-case, whoever writes it", async () => {
     const role = await db.role.findUniqueOrThrow({ where: { key: "manager" } });

@@ -111,9 +111,17 @@ async function devicesByNumber(db: DbOrTx, digits: string): Promise<string[]> {
 async function clientsByText(db: DbOrTx, text: string): Promise<string[]> {
   const digits = text.replace(/\D/g, "");
   const name = normalizeName(text);
+  const nameNorm = { contains: escapeLike(name) };
   const matches: Prisma.SubscriberWhereInput[] = [
     { legacyCode: text },
-    ...(name.length >= MIN_NAME_SEARCH ? [{ nameNorm: { contains: escapeLike(name) } }] : []),
+    // Live and archived clients both, by the partial index of each: without the archive in the condition neither index
+    // applies and the lookup read every client, 200 ms on the seed of 1M (D84)
+    ...(name.length >= MIN_NAME_SEARCH
+      ? [
+          { nameNorm, archivedAt: null },
+          { nameNorm, archivedAt: { not: null } },
+        ]
+      : []),
     ...(CODE_DIGITS.test(digits) ? [{ code: BigInt(digits) }] : []),
   ];
   const rows = await db.subscriber.findMany({ where: { OR: matches }, take: MATCHES_MAX, select: { id: true } });
@@ -140,15 +148,16 @@ async function searchWhere(db: DbOrTx, text: string): Promise<Where> {
 async function filtersWhere(db: DbOrTx, query: ObjectCountQuery, scope: RecordScope): Promise<Where> {
   const { q, status, programId, serverId, tariffId, modelId, addonId, subscriberId, managerId, archived } = query;
   return {
-    // In an AND of its own: the filter by manager below would replace it as a key of this object
-    AND: [objectWhere(scope), ...(managerId ? [{ subscriber: { managerId } }] : [])],
+    // In an AND of its own: the filter by manager and the own records both name managerId
+    AND: [objectWhere(scope), ...(managerId ? [{ managerId }] : [])],
     archivedAt: archived ? { not: null } : null,
     ...(status ? { status } : {}),
     ...(programId ? { programId } : {}),
     ...(serverId ? { serverId } : {}),
     ...(tariffId ? { tariffId } : {}),
     ...(subscriberId ? { subscriberId } : {}),
-    ...(modelId ? { currentDevice: { modelId } } : {}),
+    // D85: copies on the object, as a join here read the table in the order of the list
+    ...(modelId ? { modelId } : {}),
     ...(addonId ? { addonPeriods: { some: { addonId, validTo: null } } } : {}),
     ...(q ? await searchWhere(db, q) : {}),
   };

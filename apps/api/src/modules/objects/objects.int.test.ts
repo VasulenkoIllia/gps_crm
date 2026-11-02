@@ -1,4 +1,4 @@
-import { type ObjectList, type ObjectListItem, type SubscriberCard } from "@gps_crm/shared";
+import { type DeviceCard, type ObjectList, type ObjectListItem, type SubscriberCard } from "@gps_crm/shared";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { ALL_RECORDS } from "../../core/access/access.js";
 import type { DbClient } from "../../core/db/client.js";
@@ -312,6 +312,58 @@ describe("objects", () => {
       expect(await names(`subscriberId=${other.id}`)).toEqual(["Чужа"]);
       expect(await names(`managerId=${managerId}`)).toHaveLength(2);
       expect(await names(`managerId=${UNKNOWN_ID}`)).toEqual([]);
+    });
+
+    // D85: the filters read copies on the object, and the triggers keep them whoever changes the tracker or the client
+    it("follows a new tracker, a new model of it and a new manager of the client", async () => {
+      const first = await client.create("/tracker-models", { name: "Модель 1" });
+      const second = await client.create("/tracker-models", { name: "Модель 2" });
+      const id = await client.createObject({ name: "Своя", device: { imei: nextImei(), modelId: first } });
+      expect(await names(`modelId=${first}`)).toEqual(["Своя"]);
+
+      const replaced = await client.call("POST", `/objects/${id}/replace-device`, {
+        device: { imei: nextImei(), modelId: second },
+        installedOn: TODAY,
+        moveSim: true,
+      });
+      expect(replaced.statusCode).toBe(204);
+      expect(await names(`modelId=${first}`)).toEqual([]);
+      expect(await names(`modelId=${second}`)).toEqual(["Своя"]);
+
+      const deviceId = (await client.objectCard(id)).device?.id;
+      const device = (await client.call("GET", `/devices/${deviceId}`)).json<DeviceCard>();
+      const { imei, ownership, status, note, version } = device;
+      const edited = await client.call("PATCH", `/devices/${deviceId}`, {
+        imei,
+        modelId: first,
+        ownership,
+        status,
+        note,
+        version,
+      });
+      expect(edited.statusCode).toBe(204);
+      expect(await countOf(`modelId=${first}`)).toMatchObject({ count: 1 });
+
+      const manager = await owner.user.create({
+        data: {
+          email: `manager-${id}@example.test`,
+          fullName: "Новий менеджер",
+          status: "active",
+          role: { connect: { key: "manager" } },
+        },
+      });
+      await owner.subscriber.update({ where: { id: client.subscriberId }, data: { managerId: manager.id } });
+      expect(await names(`managerId=${manager.id}`)).toEqual(["Своя"]);
+      expect(await countOf(`managerId=${manager.id}`)).toMatchObject({ count: 1 });
+
+      // Before the reset of the next test: no object holds a copy its tracker or client does not have
+      const [stale] = await owner.$queryRaw<{ count: bigint }[]>`
+        SELECT count(*) AS count FROM objects o
+        JOIN subscribers s ON s.id = o.subscriber_id
+        LEFT JOIN devices d ON d.id = o.current_device_id
+        WHERE o.model_id IS DISTINCT FROM d.model_id OR o.manager_id IS DISTINCT FROM s.manager_id
+      `;
+      expect(stale?.count).toBe(0n);
     });
 
     it("sorts and pages by each column without a repeat", async () => {

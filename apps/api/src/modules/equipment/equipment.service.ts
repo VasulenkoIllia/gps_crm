@@ -223,6 +223,7 @@ export async function updateDevice(
 ): Promise<void> {
   await deps.db
     .$transaction(async (tx) => {
+      await repo.lockPlaceOfDevice(tx, id);
       const before = await lockedDevice(tx, id);
       assertVersion(before, input.version);
       assertDeviceState(before, input.status);

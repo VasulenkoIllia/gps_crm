@@ -100,6 +100,18 @@ export async function listServers(db: DbOrTx, query: ReferenceListQuery, canRead
   };
 }
 
+// D84: by the index of live clients per tariff, for the tariffs of the page. A count through the relation grouped every
+// live client by tariff and program, which no index holds: one pass over the table for each page.
+async function countClientsPerTariff(db: DbOrTx, tariffIds: string[]): Promise<Map<string, number>> {
+  if (tariffIds.length === 0) return new Map();
+  const rows = await db.subscriber.groupBy({
+    by: ["tariffId"],
+    where: { tariffId: { in: tariffIds }, archivedAt: null },
+    _count: { _all: true },
+  });
+  return new Map(rows.map(({ tariffId, _count }) => [tariffId, _count._all]));
+}
+
 export async function listTariffs(db: DbOrTx, query: ReferenceListQuery): Promise<TariffList> {
   const rows = await db.tariff.findMany({
     where: statusWhere(query),
@@ -113,19 +125,22 @@ export async function listTariffs(db: DbOrTx, query: ReferenceListQuery): Promis
       selectedAt: true,
       program: { select: { name: true } },
       server: { select: { name: true } },
-      _count: { select: { subscribers: { where: { archivedAt: null } } } },
     },
     ...pageArgs(query),
   });
   const { page, nextCursor } = toPage(rows, query.limit);
+  const clients = await countClientsPerTariff(
+    db,
+    page.map(({ id }) => id),
+  );
   return {
-    items: page.map(({ program, server, selectedAt, priceKop, _count, ...row }) => ({
+    items: page.map(({ program, server, selectedAt, priceKop, ...row }) => ({
       ...row,
       priceKop: Number(priceKop),
       isSelected: selectedAt !== null,
       programName: program.name,
       serverName: server.name,
-      clientCount: _count.subscribers,
+      clientCount: clients.get(row.id) ?? 0,
     })),
     nextCursor,
   };

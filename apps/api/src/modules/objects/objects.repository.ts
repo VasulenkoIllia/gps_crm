@@ -41,8 +41,10 @@ function toRow({ statusFrom, connectedOn, disconnectedOn, ...row }: RawRow): Obj
   };
 }
 
+// D85: by the copy of the client's manager on the object. Through the client, a list of own objects by name read the
+// table in the order of the list and looked up the client of each: 1.5 s on the seed of 1M.
 export function objectWhere(scope: RecordScope): Prisma.MonitoredObjectWhereInput {
-  return scope.managerId ? { subscriber: { managerId: scope.managerId } } : {};
+  return scope.managerId ? { managerId: scope.managerId } : {};
 }
 
 export async function findClientOf(db: DbOrTx, id: string, scope: RecordScope): Promise<string | null> {
