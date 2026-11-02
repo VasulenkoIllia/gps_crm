@@ -20,7 +20,7 @@ import type { Prisma } from "../../generated/prisma/client.js";
 import { CONTRACT_OWNER } from "./contracts.files.js";
 import { scopedContract } from "./contracts.repository.js";
 import { scopedPayer } from "./payers.repository.js";
-import { MIN_NAME_SEARCH } from "./subscribers.queries.js";
+import { COUNT_CAP, MIN_NAME_SEARCH } from "./subscribers.queries.js";
 import { subscriberWhere } from "./subscribers.repository.js";
 
 // Who a search names: a person narrows it long before this
@@ -188,6 +188,17 @@ export async function listContracts(
     nextCursor:
       rows.length > query.limit && last ? encodeListCursor({ value: fromDbDate(last[column]), id: last.id }) : null,
   };
+}
+
+// The number on the start page (search-exports.md B): the same «спливає» as the filter of the list
+export async function countExpiringContracts(
+  db: DbOrTx,
+  scope: RecordScope,
+  today: string,
+): Promise<{ count: number; isCapped: boolean }> {
+  const where = { AND: [scopedContract(scope), { archivedAt: null }, expiringWhere(today)] };
+  const count = await db.contract.count({ where, take: COUNT_CAP + 1 });
+  return { count: Math.min(count, COUNT_CAP), isCapped: count > COUNT_CAP };
 }
 
 export async function listContractsOf(db: DbOrTx, subscriberId: string, today: string): Promise<ContractList> {

@@ -221,6 +221,7 @@ const subscriberListItemSchema = z.strictObject({
   objectsActive: z.number(),
   objectsTotal: z.number(),
   managerName: z.string(),
+  createdAt: z.string(),
   isArchived: z.boolean(),
 });
 export type SubscriberListItem = z.infer<typeof subscriberListItemSchema>;

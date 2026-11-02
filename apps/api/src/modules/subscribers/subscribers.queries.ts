@@ -29,7 +29,7 @@ import { scopedContract } from "./contracts.repository.js";
 import { scopedPayer } from "./payers.repository.js";
 import { subscriberWhere } from "./subscribers.repository.js";
 
-const COUNT_CAP = 10_000;
+export const COUNT_CAP = 10_000;
 const CODE_DIGITS = /^\d{5,15}$/;
 const PHONE_LIKE = /^[\d\s()+-]+$/;
 const MIN_PHONE_SEARCH = 4;
@@ -169,6 +169,7 @@ const PAGE_ROW = {
   objectsActive: true,
   objectsSuspended: true,
   objectsDisconnected: true,
+  createdAt: true,
   archivedAt: true,
   program: { select: { name: true } },
   tariff: { select: { name: true } },
@@ -191,6 +192,7 @@ function toListItem(row: SubscriberPageRow): SubscriberListItem {
     objectsActive: row.objectsActive,
     objectsTotal: row.objectsActive + row.objectsSuspended + row.objectsDisconnected,
     managerName: row.manager.fullName,
+    createdAt: row.createdAt.toISOString(),
     isArchived: row.archivedAt !== null,
   };
 }

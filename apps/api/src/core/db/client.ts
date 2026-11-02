@@ -24,16 +24,28 @@ export type DbOrTx = PrismaClient | Prisma.TransactionClient;
 
 const UNIQUE_VIOLATION = "P2002";
 const INVALID_BYTE_SEQUENCE = "22021";
+const QUERY_CANCELED = "57014";
+const TRANSACTION_EXPIRED = "P2028";
 
 export function isUniqueViolation(error: unknown): boolean {
   return error instanceof Prisma.PrismaClientKnownRequestError && error.code === UNIQUE_VIOLATION;
 }
 
+function driverCodeOf(error: Prisma.PrismaClientKnownRequestError): string | undefined {
+  const driverError = error.meta?.driverAdapterError as { cause?: { originalCode?: string } } | undefined;
+  return driverError?.cause?.originalCode;
+}
+
 // PostgreSQL refuses a NUL inside a text, and it is the first to look: a schema takes it for an ordinary character
 export function isInvalidText(error: unknown): boolean {
   if (!(error instanceof Prisma.PrismaClientKnownRequestError)) return false;
-  const driverError = error.meta?.driverAdapterError as { cause?: { originalCode?: string } } | undefined;
-  return driverError?.cause?.originalCode === INVALID_BYTE_SEQUENCE;
+  return driverCodeOf(error) === INVALID_BYTE_SEQUENCE;
+}
+
+// A statement over its statement_timeout, or a transaction over the time it was given
+export function isTimedOut(error: unknown): boolean {
+  if (!(error instanceof Prisma.PrismaClientKnownRequestError)) return false;
+  return error.code === TRANSACTION_EXPIRED || driverCodeOf(error) === QUERY_CANCELED;
 }
 
 // onError gets errors of idle pooled connections (database restart, dropped network);

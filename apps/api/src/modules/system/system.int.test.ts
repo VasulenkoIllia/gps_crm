@@ -10,7 +10,7 @@ import { connectTestAppDatabase, connectTestDatabase } from "../../core/db/test-
 import type { JobDefinition, JobQueue } from "../../core/jobs/job.js";
 import { recordJobFailure, recordJobSuccess, registerJobHealth } from "../../core/jobs/job.repository.js";
 import { NO_MAIL, testConfig } from "../../core/test-app.js";
-import { JOBS } from "../../jobs.js";
+import { JOBS, TASKS } from "../../jobs.js";
 import { api, clearAuthData, createUser, signInWithSetup } from "../../test-auth.js";
 import { noteDeployment } from "./index.js";
 
@@ -70,7 +70,14 @@ describe("the «Система» screen", () => {
       db,
       config: testConfig({ backupStatusDir: statusDir, appVersion: VERSION }),
       mailer: NO_MAIL,
-      jobs: { definitions: [job(CLEAN, true), job(LOCKED, false)], requestRun, readQueues, lastErrorAt },
+      jobs: {
+        definitions: [job(CLEAN, true), job(LOCKED, false)],
+        tasks: [],
+        requestRun,
+        enqueue: () => Promise.reject(new Error("no tasks here")),
+        readQueues,
+        lastErrorAt,
+      },
       checkReady: () => Promise.resolve(),
     });
     await clearAuthData(owner);
@@ -206,8 +213,10 @@ describe("the «Система» screen", () => {
       expect(JOBS.map(({ name }) => name).sort()).toEqual([
         "activity.partitions",
         "auth.cleanup",
+        "exports.cleanup",
         "subscribers.rollup-reconcile",
       ]);
+      expect(TASKS.map(({ name }) => name)).toEqual(["exports.build"]);
     });
   });
 

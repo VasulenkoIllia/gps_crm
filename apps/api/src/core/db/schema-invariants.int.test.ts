@@ -62,6 +62,7 @@ const REQUIRED_CHECKS = [
   "device_installations_dates",
   "sim_installations_dates",
   "sensor_installations_dates",
+  "export_jobs_done_has_file",
 ];
 // The migrations' own: activity.partitions adds months after these, so the list is a floor
 const REQUIRED_PARTITIONS = [

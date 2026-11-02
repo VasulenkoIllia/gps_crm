@@ -11,7 +11,9 @@ export { subscriberRestorers } from "./archive.service.js";
 export type { ArchivedObject, ClientObjects } from "./client-objects.js";
 export { lockClientPayer, requireClientPayer } from "./payers.service.js";
 export { refreshRollup, requireLiveSubscriber } from "./subscribers.helpers.js";
-export { lockSubscribers } from "./subscribers.repository.js";
+export { lockSubscribers, subscriberWhere } from "./subscribers.repository.js";
+export { countSubscribers, listSubscribers } from "./subscribers.queries.js";
+export { countExpiringContracts, listContracts } from "./contracts.queries.js";
 export { reconcileRollups, SUBSCRIBERS_ROLLUP_JOB } from "./subscribers.jobs.js";
 
 export function registerSubscribersRoutes(app: FastifyInstance, deps: AppDeps, objects: ClientObjects): void {

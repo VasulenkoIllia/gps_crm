@@ -2,8 +2,16 @@ import type { Logger } from "pino";
 import { PgBoss, type ConstructorOptions, type Queue, type QueueStats } from "pg-boss";
 import type { AppRole } from "../config.js";
 import type { DbClient } from "../db/client.js";
+import type { FileStorage } from "../files/file-storage.js";
 import { grantJobSchema } from "./grants.repository.js";
-import { JOB_EXPIRE_SECONDS, type JobDefinition, type JobQueue, type JobTrigger, type QueueStat } from "./job.js";
+import {
+  JOB_EXPIRE_SECONDS,
+  type JobDefinition,
+  type JobQueue,
+  type JobTrigger,
+  type QueueStat,
+  type TaskDefinition,
+} from "./job.js";
 import { registerJobHealth } from "./job.repository.js";
 import { runJob } from "./run-job.js";
 
@@ -30,6 +38,19 @@ const RETRY_OPTIONS = {
 // exclusive: one job queued or active, so a late run never overlaps the next (system.md §11) and a second press of the
 // button is refused
 const QUEUE_OPTIONS = { ...RETRY_OPTIONS, policy: "exclusive" } satisfies Omit<Queue, "name">;
+
+// A person waits for a task: one quick retry for a blip, then the task reports the failure itself
+const TASK_RETRY_LIMIT = 1;
+const TASK_RETRY_OPTIONS = {
+  retryLimit: TASK_RETRY_LIMIT,
+  retryDelay: 5,
+  retryBackoff: false,
+  expireInSeconds: JOB_EXPIRE_SECONDS,
+} satisfies Omit<Queue, "name">;
+// standard: every request is a job of its own
+const TASK_QUEUE_OPTIONS = { ...TASK_RETRY_OPTIONS, policy: "standard" } satisfies Omit<Queue, "name">;
+// Two at once: one long export does not hold up the next, and the worker profile has 5 connections for everything
+const TASK_CONCURRENCY = 2;
 
 interface JobData {
   trigger: JobTrigger;
@@ -78,9 +99,11 @@ interface JobQueueOptions {
   connectionString: string;
   role: AppRole;
   definitions: JobDefinition[];
+  tasks?: TaskDefinition[];
   // Worker profile
   db: DbClient;
   logger: Logger;
+  files: FileStorage;
   pollingIntervalSeconds?: number;
 }
 
@@ -103,7 +126,8 @@ function toQueueStat(stats: QueueStats): QueueStat {
 // api sends and reads, all and worker also run: the same image, one role per container (02-architecture.md §2.1).
 // Nothing here creates a table: a queue is a row in the shared job table.
 export function createJobQueue(options: JobQueueOptions): RunningJobQueue {
-  const { connectionString, role, definitions, db, logger } = options;
+  const { connectionString, role, definitions, db, logger, files } = options;
+  const tasks = options.tasks ?? [];
   const pollingIntervalSeconds = options.pollingIntervalSeconds ?? POLLING_INTERVAL_SECONDS;
   const isWorker = role !== "api";
   const boss = new PgBoss({
@@ -126,7 +150,22 @@ export function createJobQueue(options: JobQueueOptions): RunningJobQueue {
     // missed: a deploy or a restart at the scheduled minute must not cost a monthly job its month
     await boss.schedule(name, cron, { trigger: "schedule" } satisfies JobData, { tz: TIME_ZONE, missed: "once" });
     await boss.work<JobData>(name, { pollingIntervalSeconds, localConcurrency: 1 }, async ([job]) => {
-      if (job) await runJob(definition, { db, logger }, job.data?.trigger ?? "schedule");
+      if (job) await runJob(definition, { db, logger, files }, job.data?.trigger ?? "schedule");
+    });
+  }
+
+  // By every role: a request on the api role sends to the queue, and pg-boss refuses a queue it does not have
+  async function createTaskQueue({ name }: TaskDefinition): Promise<void> {
+    await boss.createQueue(name, TASK_QUEUE_OPTIONS);
+    await boss.updateQueue(name, TASK_RETRY_OPTIONS);
+  }
+
+  async function startTask(task: TaskDefinition): Promise<void> {
+    const workOptions = { pollingIntervalSeconds, localConcurrency: TASK_CONCURRENCY };
+    await boss.work(task.name, workOptions, async ([job]) => {
+      if (!job) return;
+      const isLastAttempt = job.retryCount >= TASK_RETRY_LIMIT;
+      await task.run({ db, logger, files, signal: job.signal, isLastAttempt }, job.data);
     });
   }
 
@@ -140,6 +179,7 @@ export function createJobQueue(options: JobQueueOptions): RunningJobQueue {
 
   return {
     definitions,
+    tasks,
     isStarted: () => isStarted,
     lastErrorAt: () => lastErrorAt,
 
@@ -147,9 +187,11 @@ export function createJobQueue(options: JobQueueOptions): RunningJobQueue {
       await boss.start({ attempts: START_ATTEMPTS });
       // By every role: a stack with no worker must turn red in time, not wait for a row only a worker would write
       for (const { name } of definitions) await registerJobHealth(db, name);
+      for (const task of tasks) await createTaskQueue(task);
       if (isWorker) {
         await dropForeignSchedules();
         for (const definition of definitions) await startWork(definition);
+        for (const task of tasks) await startTask(task);
       }
       isStarted = true;
     },
@@ -164,9 +206,16 @@ export function createJobQueue(options: JobQueueOptions): RunningJobQueue {
       return id ? "accepted" : "busy";
     },
 
+    // A standard queue takes every job: no id would mean the job was lost
+    async enqueue(name, data) {
+      const id = await boss.send(name, data);
+      if (!id) throw new Error(`the queue ${name} did not take the job`);
+    },
+
     // force: the plain reading is a cache only the supervisor refreshes, and the api role has no supervisor
     async readQueues() {
-      const stats = await Promise.all(definitions.map(({ name }) => boss.getQueueStats(name, { force: true })));
+      const names = [...definitions, ...tasks].map(({ name }) => name);
+      const stats = await Promise.all(names.map((name) => boss.getQueueStats(name, { force: true })));
       return stats.flat().map(toQueueStat);
     },
   };

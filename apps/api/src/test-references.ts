@@ -2,6 +2,7 @@ import type { PermissionKey } from "@gps_crm/shared";
 import type { FastifyInstance, LightMyRequestResponse } from "fastify";
 import { buildApp } from "./app.js";
 import type { DbClient } from "./core/db/client.js";
+import type { JobQueue } from "./core/jobs/job.js";
 import { clearClientData } from "./core/db/test-database.js";
 import { NO_JOBS, NO_MAIL, testConfig } from "./core/test-app.js";
 import { api, clearAuthData, createUser, signInWithSetup } from "./test-auth.js";
@@ -47,12 +48,16 @@ export interface JournalLine {
 }
 
 // One app and one sign-in for a file: a sign-in hashes for real, and the rows are cleared between the tests instead
-export async function startReferenceClient(db: DbClient, owner: DbClient): Promise<ReferenceClient> {
+export async function startReferenceClient(
+  db: DbClient,
+  owner: DbClient,
+  jobs: JobQueue = NO_JOBS,
+): Promise<ReferenceClient> {
   const app = await buildApp({
     db,
     config: testConfig(),
     mailer: NO_MAIL,
-    jobs: NO_JOBS,
+    jobs,
     checkReady: () => Promise.resolve(),
   });
   await clearReferences(owner);

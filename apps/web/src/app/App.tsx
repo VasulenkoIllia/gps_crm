@@ -30,8 +30,11 @@ const ActivityPage = lazyPage(() => import("../features/activity/ActivityPage"),
 const ArchivePage = lazyPage(() => import("../features/activity/ArchivePage"), "ArchivePage");
 const SystemPage = lazyPage(() => import("../features/system/SystemPage"), "SystemPage");
 const ShowcasePage = lazyPage(() => import("../features/ui-showcase/ShowcasePage"), "ShowcasePage");
+const HomePage = lazyPage(() => import("../features/home/HomePage"), "HomePage");
+const SearchPage = lazyPage(() => import("../features/search/SearchPage"), "SearchPage");
 
 const BUILT_PAGES: Record<string, ReactNode> = {
+  "/": <HomePage />,
   "/subscribers": <SubscribersPage />,
   "/objects": <ObjectsPage />,
   "/equipment": <EquipmentPage />,
@@ -69,6 +72,7 @@ export function App() {
           ))}
           <Route path="/subscribers/:id" element={<SubscriberPage />} />
           <Route path="/objects/:id" element={<ObjectPage />} />
+          <Route path="/search" element={<SearchPage />} />
           <Route path="/profile" element={<ProfilePage />} />
           <Route path="/ui" element={<ShowcasePage />} />
           <Route path="*" element={<NotFoundPage />} />

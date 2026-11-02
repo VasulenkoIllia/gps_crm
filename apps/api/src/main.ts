@@ -6,10 +6,11 @@ import { createDbClient, DB_PROFILES } from "./core/db/client.js";
 import { listExpectedMigrations } from "./core/db/migration-state.js";
 import { checkDatabaseReady } from "./core/db/readiness.js";
 import { createMailer } from "./core/email/mailer.js";
+import { createFileStorage } from "./core/files/file-storage.js";
 import { createJobQueue } from "./core/jobs/queue.js";
 import { createLogger } from "./core/logger.js";
 import { installShutdown } from "./core/shutdown.js";
-import { JOBS } from "./jobs.js";
+import { JOBS, TASKS } from "./jobs.js";
 import { noteDeployment } from "./modules/system/index.js";
 
 const config = loadConfig(process.env);
@@ -33,8 +34,11 @@ const jobs = createJobQueue({
   connectionString: config.databaseUrl,
   role: config.appRole,
   definitions: JOBS,
+  tasks: TASKS,
   db: jobsDb,
   logger,
+  // The same place the app keeps its files in, which buildApp prepares before the queue starts
+  files: createFileStorage(config.files),
 });
 
 async function checkReady(): Promise<void> {

@@ -8,6 +8,7 @@ import {
   type RoleKey,
 } from "@gps_crm/shared";
 import type { DbClient } from "./core/db/client.js";
+import type { JobQueue } from "./core/jobs/job.js";
 import { resetClients, startClientApi, type ClientApi } from "./test-clients.js";
 import { items } from "./test-references.js";
 
@@ -45,9 +46,9 @@ export interface ObjectApi extends ClientApi {
   addPayer: (name: string) => Promise<string>;
 }
 
-export async function startObjectApi(db: DbClient, owner: DbClient): Promise<ObjectApi> {
+export async function startObjectApi(db: DbClient, owner: DbClient, jobs?: JobQueue): Promise<ObjectApi> {
   // On the same object and not a copy: resetClients sets the place on what it gets, and createClient reads it there
-  const client = await startClientApi(db, owner);
+  const client = await startClientApi(db, owner, jobs);
   const self: ObjectApi = Object.assign(client, {
     subscriberId: "",
     payerId: "",

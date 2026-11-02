@@ -4,7 +4,7 @@ import { recordActivity, SYSTEM_ACTOR, type ActivityContext } from "../../core/a
 import type { DbClient } from "../../core/db/client.js";
 import type { AppDeps } from "../../core/deps.js";
 import { AppError } from "../../core/errors.js";
-import type { JobDefinition, JobQueue, QueueStat } from "../../core/jobs/job.js";
+import type { JobDefinition, JobQueue, QueueStat, TaskDefinition } from "../../core/jobs/job.js";
 import { readBackupFiles } from "./backup-files.js";
 import { backupStatus, diskVerdict, jobVerdict, queueVerdict } from "./system.health.js";
 import {
@@ -33,7 +33,7 @@ async function readDisk(path: string, logger: AppDeps["logger"]): Promise<System
   }
 }
 
-function withLabels(queues: QueueStat[], definitions: JobDefinition[]): SystemStatus["queues"] {
+function withLabels(queues: QueueStat[], definitions: (JobDefinition | TaskDefinition)[]): SystemStatus["queues"] {
   const titles = new Map(definitions.map(({ name, title }) => [name, title]));
   return queues.map((queue) => ({ ...queue, label: titles.get(queue.name) ?? queue.name }));
 }
@@ -62,7 +62,7 @@ export async function readSystemStatus(deps: AppDeps): Promise<SystemStatus> {
     checkedAt: now.toISOString(),
     backups: backupStatus(backupFiles.dump, backupFiles.check, now),
     queueState: queueVerdict(queues !== null, jobs.lastErrorAt(), now),
-    queues: withLabels(queues ?? [], jobs.definitions),
+    queues: withLabels(queues ?? [], [...jobs.definitions, ...jobs.tasks]),
     database,
     disk,
     version: { current: config.appVersion, deployments },

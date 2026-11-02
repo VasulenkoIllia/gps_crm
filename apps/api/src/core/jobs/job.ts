@@ -1,5 +1,6 @@
 import type { Logger } from "pino";
 import type { DbClient } from "../db/client.js";
+import type { FileStorage } from "../files/file-storage.js";
 
 export type JobTrigger = "schedule" | "manual";
 
@@ -11,6 +12,7 @@ export interface JobContext {
   // The worker's profile: long statements are fine here, unlike on the pool of the requests
   db: DbClient;
   logger: Pick<Logger, "info" | "warn" | "error">;
+  files: FileStorage;
 }
 
 export interface JobOutcome {
@@ -32,6 +34,22 @@ export interface JobDefinition {
   run: (context: JobContext) => Promise<JobOutcome>;
 }
 
+// A job a request asks for, with data of its own, as often as people ask: no schedule and no row on the list of jobs of
+// «Система», which shows its queue instead (system.md П6)
+export interface TaskContext extends JobContext {
+  // Fires when pg-boss gives up on the run: a long task stops between its batches
+  signal: AbortSignal;
+  // No retry follows a failure of this run, so the task records the failure where its requester will see it
+  isLastAttempt: boolean;
+}
+
+export interface TaskDefinition {
+  name: string;
+  title: string;
+  // It comes back from the queue's table, so the task parses it
+  run: (context: TaskContext, data: unknown) => Promise<void>;
+}
+
 export interface QueueStat {
   name: string;
   waiting: number;
@@ -44,7 +62,9 @@ export type RunRequest = "accepted" | "busy";
 
 export interface JobQueue {
   definitions: JobDefinition[];
+  tasks: TaskDefinition[];
   requestRun: (name: string) => Promise<RunRequest>;
+  enqueue: (name: string, data: object) => Promise<void>;
   readQueues: () => Promise<QueueStat[]>;
   // The last error of the queue itself: its scheduler and supervisor catch their own and only report them
   lastErrorAt: () => Date | null;

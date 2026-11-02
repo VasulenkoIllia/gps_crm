@@ -96,6 +96,8 @@ export const ACTIVITY_ACTIONS = {
   "object.archived": "Архівування об'єкта",
   "object.restored": "Відновлення об'єкта",
   "object.deleted": "Видалення об'єкта",
+  "export.completed": "Експорт в Excel",
+  "export.downloaded": "Скачування експорту",
   "job.run_requested": "Ручний запуск задачі",
   "system.deployed": "Нова версія",
 } as const;
@@ -126,6 +128,7 @@ export const ACTIVITY_ENTITY_TYPES = {
   device: "Трекер",
   sim: "SIM-картка",
   sensor: "Датчик",
+  export: "Експорт",
 } as const;
 
 export type ActivityEntityType = keyof typeof ACTIVITY_ENTITY_TYPES;
@@ -213,6 +216,9 @@ export const ACTIVITY_FIELD_LABELS: Record<string, string> = {
   validTo: "Діє до",
   oldTrackerState: "Стан старого трекера",
   subscriber: "Клієнт",
+  list: "Список",
+  rowCount: "Рядків",
+  filters: "Фільтри",
 };
 
 // A detail that names the record: the journal shows it in the column «Запис» and not among the facts (activity.queries.ts)

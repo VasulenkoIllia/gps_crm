@@ -1,5 +1,6 @@
 export { registerEquipmentRoutes } from "./equipment.routes.js";
 export { EQUIPMENT_RESTORERS } from "./equipment.archive.service.js";
+export { listDevices, listSensors, listSims } from "./equipment.queries.js";
 export { lockDevices } from "./equipment.repository.js";
 export {
   deviceIdOf,

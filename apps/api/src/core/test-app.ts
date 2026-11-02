@@ -56,7 +56,9 @@ export const NO_MAIL: Mailer = {
 
 export const NO_JOBS: JobQueue = {
   definitions: [],
+  tasks: [],
   requestRun: () => Promise.reject(new Error("jobs are not running in this test")),
+  enqueue: () => Promise.reject(new Error("jobs are not running in this test")),
   readQueues: () => Promise.resolve([]),
   lastErrorAt: () => null,
 };
@@ -65,8 +67,11 @@ export const NO_FILES: FileStorage = {
   name: "none",
   prepare: () => Promise.resolve(),
   put: () => Promise.reject(new Error("files are not stored in this test")),
+  putStream: () => Promise.reject(new Error("files are not stored in this test")),
   read: () => Promise.resolve(null),
+  openStream: () => Promise.resolve(null),
   remove: () => Promise.resolve(),
+  removeFolder: () => Promise.resolve(),
 };
 
 // A database client that never connects: unit tests stay away from the routes that would need it

@@ -17,6 +17,7 @@ import {
   SearchField,
   type DataTableColumn,
 } from "../../ui";
+import { ExportButton } from "../exports/ExportButton";
 import { SubscriberFilter } from "../subscribers/SubscriberFilter";
 import { CONTRACT_FILTER_KEYS, CONTRACTS_KEY, fetchContracts } from "./contracts.api";
 import { ContractFile, ContractStatus } from "./ContractParts";
@@ -72,6 +73,7 @@ function ContractsScreen() {
     <ListPage
       title="Договори"
       subtitle="Договори всіх клієнтів"
+      actions={<ExportButton request={{ entity: "contracts", filters }} />}
       filters={
         <FilterBar hasFilters={hasFilters} onReset={resetFilters}>
           <SearchField

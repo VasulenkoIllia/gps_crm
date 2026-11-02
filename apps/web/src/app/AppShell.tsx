@@ -1,8 +1,9 @@
-import { MenuOutlined } from "@ant-design/icons";
+import { MenuOutlined, SearchOutlined } from "@ant-design/icons";
 import { Button, Drawer, Grid, Layout, Menu, Skeleton } from "antd";
 import { Suspense, useEffect, useMemo, useState } from "react";
-import { Link, NavLink, Outlet, useLocation } from "react-router";
-import { usePermissions } from "../lib/session";
+import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router";
+import { GlobalSearch } from "../features/search/GlobalSearch";
+import { useCan, usePermissions } from "../lib/session";
 import { BrandMark, ErrorBoundary } from "../ui";
 import { findActiveKeys, NAV_ITEMS, type NavItem } from "./nav";
 import { UserMenu } from "./UserMenu";
@@ -77,6 +78,27 @@ function MobileNav() {
   );
 }
 
+// On a phone the field does not fit beside the menu: the button opens the page of the search, which has its own
+// The home page and the search page have a field of their own
+const PAGES_WITH_SEARCH = new Set(["/", "/search"]);
+
+function HeaderSearch({ isMobile }: { isMobile: boolean }) {
+  const navigate = useNavigate();
+  const { pathname } = useLocation();
+  const canSearch = useCan("subscribers.read");
+  if (!canSearch || PAGES_WITH_SEARCH.has(pathname)) return null;
+  if (!isMobile) return <GlobalSearch />;
+  return (
+    <Button
+      type="text"
+      className="header-search-button"
+      icon={<SearchOutlined />}
+      aria-label="Відкрити пошук"
+      onClick={() => void navigate("/search")}
+    />
+  );
+}
+
 export function AppShell() {
   const { pathname } = useLocation();
   const screens = Grid.useBreakpoint();
@@ -100,6 +122,7 @@ export function AppShell() {
       <Layout>
         <Layout.Header className="app-header">
           {isMobile && <MobileNav />}
+          <HeaderSearch isMobile={isMobile} />
           <UserMenu />
         </Layout.Header>
         <Layout.Content id={MAIN_ID} className="app-content">
