@@ -949,6 +949,11 @@ model MonitoredObject {
   hasOwnTariff       Boolean      @default(false) @map("has_own_tariff")
   // Empty only on a disconnected object that went through the archive (D71)
   currentDeviceId    String?      @unique @map("current_device_id") @db.Uuid
+  // Copies of the model of the current tracker and the manager of the client, for the filters of the list and the own
+  // records of a manager (D85). Triggers of the migration keep them, whoever changes the tracker, its model or the
+  // client; the app only reads them.
+  modelId            String?      @map("model_id") @db.Uuid
+  managerId          String?      @map("manager_id") @db.Uuid
   note               String?
   version            Int          @default(1)
   createdAt          DateTime     @default(now()) @map("created_at") @db.Timestamptz

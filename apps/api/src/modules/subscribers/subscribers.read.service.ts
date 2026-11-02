@@ -12,6 +12,7 @@ import type {
   SubscriberListQuery,
 } from "@gps_crm/shared";
 import type { RecordScope } from "../../core/access/access.js";
+import { withSearchPlan } from "../../core/db/search-plan.queries.js";
 import type { AppDeps } from "../../core/deps.js";
 import { listActivity } from "../activity/index.js";
 import { notFound } from "../references/index.js";
@@ -21,7 +22,7 @@ import { findVisibleId } from "./subscribers.repository.js";
 type ReadDeps = Pick<AppDeps, "db">;
 
 export function listClients(deps: ReadDeps, query: SubscriberListQuery, scope: RecordScope): Promise<SubscriberList> {
-  return queries.listSubscribers(deps.db, query, scope);
+  return withSearchPlan(deps.db, query.q, (db) => queries.listSubscribers(db, query, scope));
 }
 
 export function countClients(
@@ -29,7 +30,7 @@ export function countClients(
   query: SubscriberCountQuery,
   scope: RecordScope,
 ): Promise<SubscriberCount> {
-  return queries.countSubscribers(deps.db, query, scope);
+  return withSearchPlan(deps.db, query.q, (db) => queries.countSubscribers(db, query, scope));
 }
 
 export function listManagerOptions(deps: ReadDeps): Promise<ManagerList> {

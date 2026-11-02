@@ -45,6 +45,11 @@ export default defineConfig(
   { files: ["**/*.{js,cjs,mjs}"], extends: [tseslint.configs.disableTypeChecked] },
   { files: ["**/*.cjs"], languageOptions: { sourceType: "commonjs" } },
   {
+    // k6 runs these, not Node: its own globals
+    files: ["apps/api/scripts/k6/**/*.js"],
+    languageOptions: { globals: { __ENV: "readonly", __VU: "readonly", open: "readonly" } },
+  },
+  {
     files: API_SOURCES,
     rules: {
       "no-restricted-syntax": ["error", UNSAFE_RAW_SQL, RAW_SQL_OUTSIDE_QUERIES],

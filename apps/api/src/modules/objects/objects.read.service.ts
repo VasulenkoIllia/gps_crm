@@ -9,6 +9,7 @@ import type {
   ObjectListQuery,
 } from "@gps_crm/shared";
 import type { RecordScope } from "../../core/access/access.js";
+import { withSearchPlan } from "../../core/db/search-plan.queries.js";
 import type { AppDeps } from "../../core/deps.js";
 import { listActivity } from "../activity/index.js";
 import { notFound } from "../references/index.js";
@@ -19,11 +20,11 @@ import * as queries from "./objects.queries.js";
 type ReadDeps = Pick<AppDeps, "db">;
 
 export function listObjects(deps: ReadDeps, query: ObjectListQuery, scope: RecordScope): Promise<ObjectList> {
-  return queries.listObjects(deps.db, query, scope);
+  return withSearchPlan(deps.db, query.q, (db) => queries.listObjects(db, query, scope));
 }
 
 export function countObjects(deps: ReadDeps, query: ObjectCountQuery, scope: RecordScope): Promise<ObjectCount> {
-  return queries.countObjects(deps.db, query, scope);
+  return withSearchPlan(deps.db, query.q, (db) => queries.countObjects(db, query, scope));
 }
 
 export async function readObjectCard(deps: ReadDeps, id: string, scope: RecordScope): Promise<ObjectCard> {

@@ -13,6 +13,7 @@
     "db:deploy": "prisma migrate deploy",
     "db:setup": "node --env-file-if-exists=../../.env --import tsx src/setup.ts",
     "routes:update": "UPDATE_ROUTE_INVENTORY=1 vitest run --root ../.. --project api src/route-inventory.test.ts",
+    "seed:scale": "node --import tsx scripts/seed-scale.ts",
     "db:drift": "prisma migrate diff --from-config-datasource --to-schema prisma/schema.prisma --exit-code"
   },
   "dependencies": {

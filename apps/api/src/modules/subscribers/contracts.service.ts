@@ -16,6 +16,7 @@ import {
   type ActivityEventInput,
 } from "../../core/activity/activity.repository.js";
 import { isUniqueViolation, type DbOrTx } from "../../core/db/client.js";
+import { withSearchPlan } from "../../core/db/search-plan.queries.js";
 import type { AppDeps } from "../../core/deps.js";
 import { AppError } from "../../core/errors.js";
 import { detectFileType } from "../../core/files/file-type.js";
@@ -71,7 +72,8 @@ async function requirePayerOfClient(tx: DbOrTx, payerId: string, subscriberId: s
 }
 
 export function listContracts(deps: ContractDeps, query: ContractListQuery, scope: RecordScope): Promise<ContractList> {
-  return readContracts(deps.db, query, scope, todayKyiv());
+  const today = todayKyiv();
+  return withSearchPlan(deps.db, query.q, (db) => readContracts(db, query, scope, today));
 }
 
 export async function listSubscriberContracts(

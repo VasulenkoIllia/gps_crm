@@ -103,10 +103,11 @@ cd /var/www/projects/gps_crm_staging && ls -lht backups/ && docker ps --filter n
 минулої спроби, спершу видаліть її командою з кроку 9, вказавши `gps_crm_restore`. Роль `gps_crm_app` має вже бути, інакше
 відновлення зупиниться на її правах. Де деплою ще не було, спершу виконайте
 `docker exec gps_crm_staging-db-1 sh -c 'psql -U "$POSTGRES_USER" -d postgres -X -c "create role gps_crm_app nologin noinherit"'`,
-а пароль їй задасть крок 6. Очікується `restored` в кінці.
+а пароль їй задасть крок 6. Дамп не несе статистики планувальника, тому команда одразу її збирає: без неї великі
+списки й фільтри відповідають секундами. Очікується `restored` в кінці.
 
 ```bash
-cd /var/www/projects/gps_crm_staging && docker exec gps_crm_staging-db-1 sh -c 'createdb -U "$POSTGRES_USER" gps_crm_restore' && docker exec -i gps_crm_staging-db-1 sh -c 'pg_restore -U "$POSTGRES_USER" -d gps_crm_restore --exit-on-error --single-transaction' < backups/<DUMP> && echo restored
+cd /var/www/projects/gps_crm_staging && docker exec gps_crm_staging-db-1 sh -c 'createdb -U "$POSTGRES_USER" gps_crm_restore' && docker exec -i gps_crm_staging-db-1 sh -c 'pg_restore -U "$POSTGRES_USER" -d gps_crm_restore --exit-on-error --single-transaction' < backups/<DUMP> && docker exec gps_crm_staging-db-1 sh -c 'psql -U "$POSTGRES_USER" -d gps_crm_restore -X -q -c "ANALYZE"' && echo restored
 ```
 
 **3. На сервері після ssh: подивитись, що відновилось (лише читає).** Очікується кількість таблиць і остання міграція.

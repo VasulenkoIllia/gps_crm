@@ -1,7 +1,7 @@
 import { PrismaPg } from "@prisma/adapter-pg";
 import { Prisma, PrismaClient } from "../../generated/prisma/client.js";
 
-const CONNECT_TIMEOUT_MS = 5_000;
+export const CONNECT_TIMEOUT_MS = 5_000;
 // On the client too: the server's statement_timeout never fires on a half-open socket
 const CLIENT_TIMEOUT_MARGIN_MS = 1_000;
 

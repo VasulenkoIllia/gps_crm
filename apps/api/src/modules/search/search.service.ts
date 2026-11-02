@@ -16,6 +16,7 @@ import {
 import type { Logger } from "pino";
 import type { RecordScope } from "../../core/access/access.js";
 import { isTimedOut, type DbClient, type DbOrTx } from "../../core/db/client.js";
+import { readMatchesFirst } from "../../core/db/search-plan.queries.js";
 import { AppError } from "../../core/errors.js";
 import { listDevices, listSims } from "../equipment/index.js";
 import { listObjects } from "../objects/index.js";
@@ -124,6 +125,7 @@ export async function search(
     return await db.$transaction(
       async (tx) => {
         await limitStatementTime(tx, TIME_LIMIT_MS);
+        await readMatchesFirst(tx);
         return readGroups(tx, query, scopes);
       },
       { timeout: TIME_LIMIT_MS },

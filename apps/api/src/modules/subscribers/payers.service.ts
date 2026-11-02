@@ -7,6 +7,7 @@ import {
   type ActivityEventInput,
 } from "../../core/activity/activity.repository.js";
 import type { DbOrTx } from "../../core/db/client.js";
+import { withSearchPlan } from "../../core/db/search-plan.queries.js";
 import type { AppDeps } from "../../core/deps.js";
 import { AppError } from "../../core/errors.js";
 import { assertVersion, changedFields, hasChanges, notFound, recordArchived } from "../references/index.js";
@@ -48,7 +49,7 @@ export async function listSubscriberPayers(
 }
 
 export function searchPayerList(deps: PayerDeps, query: PayerSearchQuery, scope: RecordScope): Promise<PayerList> {
-  return searchPayers(deps.db, query, scope);
+  return withSearchPlan(deps.db, query.q, (db) => searchPayers(db, query, scope));
 }
 
 export function createPayer(

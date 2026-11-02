@@ -55,6 +55,19 @@ export async function lockDevices(tx: DbOrTx, ids: string[]): Promise<void> {
   await tx.$queryRaw`SELECT 1 FROM devices WHERE id = ANY(${ids}::uuid[]) ORDER BY id FOR NO KEY UPDATE`;
 }
 
+// D85: a new model of a tracker reaches its object by a trigger, which locks the object. So the client and the object go
+// first, as in every write that hangs off a client (objects.helpers.ts lockObject): after the tracker, a replacement of
+// that tracker or an archive of its client would meet this change in a deadlock. A tracker installed between this and
+// its own lock comes with a new version, so the change stops at assertVersion before it writes.
+export async function lockPlaceOfDevice(tx: DbOrTx, id: string): Promise<void> {
+  await tx.$queryRaw`
+    SELECT 1 FROM subscribers
+    WHERE id = (SELECT subscriber_id FROM objects WHERE current_device_id = ${id}::uuid)
+    FOR NO KEY UPDATE
+  `;
+  await tx.$queryRaw`SELECT 1 FROM objects WHERE current_device_id = ${id}::uuid FOR NO KEY UPDATE`;
+}
+
 export async function lockSims(tx: DbOrTx, ids: string[]): Promise<void> {
   if (ids.length === 0) return;
   await tx.$queryRaw`SELECT 1 FROM sims WHERE id = ANY(${ids}::uuid[]) ORDER BY id FOR NO KEY UPDATE`;
