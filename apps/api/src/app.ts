@@ -18,8 +18,10 @@ import { registerAccessRoutes } from "./modules/access/index.js";
 import { registerActivityRoutes, type ArchiveRestorers } from "./modules/activity/index.js";
 import { registerAuthRoutes } from "./modules/auth/index.js";
 import { EQUIPMENT_RESTORERS, registerEquipmentRoutes } from "./modules/equipment/index.js";
+import { registerExportRoutes } from "./modules/exports/index.js";
 import { CLIENT_OBJECTS, OBJECT_RESTORERS, registerObjectRoutes } from "./modules/objects/index.js";
 import { REFERENCE_RESTORERS, registerReferencesRoutes } from "./modules/references/index.js";
+import { registerSearchRoutes } from "./modules/search/index.js";
 import { registerSubscribersRoutes, subscriberRestorers } from "./modules/subscribers/index.js";
 import { registerSystemRoutes } from "./modules/system/index.js";
 import { registerTwoFactorRoutes } from "./modules/two-factor/index.js";
@@ -84,6 +86,8 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
   registerSubscribersRoutes(app, deps, CLIENT_OBJECTS);
   registerEquipmentRoutes(app, deps);
   registerObjectRoutes(app, deps);
+  registerSearchRoutes(app, deps);
+  registerExportRoutes(app, deps);
   registerSystemRoutes(app, deps);
 
   const { webRoot } = options;

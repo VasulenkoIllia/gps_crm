@@ -190,32 +190,32 @@ const pageFields = {
 const idFilter = z.uuid(INVALID_ID).optional();
 const archivedFilter = z.literal("true").optional();
 
-export const deviceListQuerySchema = z.strictObject({
+// Apart from the page: the export of a list takes the filters alone (search-exports.md C)
+export const deviceFiltersSchema = z.strictObject({
   q: searchField,
   status: z.enum(DEVICE_STATUS_KEYS).optional(),
   modelId: idFilter,
   contractorId: idFilter,
   archived: archivedFilter,
-  ...pageFields,
 });
+
+export const deviceListQuerySchema = deviceFiltersSchema.extend(pageFields);
 export type DeviceListQuery = z.infer<typeof deviceListQuerySchema>;
 
-export const simListQuerySchema = z.strictObject({
+export const simFiltersSchema = z.strictObject({
   q: searchField,
   status: z.enum(SIM_STATUS_KEYS).optional(),
   operatorId: idFilter,
   contractorId: idFilter,
   archived: archivedFilter,
-  ...pageFields,
 });
+
+export const simListQuerySchema = simFiltersSchema.extend(pageFields);
 export type SimListQuery = z.infer<typeof simListQuerySchema>;
 
-export const sensorListQuerySchema = z.strictObject({
-  q: searchField,
-  contractorId: idFilter,
-  archived: archivedFilter,
-  ...pageFields,
-});
+export const sensorFiltersSchema = z.strictObject({ q: searchField, contractorId: idFilter, archived: archivedFilter });
+
+export const sensorListQuerySchema = sensorFiltersSchema.extend(pageFields);
 export type SensorListQuery = z.infer<typeof sensorListQuerySchema>;
 
 export const availableQuerySchema = z.strictObject({ q: searchField, ...pageFields });

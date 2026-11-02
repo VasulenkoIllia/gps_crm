@@ -2,16 +2,20 @@ import { Button, Tabs } from "antd";
 import { useState } from "react";
 import { useSearchParams } from "react-router";
 import { useCan } from "../../lib/session";
+import { readFilters } from "../../lib/url-filters";
 import { NoAccess, PageHeader, Panel } from "../../ui";
+import { ExportButton } from "../exports/ExportButton";
 import { DevicesTab } from "./DevicesTab";
+import { DEVICE_FILTER_KEYS, SENSOR_FILTER_KEYS, SIM_FILTER_KEYS } from "./equipment.api";
 import { SensorsTab } from "./SensorsTab";
 import { SimsTab } from "./SimsTab";
 
 const TAB_PARAM = "tab";
+// The key of a tab is the name of its list in an export as well
 const TABS = [
-  { key: "devices", label: "Трекери", add: "Новий трекер", content: DevicesTab },
-  { key: "sims", label: "SIM-картки", add: "Нова SIM-картка", content: SimsTab },
-  { key: "sensors", label: "Датчики", add: "Новий датчик", content: SensorsTab },
+  { key: "devices", label: "Трекери", add: "Новий трекер", content: DevicesTab, filterKeys: DEVICE_FILTER_KEYS },
+  { key: "sims", label: "SIM-картки", add: "Нова SIM-картка", content: SimsTab, filterKeys: SIM_FILTER_KEYS },
+  { key: "sensors", label: "Датчики", add: "Новий датчик", content: SensorsTab, filterKeys: SENSOR_FILTER_KEYS },
 ] as const;
 const [FIRST_TAB] = TABS;
 
@@ -30,11 +34,14 @@ function EquipmentScreen() {
         title="Обладнання та SIM"
         subtitle="Весь запас: те, що стоїть на об'єктах, і те, що чекає встановлення"
         actions={
-          canWrite && (
-            <Button type="primary" onClick={() => setAdding(true)}>
-              {tab.add}
-            </Button>
-          )
+          <>
+            {canWrite && (
+              <Button type="primary" onClick={() => setAdding(true)}>
+                {tab.add}
+              </Button>
+            )}
+            <ExportButton key={tab.key} request={{ entity: tab.key, filters: readFilters(params, tab.filterKeys) }} />
+          </>
         }
       />
       <Panel>

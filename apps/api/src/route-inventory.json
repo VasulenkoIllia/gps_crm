@@ -212,6 +212,44 @@
   },
   {
     "method": "POST",
+    "url": "/api/v1/exports",
+    "access": "can:data.export"
+  },
+  {
+    "method": "GET",
+    "url": "/api/v1/exports/:id",
+    "access": "can:data.export"
+  },
+  {
+    "method": "HEAD",
+    "url": "/api/v1/exports/:id",
+    "access": "can:data.export",
+    "derived": true
+  },
+  {
+    "method": "GET",
+    "url": "/api/v1/exports/:id/file",
+    "access": "can:data.export"
+  },
+  {
+    "method": "HEAD",
+    "url": "/api/v1/exports/:id/file",
+    "access": "can:data.export",
+    "derived": true
+  },
+  {
+    "method": "GET",
+    "url": "/api/v1/home",
+    "access": "can:subscribers.read"
+  },
+  {
+    "method": "HEAD",
+    "url": "/api/v1/home",
+    "access": "can:subscribers.read",
+    "derived": true
+  },
+  {
+    "method": "POST",
     "url": "/api/v1/invitations/accept",
     "access": "public"
   },
@@ -676,6 +714,17 @@
     "method": "POST",
     "url": "/api/v1/references/tracker-models/:id/deactivate",
     "access": "can:references.manage"
+  },
+  {
+    "method": "GET",
+    "url": "/api/v1/search",
+    "access": "can:subscribers.read"
+  },
+  {
+    "method": "HEAD",
+    "url": "/api/v1/search",
+    "access": "can:subscribers.read",
+    "derived": true
   },
   {
     "method": "GET",

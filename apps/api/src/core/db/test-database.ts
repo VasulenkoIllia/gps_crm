@@ -65,6 +65,7 @@ export async function clearClientData(owner: DbClient): Promise<void> {
   await owner.device.deleteMany();
   await owner.sim.deleteMany();
   await owner.sensor.deleteMany();
+  await owner.exportJob.deleteMany();
   await owner.storedFile.deleteMany();
   await owner.contract.deleteMany();
   await owner.contact.deleteMany();

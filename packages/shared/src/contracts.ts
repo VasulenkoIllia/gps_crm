@@ -126,16 +126,20 @@ export type Contract = z.infer<typeof contractSchema>;
 export const contractListSchema = pageOf(contractSchema);
 export type ContractList = z.infer<typeof contractListSchema>;
 
-export const contractListQuerySchema = z
-  .strictObject({
+// The filters of the list, which an export takes as they are (search-exports.md C)
+export const contractFiltersSchema = z.strictObject({
+  q: z.string().trim().min(1).max(SEARCH_MAX_LENGTH).optional(),
+  status: z.enum(CONTRACT_STATUSES).optional(),
+  expiring: z.literal("true").optional(),
+  signedFrom: businessDateSchema.optional(),
+  signedTo: businessDateSchema.optional(),
+  subscriberId: z.uuid("Некоректний ідентифікатор").optional(),
+});
+
+export const contractListQuerySchema = contractFiltersSchema
+  .extend({
     cursor: listCursorSchema.optional(),
     limit: z.coerce.number().int().min(1).max(PAGE_MAX).default(PAGE_DEFAULT),
-    q: z.string().trim().min(1).max(SEARCH_MAX_LENGTH).optional(),
-    status: z.enum(CONTRACT_STATUSES).optional(),
-    expiring: z.literal("true").optional(),
-    signedFrom: businessDateSchema.optional(),
-    signedTo: businessDateSchema.optional(),
-    subscriberId: z.uuid("Некоректний ідентифікатор").optional(),
   })
   .superRefine((query, context) => {
     if (!query.cursor || businessDateSchema.safeParse(decodeListCursor(query.cursor).value).success) return;

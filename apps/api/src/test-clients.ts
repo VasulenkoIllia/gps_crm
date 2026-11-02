@@ -1,6 +1,7 @@
 import type { LightMyRequestResponse } from "fastify";
 import { firstOfNextMonth, todayKyiv, type SubscriberCard } from "@gps_crm/shared";
 import type { DbClient } from "./core/db/client.js";
+import type { JobQueue } from "./core/jobs/job.js";
 import { clearClientData } from "./core/db/test-database.js";
 import {
   clearReferences,
@@ -60,9 +61,9 @@ export function updateForm(card: SubscriberCard, fields: object = {}) {
   return { type, name, taxId, crmUrl, managerId, graceDays, discountKop, legacyCode, note, version, ...fields };
 }
 
-export async function startClientApi(db: DbClient, owner: DbClient): Promise<ClientApi> {
+export async function startClientApi(db: DbClient, owner: DbClient, jobs?: JobQueue): Promise<ClientApi> {
   await clearClientData(owner);
-  const client = await startReferenceClient(db, owner);
+  const client = await startReferenceClient(db, owner, jobs);
   const self: ClientApi = {
     ...client,
     place: { programId: "", serverId: "" },

@@ -57,7 +57,7 @@ async function leaveForm(page: Page): Promise<void> {
 
 async function openObject(page: Page, name: string): Promise<void> {
   await page.goto("/objects");
-  await page.getByLabel("Пошук").fill(name);
+  await page.getByLabel("Пошук", { exact: true }).fill(name);
   await page.getByRole("row", { name: new RegExp(name) }).click();
   await expect(page.getByRole("heading", { name, exact: true })).toBeVisible();
 }
@@ -97,7 +97,7 @@ test.describe.serial("the objects and the equipment", () => {
 
   test("a client gets an object with a tracker from the stock and a new SIM", async ({ page }) => {
     await page.goto("/subscribers");
-    await page.getByLabel("Пошук").fill(CLIENT);
+    await page.getByLabel("Пошук", { exact: true }).fill(CLIENT);
     await page.getByRole("row", { name: new RegExp(CLIENT) }).click();
     // The only payer is filled in on every opening, not just the first
     await page.getByRole("button", { name: "Додати об'єкт" }).click();
@@ -149,15 +149,15 @@ test.describe.serial("the objects and the equipment", () => {
 
   test("an object is found by the last digits of its IMEI, and so is its client", async ({ page }) => {
     await page.goto("/objects");
-    await page.getByLabel("Пошук").fill(IMEI.slice(-6));
+    await page.getByLabel("Пошук", { exact: true }).fill(IMEI.slice(-6));
     await expect(page.getByRole("row", { name: new RegExp(OBJECT) })).toBeVisible();
-    await page.getByLabel("Пошук").fill("000000");
+    await page.getByLabel("Пошук", { exact: true }).fill("000000");
     await expect(page.getByRole("row", { name: new RegExp(OBJECT) })).toHaveCount(0);
 
     await page.goto("/subscribers");
-    await page.getByLabel("Пошук").fill(IMEI.slice(-6));
+    await page.getByLabel("Пошук", { exact: true }).fill(IMEI.slice(-6));
     await expect(page.getByRole("row", { name: new RegExp(CLIENT) })).toBeVisible();
-    await page.getByLabel("Пошук").fill(ICCID);
+    await page.getByLabel("Пошук", { exact: true }).fill(ICCID);
     await expect(page.getByRole("row", { name: new RegExp(CLIENT) })).toBeVisible();
   });
 
@@ -233,7 +233,7 @@ test.describe.serial("the objects and the equipment", () => {
 
   test("a client with a working object does not go to the archive, and a payer stays", async ({ page }) => {
     await page.goto("/subscribers");
-    await page.getByLabel("Пошук").fill(CLIENT);
+    await page.getByLabel("Пошук", { exact: true }).fill(CLIENT);
     await page.getByRole("row", { name: new RegExp(CLIENT) }).click();
     await rowAction(page, CLIENT, "Архівувати");
     await page.getByRole("dialog").getByRole("button", { name: "Архівувати" }).click();
@@ -286,7 +286,7 @@ test.describe.serial("the objects and the equipment", () => {
     await expect(form).toContainText(CLIENT);
     await expect(form).toContainText(CONTRACTOR);
     await form.getByRole("button", { name: "Скасувати" }).click();
-    await page.getByLabel("Пошук").fill(SECOND_OBJECT);
+    await page.getByLabel("Пошук", { exact: true }).fill(SECOND_OBJECT);
     await page.getByRole("row", { name: new RegExp(SECOND_OBJECT) }).click();
     await expect(page.getByRole("heading", { name: SECOND_OBJECT, exact: true })).toBeVisible();
     await rowAction(page, SECOND_OBJECT, "Видалити");

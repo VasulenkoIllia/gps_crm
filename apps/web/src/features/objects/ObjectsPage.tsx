@@ -7,6 +7,7 @@ import { listRows } from "../../lib/list-rows";
 import { useCan } from "../../lib/session";
 import { useUrlFilters, useUrlSort } from "../../lib/url-filters";
 import { FilterBar, FilterSelect, ListPage, NoAccess, NothingFound, SearchField } from "../../ui";
+import { ExportButton } from "../exports/ExportButton";
 import { useReferenceOptions } from "../references/references.api";
 import { tariffLabel, useManagerOptions } from "../subscribers/subscriber-form";
 import { SubscriberFilter } from "../subscribers/SubscriberFilter";
@@ -149,11 +150,14 @@ function ObjectsScreen() {
         title="Об'єкти"
         subtitle={count.data && countText(count.data.count, count.data.isCapped)}
         actions={
-          canWrite && (
-            <Button type="primary" onClick={() => setCreating(true)}>
-              Новий об'єкт
-            </Button>
-          )
+          <>
+            {canWrite && (
+              <Button type="primary" onClick={() => setCreating(true)}>
+                Новий об'єкт
+              </Button>
+            )}
+            <ExportButton request={{ entity: "objects", filters, sort: sort?.key, order: sort?.order }} />
+          </>
         }
         filters={<ListFilters filters={filters} hasFilters={hasFilters} onChange={setFilter} onReset={resetFilters} />}
         table={{

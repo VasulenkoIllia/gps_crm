@@ -278,6 +278,10 @@ a {
   .panel-link {
     min-height: 44px;
   }
+  .simple-list .table-link {
+    display: inline-flex;
+    align-items: center;
+  }
   .ant-drawer-close {
     min-width: 44px;
     min-height: 44px;
@@ -363,6 +367,72 @@ a {
   overflow-wrap: anywhere;
   margin-bottom: 12px;
   font-family: ui-monospace, Menlo, Consolas, monospace;
+}
+
+/* Global search (search-exports.md A) */
+
+.global-search {
+  width: min(420px, 100%);
+  min-width: 0;
+}
+.global-search-large {
+  width: 100%;
+}
+.search-option {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.header-search-button {
+  margin-inline-start: auto;
+  min-width: 44px;
+  min-height: 44px;
+}
+.header-search-button + .user-menu {
+  margin-inline-start: 0;
+}
+
+/* Start page */
+
+.home-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+.home-counters {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr));
+  gap: 16px;
+  margin-bottom: 16px;
+}
+.home-counter {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 14px 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  color: var(--ink);
+}
+.home-counter-value {
+  font-size: 24px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+/* Three in a row on a phone too: one under another they take half the screen before the records */
+@media (max-width: 767px) {
+  .home-counters {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+  }
+  .home-counter {
+    padding: 10px 12px;
+    overflow-wrap: anywhere;
+  }
+  .home-counter-value {
+    font-size: 20px;
+  }
 }
 
 /* User menu */

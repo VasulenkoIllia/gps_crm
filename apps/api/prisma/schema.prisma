@@ -149,6 +149,7 @@ model User {
   twoFactorCredential TwoFactorCredential?
   permissionOverrides UserPermissionOverride[]
   managedSubscribers  Subscriber[]
+  exportJobs          ExportJob[]
 
   @@index([roleId])
   @@map("users")
@@ -625,6 +626,8 @@ model StoredFile {
   uploadedBy   String?  @map("uploaded_by") @db.Uuid
   createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz
 
+  exportJob ExportJob?
+
   @@index([ownerType, ownerId, id(sort: Desc)])
   @@map("files")
 }
@@ -1097,4 +1100,54 @@ model SensorInstallation {
   @@index([sensorId, validFrom(sort: Desc), id(sort: Desc)])
   @@index([contractorId])
   @@map("sensor_installations")
+}
+
+enum ExportEntity {
+  subscribers
+  objects
+  devices
+  sims
+  sensors
+  contracts
+
+  @@map("export_entity")
+}
+
+enum ExportStatus {
+  queued
+  running
+  done
+  failed
+  expired
+
+  @@map("export_status")
+}
+
+// A list in Excel, built by the job exports.build after the request (search-exports.md C)
+model ExportJob {
+  id          String       @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  requestedBy String       @map("requested_by") @db.Uuid
+  entity      ExportEntity
+  // The filters, the sort and the level of access at the moment of the request: the job reads what the screen showed
+  params      Json
+  status      ExportStatus @default(queued)
+  rowCount    Int?         @map("row_count")
+  fileId      String?      @unique @map("file_id") @db.Uuid
+  // In the words of a person: the screen shows it as it is
+  error       String?
+  // Where the request came from: the job writes the line of the journal on behalf of the person
+  ip          String?
+  requestId   String?      @map("request_id")
+  createdAt   DateTime     @default(now()) @map("created_at") @db.Timestamptz
+  startedAt   DateTime?    @map("started_at") @db.Timestamptz
+  finishedAt  DateTime?    @map("finished_at") @db.Timestamptz
+  expiresAt   DateTime?    @map("expires_at") @db.Timestamptz
+
+  requester User        @relation(fields: [requestedBy], references: [id])
+  file      StoredFile? @relation(fields: [fileId], references: [id], onDelete: Restrict)
+
+  @@index([requestedBy, createdAt(sort: Desc)])
+  // exports.cleanup: what has expired, and what was left behind by a run that died
+  @@index([status, expiresAt])
+  @@map("export_jobs")
 }

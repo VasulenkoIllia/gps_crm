@@ -2,6 +2,7 @@ import type { Logger } from "pino";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { DB_PROFILES, type DbClient } from "../db/client.js";
 import { connectTestAppDatabase, connectTestDatabase, testAppDatabaseUrl } from "../db/test-database.js";
+import { NO_FILES } from "../test-app.js";
 import { JOB_EXPIRE_SECONDS, type JobDefinition, type JobOutcome } from "./job.js";
 import { createJobQueue, type RunningJobQueue } from "./queue.js";
 
@@ -48,6 +49,7 @@ describe("the job queue", () => {
       definitions,
       db,
       logger,
+      files: NO_FILES,
       pollingIntervalSeconds: POLLING_INTERVAL_SECONDS,
     });
     running.push(created);

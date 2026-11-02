@@ -23,6 +23,7 @@ import {
   StatusTag,
   type DataTableColumn,
 } from "../../ui";
+import { ExportButton } from "../exports/ExportButton";
 import { useReferenceOptions } from "../references/references.api";
 import { tariffLabel, useManagerOptions } from "./subscriber-form";
 import { SubscriberCreateDrawer } from "./SubscriberCreateDrawer";
@@ -191,11 +192,14 @@ function SubscribersScreen() {
         title="Клієнти"
         subtitle={count.data && countText(count.data.count, count.data.isCapped)}
         actions={
-          canWrite && (
-            <Button type="primary" onClick={() => setCreating(true)}>
-              Новий клієнт
-            </Button>
-          )
+          <>
+            {canWrite && (
+              <Button type="primary" onClick={() => setCreating(true)}>
+                Новий клієнт
+              </Button>
+            )}
+            <ExportButton request={{ entity: "subscribers", filters, sort: sort?.key, order: sort?.order }} />
+          </>
         }
         filters={<ListFilters filters={filters} hasFilters={hasFilters} onChange={setFilter} onReset={resetFilters} />}
         table={{

@@ -31,7 +31,7 @@ const shownDate = (date: string) => date.split("-").reverse().join(".");
 
 async function openCard(page: Page, name: string): Promise<void> {
   await page.goto("/subscribers");
-  await page.getByLabel("Пошук").fill(name);
+  await page.getByLabel("Пошук", { exact: true }).fill(name);
   await page.getByRole("row", { name: new RegExp(name) }).click();
   await expect(page.getByRole("heading", { name, exact: true })).toBeVisible();
 }
@@ -42,7 +42,7 @@ async function openTab(page: Page, tab: string): Promise<void> {
 
 async function searchList(page: Page, text: string): Promise<void> {
   await page.goto("/subscribers");
-  await page.getByLabel("Пошук").fill(text);
+  await page.getByLabel("Пошук", { exact: true }).fill(text);
 }
 
 // system.spec.ts runs next and starts from an empty archive: every package opened here is restored here
