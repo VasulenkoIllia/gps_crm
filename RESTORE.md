@@ -45,7 +45,7 @@
 ## Як перевірити, що бекапи працюють
 
 На сервері після ssh (лише читає). Очікується `"ok":true` і свіжий `lastOkAt`: дамп не старший за 7 годин, перевірка
-відновлення не старша за місяць.
+відновлення не старша за 35 днів (вона йде 15-го числа).
 
 ```bash
 cd /var/www/projects/gps_crm_staging && cat backup-status/dump.json backup-status/check.json && tail -n 5 backup.log
@@ -143,7 +143,7 @@ SQL
 
 **6. На сервері після ssh: міграції (пише).** Дамп може бути старший за запущений реліз, тоді застосунок не стане готовим,
 поки схема не наздожене код. Той самий крок задає пароль ролі застосунку й оновлює схему черги задач. Очікується `No pending migrations to apply` або
-список застосованих міграцій, а в кінці `runtime role ready`.
+список застосованих міграцій, а після них рядки `runtime role ready` і `job schema ready`.
 
 ```bash
 cd /var/www/projects/gps_crm_staging && IMAGE_TAG=$(cat current_tag) docker compose --project-name gps_crm_staging --env-file .env -f release/compose.yml run --rm -T migrate
