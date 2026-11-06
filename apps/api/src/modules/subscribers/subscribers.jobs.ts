@@ -44,6 +44,8 @@ export async function reconcileRollups(db: DbOrTx): Promise<{ checked: number; f
 export const SUBSCRIBERS_ROLLUP_JOB: JobDefinition = {
   name: "subscribers.rollup-reconcile",
   title: "Звірка статусів клієнтів і лічильників об'єктів",
+  description:
+    "Перераховує статус клієнта й кількість його об'єктів. Запустіть вручну, якщо статус чи лічильник у списку не збігається з об'єктами.",
   cron: "30 2 * * *",
   scheduleLabel: "Щоночі о 02:30",
   maxSilenceMs: MAX_SILENCE_MS,

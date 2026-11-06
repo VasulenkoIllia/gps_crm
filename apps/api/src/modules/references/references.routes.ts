@@ -21,7 +21,14 @@ import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { activityContext, can, requireAuth } from "../../core/access/access.js";
 import { API_PREFIX, type AppDeps } from "../../core/deps.js";
 import { parseInput } from "../../core/http/validate.js";
-import { addAddonPrice, addCostPrice, createAddon, updateAddon } from "./addons.service.js";
+import {
+  addAddonPrice,
+  addCostPrice,
+  cancelAddonPrice,
+  cancelCostPrice,
+  createAddon,
+  updateAddon,
+} from "./addons.service.js";
 import { deactivateReference } from "./archive.service.js";
 import {
   createServer,
@@ -156,6 +163,17 @@ function registerPriceRoutes(app: FastifyInstance, deps: AppDeps): void {
     await addCostPrice(deps, activityContext(request), parseInput(costPriceInputSchema, request.body));
     return reply.code(CREATED).send();
   });
+  // Only a price that has not started: one in force is refused (D87)
+  app.delete(
+    `${REFERENCES_PATH}/addon-prices/:id`,
+    manage(),
+    changing((request, id) => cancelAddonPrice(deps, activityContext(request), id)),
+  );
+  app.delete(
+    `${REFERENCES_PATH}/cost-prices/:id`,
+    manage(),
+    changing((request, id) => cancelCostPrice(deps, activityContext(request), id)),
+  );
 }
 
 export function registerReferencesRoutes(app: FastifyInstance, deps: AppDeps): void {

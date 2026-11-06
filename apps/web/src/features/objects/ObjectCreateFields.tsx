@@ -1,13 +1,21 @@
 import { DeleteOutlined } from "@ant-design/icons";
-import { objectNameSchema, OBJECT_STATUS_META, type ObjectStatus, type SubscriberCard } from "@gps_crm/shared";
+import {
+  dateText,
+  objectNameSchema,
+  OBJECT_STATUS_META,
+  todayKyiv,
+  type ObjectStatus,
+  type SubscriberCard,
+} from "@gps_crm/shared";
 import { Button, Checkbox, Form, Input } from "antd";
 import { useEffect, useRef } from "react";
 import { DictSelect, RemoteSelect, zodRule } from "../../ui";
 import { PastDateField, SensorChoiceField } from "../equipment/EquipmentFields";
 import { useReferenceOptions } from "../references/references.api";
+import { tariffVersionsOf } from "../subscribers/subscriber-form";
 import { searchSubscribers } from "../subscribers/subscribers.api";
 import { TariffFields } from "../subscribers/TariffFields";
-import { useAddonOptions } from "./object-form";
+import { refuseRepeatedAddon, useAddonOptions } from "./object-form";
 
 const NOTE_ROWS = 3;
 const STATUS_OPTIONS = Object.entries(OBJECT_STATUS_META).map(([value, { label }]) => ({
@@ -53,9 +61,11 @@ export function ObjectMainFields({ open, isClientFixed }: { open: boolean; isCli
 }
 
 function clientTariffText(client: SubscriberCard | undefined): string {
-  const tariff = client?.tariffHistory[0];
+  const { current, next } = tariffVersionsOf(client?.tariffHistory ?? [], todayKyiv());
+  const tariff = current ?? next;
   if (!client || !tariff) return "Об'єкт стане на тариф клієнта.";
-  return `Тариф клієнта: ${tariff.tariffName}, сервер ${tariff.serverName}, програма ${client.programName}.`;
+  const text = `Тариф клієнта: ${tariff.tariffName}, сервер ${tariff.serverName}, програма ${client.programName}`;
+  return tariff === next ? `${text}, з ${dateText(tariff.validFrom)}.` : `${text}.`;
 }
 
 // П18: the tariff of the client unless the object has its own, of any program
@@ -71,12 +81,6 @@ export function ObjectTariffFields({ open, client }: { open: boolean; client: Su
       {hasOwnTariff && <TariffFields open={open} dateName="ownTariffFrom" />}
     </>
   );
-}
-
-function refuseRepeatedAddon(_: unknown, rows: { addonId?: string }[] | undefined): Promise<void> {
-  const chosen = (rows ?? []).flatMap(({ addonId }) => (addonId ? [addonId] : []));
-  if (new Set(chosen).size === chosen.length) return Promise.resolve();
-  return Promise.reject(new Error("Ця послуга вже є в списку"));
 }
 
 function AddonRows({ open, programId }: { open: boolean; programId: string | undefined }) {

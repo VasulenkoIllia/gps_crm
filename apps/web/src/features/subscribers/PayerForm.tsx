@@ -131,6 +131,7 @@ export function PayerForm({ subscriberId, row, open, onClose }: PayerFormProps) 
         name="taxId"
         required={Boolean(taxIdProblem)}
         initialValue={row?.taxId ?? undefined}
+        validateFirst
         rules={[
           { required: Boolean(taxIdProblem), message: taxIdProblem?.message },
           zodRule(payerTaxIdSchema.optional()),
@@ -153,11 +154,12 @@ export function PayerForm({ subscriberId, row, open, onClose }: PayerFormProps) 
 
 interface PayerLinkFormProps {
   subscriberId: string;
+  linkedIds: readonly string[];
   open: boolean;
   onClose: () => void;
 }
 
-export function PayerLinkModal({ subscriberId, open, onClose }: PayerLinkFormProps) {
+export function PayerLinkModal({ subscriberId, linkedIds, open, onClose }: PayerLinkFormProps) {
   const [form] = Form.useForm<{ payerId: string }>();
   const save = useReferenceSave((payerId: string) => linkPayer(subscriberId, payerId), {
     form,
@@ -179,7 +181,7 @@ export function PayerLinkModal({ subscriberId, open, onClose }: PayerLinkFormPro
         required
         rules={[{ required: true, message: "Оберіть платника" }]}
       >
-        <RemoteSelect name="payers" search={searchPayerOptions} className="form-control-wide" />
+        <RemoteSelect name="payers" search={searchPayerOptions} excludeIds={linkedIds} className="form-control-wide" />
       </Form.Item>
     </FormModal>
   );

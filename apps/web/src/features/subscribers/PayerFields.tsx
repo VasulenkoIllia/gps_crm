@@ -41,11 +41,11 @@ export function PayerMethodFields({ prefix = [], initial }: PayerFieldsProps) {
   return (
     <>
       <Form.Item
-        label="Форма оплати"
+        label="Спосіб оплати"
         name={[...prefix, "paymentMethod"]}
         required
         initialValue={initial?.paymentMethod}
-        rules={[{ required: true, message: "Оберіть форму оплати" }]}
+        rules={[{ required: true, message: "Оберіть спосіб оплати" }]}
       >
         <DictSelect options={METHOD_OPTIONS} />
       </Form.Item>
@@ -55,6 +55,7 @@ export function PayerMethodFields({ prefix = [], initial }: PayerFieldsProps) {
           name={[...prefix, "legalName"]}
           required
           initialValue={initial?.legalName ?? undefined}
+          validateFirst
           rules={[{ required: true, whitespace: true, message: legalName.message }, zodRule(legalNameSchema)]}
         >
           <Input autoComplete="off" />
@@ -66,6 +67,7 @@ export function PayerMethodFields({ prefix = [], initial }: PayerFieldsProps) {
           name={[...prefix, "vchasnoEmail"]}
           required
           initialValue={initial?.vchasnoEmail ?? undefined}
+          validateFirst
           rules={[{ required: true, message: vchasnoEmail.message }, zodRule(vchasnoEmailSchema)]}
         >
           <Input type="email" autoComplete="off" />
@@ -77,6 +79,7 @@ export function PayerMethodFields({ prefix = [], initial }: PayerFieldsProps) {
           name={[...prefix, "detailsContact"]}
           required
           initialValue={initial?.detailsContact ?? undefined}
+          validateFirst
           rules={[{ required: true, message: detailsContact.message }, zodRule(detailsContactSchema)]}
         >
           <Input autoComplete="off" />

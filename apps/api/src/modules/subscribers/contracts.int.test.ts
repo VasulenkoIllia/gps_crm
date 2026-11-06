@@ -338,8 +338,16 @@ describe("contracts", () => {
       expect(inline.headers["content-disposition"]).toContain("inline;");
       expect(inline.headers["cache-control"]).toBe("private, no-store");
       expect(inline.headers["x-content-type-options"]).toBe("nosniff");
-      const activity = await client.call("GET", `/subscribers/${subscriberId}/activity?action=contract.file_viewed`);
-      expect(activity.json<{ items: object[] }>().items).not.toHaveLength(0);
+      // D92: a look at a file is in the journal of actions, and not in the card or on the home page
+      const actionsOf = async (path: string) =>
+        (await client.call("GET", path)).json<{ items: { action: string }[] }>().items.map((line) => line.action);
+      expect(await actionsOf(`/activity?subscriberId=${subscriberId}`)).toContain("contract.file_viewed");
+      const card = await actionsOf(`/subscribers/${subscriberId}/activity`);
+      expect(card).toContain("contract.file_uploaded");
+      expect(card).not.toContain("contract.file_viewed");
+      expect(card).not.toContain("contract.file_downloaded");
+      const home = (await client.call("GET", "/home")).json<{ recentActivity: { action: string }[] }>();
+      expect(home.recentActivity.map((line) => line.action)).not.toContain("contract.file_downloaded");
     });
 
     it("shows the newest file and keeps the old one", async () => {

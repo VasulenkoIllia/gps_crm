@@ -1,9 +1,11 @@
 import { ARCHIVED_STATUS_META, SIM_STATUS_META, type SimRow } from "@gps_crm/shared";
 import { Button } from "antd";
 import { useCallback, useMemo, useState } from "react";
-import { useUrlFilters } from "../../lib/url-filters";
+import { chosenCount, useUrlFilters } from "../../lib/url-filters";
 import {
+  ARCHIVE_FILTER,
   DataTable,
+  DigitsText,
   EmptyValue,
   FilterBar,
   FilterSelect,
@@ -18,7 +20,7 @@ import { fetchSims, SIM_FILTER_KEYS, type SimFilters } from "./equipment.api";
 import type { EquipmentTabProps } from "./equipment-tab";
 import { SimDrawer } from "./EquipmentCards";
 import { SimForm } from "./EquipmentForms";
-import { ARCHIVE_OPTIONS, InstalledCell, PlaceCell } from "./EquipmentParts";
+import { InstalledCell, PlaceCell } from "./EquipmentParts";
 import { useEquipmentRows } from "./useEquipmentRows";
 
 const STATE_OPTIONS = Object.entries(SIM_STATUS_META).map(([value, { label }]) => ({ value, label }));
@@ -31,7 +33,7 @@ function columnsOf(onOpen: (id: string) => void): DataTableColumn<SimRow>[] {
       key: "iccid",
       render: (_, row) => (
         <Button type="link" className="table-link" onClick={() => onOpen(row.id)}>
-          {row.iccid}
+          <DigitsText value={row.iccid} />
         </Button>
       ),
     },
@@ -63,11 +65,37 @@ interface SimFiltersBarProps {
   onReset: () => void;
 }
 
+// The rest of the filters behind «Ще фільтри»: on a phone the list starts on the first screen (manual test 05.11.2026)
+const MORE_FILTERS = ["contractorId", "archived"] as const;
+
 function SimFiltersBar({ filters, hasFilters, onChange, onReset }: SimFiltersBarProps) {
   const operators = useReferenceOptions("sim-operators", true);
   const contractors = useReferenceOptions("contractors", true);
   return (
-    <FilterBar hasFilters={hasFilters} onReset={onReset}>
+    <FilterBar
+      hasFilters={hasFilters}
+      onReset={onReset}
+      moreChosen={chosenCount(filters, MORE_FILTERS)}
+      more={
+        <>
+          <FilterSelect
+            label="Підрядник"
+            value={filters.contractorId}
+            options={contractors.options}
+            isLoading={contractors.isLoading}
+            hasError={contractors.hasError}
+            onChange={(value) => onChange("contractorId", value)}
+          />
+          <FilterSelect
+            label="Архів"
+            value={filters.archived}
+            options={ARCHIVE_FILTER.options}
+            anyLabel={ARCHIVE_FILTER.anyLabel}
+            onChange={(value) => onChange("archived", value)}
+          />
+        </>
+      }
+    >
       <SearchField
         label="Пошук"
         placeholder="ICCID, номер або останні цифри"
@@ -87,20 +115,6 @@ function SimFiltersBar({ filters, hasFilters, onChange, onReset }: SimFiltersBar
         isLoading={operators.isLoading}
         hasError={operators.hasError}
         onChange={(value) => onChange("operatorId", value)}
-      />
-      <FilterSelect
-        label="Підрядник"
-        value={filters.contractorId}
-        options={contractors.options}
-        isLoading={contractors.isLoading}
-        hasError={contractors.hasError}
-        onChange={(value) => onChange("contractorId", value)}
-      />
-      <FilterSelect
-        label="Архів"
-        value={filters.archived}
-        options={ARCHIVE_OPTIONS}
-        onChange={(value) => onChange("archived", value)}
       />
     </FilterBar>
   );
@@ -129,7 +143,7 @@ export function SimsTab({ isAdding, onAddClosed }: EquipmentTabProps) {
       <DataTable
         {...table}
         columns={columns}
-        empty={hasFilters ? <NothingFound onReset={resetFilters} /> : "SIM-карток ще немає"}
+        empty={hasFilters ? <NothingFound onReset={resetFilters} q={filters.q} /> : "SIM-карток ще немає"}
         onRowClick={(row) => setOpenedId(row.id)}
       />
       <SimForm

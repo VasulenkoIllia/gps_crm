@@ -71,6 +71,7 @@ export interface NewObject {
   payerId: string;
   tariff: TariffMirror;
   hasOwnTariff: boolean;
+  tariffFrom: string;
   currentDeviceId: string;
   note: string | null;
   createdBy: string | null;
@@ -83,7 +84,7 @@ export interface TariffMirror {
 }
 
 export async function insertObject(tx: DbOrTx, input: NewObject): Promise<string> {
-  const { tariff, statusFrom, connectedOn, createdBy, ...fields } = input;
+  const { tariff, statusFrom, connectedOn, tariffFrom, createdBy, ...fields } = input;
   const { tariffId, programId, serverId } = tariff;
   const row = await tx.monitoredObject.create({
     data: {
@@ -91,6 +92,7 @@ export async function insertObject(tx: DbOrTx, input: NewObject): Promise<string
       tariffId,
       programId,
       serverId,
+      tariffFrom: toDbDate(tariffFrom),
       nameNorm: normalizeName(input.name),
       statusFrom: toDbDate(statusFrom),
       connectedOn: toDbDate(connectedOn),
@@ -204,15 +206,16 @@ export async function setTermPayer(tx: DbOrTx, id: string, payerId: string): Pro
 export interface TermsMirror extends TariffMirror {
   payerId: string;
   hasOwnTariff: boolean;
+  tariffFrom: string;
 }
 
 export async function mirrorTerms(
   tx: DbOrTx,
   id: string,
-  mirror: TermsMirror,
+  { tariffFrom, ...mirror }: TermsMirror,
   updatedBy: string | null,
 ): Promise<void> {
-  await tx.monitoredObject.update({ where: { id }, data: { ...mirror, updatedBy } });
+  await tx.monitoredObject.update({ where: { id }, data: { ...mirror, tariffFrom: toDbDate(tariffFrom), updatedBy } });
 }
 
 export async function followTariff(

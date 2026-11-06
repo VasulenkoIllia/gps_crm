@@ -1,4 +1,4 @@
-import { normalizeName, type Payer, type PayerList, type PayerSearchQuery } from "@gps_crm/shared";
+import { normalizeName, PAYER_CLIENTS_MAX, type Payer, type PayerList, type PayerSearchQuery } from "@gps_crm/shared";
 import type { RecordScope } from "../../core/access/access.js";
 import type { DbOrTx } from "../../core/db/client.js";
 import { escapeLike } from "../../core/db/like.js";
@@ -6,7 +6,6 @@ import type { Prisma } from "../../generated/prisma/client.js";
 import { scopedPayer, visibleClient } from "./payers.repository.js";
 import { MIN_NAME_SEARCH } from "./subscribers.queries.js";
 
-const OTHER_CLIENTS_MAX = 30;
 const CONTRACT_NUMBERS_MAX = 30;
 const PAYERS_OF_CLIENT_MAX = 200;
 const DIGITS_ONLY = /^\d+$/;
@@ -32,7 +31,7 @@ function viewSelect(ownClientId: string | null, scope: RecordScope) {
     subscribers: {
       where: { ...others, ...visibleClient(scope) },
       orderBy: { createdAt: "asc" },
-      take: OTHER_CLIENTS_MAX,
+      take: PAYER_CLIENTS_MAX,
       select: { subscriber: { select: { id: true, name: true, code: true } } },
     },
     contracts: {

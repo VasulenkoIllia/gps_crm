@@ -126,7 +126,7 @@ export function jobVerdict(health: JobHealthFacts | null, maxSilenceMs: number, 
   if (!health.lastSuccessAt) return verdict(SYSTEM_STATE.waiting, "Чекає на перший запуск");
   if (health.skippedItems > 0) return verdict(SYSTEM_STATE.warning, "Є пропущені елементи");
   if (hasRetriedFailure(health, now)) return verdict(SYSTEM_STATE.warning, "Був збій, повтор вдався");
-  return verdict(SYSTEM_STATE.good, "Працює");
+  return verdict(SYSTEM_STATE.good, "Справна");
 }
 
 export function queueVerdict(canRead: boolean, lastErrorAt: Date | null, now: Date): SystemVerdict {

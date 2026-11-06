@@ -19,6 +19,35 @@ export function periodOn<T extends Pick<DatedPeriod, "validFrom" | "validTo">>(p
   );
 }
 
+// The version planned after a date: the earliest live one that has not begun by then
+export function periodAfter<T extends Pick<DatedPeriod, "validFrom" | "validTo">>(
+  periods: T[],
+  date: string,
+): T | null {
+  const planned = periods.filter((period) => isLivePeriod(period) && period.validFrom > date);
+  return planned.reduce<T | null>(
+    (first, period) => (first && first.validFrom <= period.validFrom ? first : period),
+    null,
+  );
+}
+
+// D91: the day the value of the newest live version took over. A version that only repeats it (a new payer under the same
+// tariff) does not move the day, so a list marks a value as planned only when that value is not in force yet.
+export function valueSince<T extends Pick<DatedPeriod, "validFrom" | "validTo">>(
+  periods: T[],
+  isSameValue: (one: T, other: T) => boolean,
+): string | null {
+  const live = periods.filter(isLivePeriod).sort((a, b) => b.validFrom.localeCompare(a.validFrom));
+  const [newest] = live;
+  if (!newest) return null;
+  let since = newest.validFrom;
+  for (const period of live.slice(1)) {
+    if (!isSameValue(period, newest)) break;
+    since = period.validFrom;
+  }
+  return since;
+}
+
 export interface VersionPlan<T> {
   // A version that has begun and starts later than the new one: the past is not rewritten (objects.md П12)
   blockedBy: T | null;

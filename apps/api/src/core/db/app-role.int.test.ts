@@ -65,11 +65,25 @@ describe("the runtime role", () => {
     await owner.activityEvent.deleteMany({ where: { action: "user.unblocked" } });
   });
 
-  it("cannot change or delete a price history", async () => {
+  it("cannot change a price history, and deletes from it only a planned price (D87)", async () => {
     await expect(app.addonPrice.updateMany({ data: { priceKop: 1n } })).rejects.toThrow(DENIED);
-    await expect(app.addonPrice.deleteMany()).rejects.toThrow(DENIED);
     await expect(app.costPrice.updateMany({ data: { costKop: 1n } })).rejects.toThrow(DENIED);
-    await expect(app.costPrice.deleteMany()).rejects.toThrow(DENIED);
+
+    const addon = await owner.addon.create({ data: { name: "Роль", nameNorm: "app-role послуга" } });
+    const price = (validFrom: string) => ({ addonId: addon.id, priceKop: 100n, validFrom: new Date(validFrom) });
+    try {
+      const removeStarted = app.$transaction(async (tx) => {
+        const started = await tx.addonPrice.create({ data: price("2026-01-01") });
+        await tx.addonPrice.delete({ where: { id: started.id } });
+      });
+      await expect(removeStarted).rejects.toThrow(/prices_keep_started/);
+
+      const planned = await app.addonPrice.create({ data: price("2999-01-01") });
+      await app.addonPrice.delete({ where: { id: planned.id } });
+      expect(await owner.addonPrice.count({ where: { addonId: addon.id } })).toBe(0);
+    } finally {
+      await owner.addon.delete({ where: { id: addon.id } });
+    }
   });
 
   it("undoes the change when the journal fails in the same transaction", async () => {

@@ -23,6 +23,17 @@
   },
   {
     "method": "GET",
+    "url": "/api/v1/activity/packages/:batchId",
+    "access": "can:activity.read"
+  },
+  {
+    "method": "HEAD",
+    "url": "/api/v1/activity/packages/:batchId",
+    "access": "can:activity.read",
+    "derived": true
+  },
+  {
+    "method": "GET",
     "url": "/api/v1/archive",
     "access": "can:records.archive"
   },
@@ -467,6 +478,11 @@
     "access": "can:records.archive"
   },
   {
+    "method": "DELETE",
+    "url": "/api/v1/references/addon-prices/:id",
+    "access": "can:references.manage"
+  },
+  {
     "method": "GET",
     "url": "/api/v1/references/addons",
     "access": "can:subscribers.read"
@@ -526,6 +542,11 @@
   {
     "method": "POST",
     "url": "/api/v1/references/cost-prices",
+    "access": "can:references.manage"
+  },
+  {
+    "method": "DELETE",
+    "url": "/api/v1/references/cost-prices/:id",
     "access": "can:references.manage"
   },
   {

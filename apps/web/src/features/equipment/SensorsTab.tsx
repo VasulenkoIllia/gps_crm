@@ -2,6 +2,7 @@ import type { SensorRow } from "@gps_crm/shared";
 import { useCallback, useMemo, useState } from "react";
 import { useUrlFilters } from "../../lib/url-filters";
 import {
+  ARCHIVE_FILTER,
   DataTable,
   EmptyValue,
   FilterBar,
@@ -14,7 +15,7 @@ import { useReferenceOptions } from "../references/references.api";
 import { fetchSensors, SENSOR_FILTER_KEYS } from "./equipment.api";
 import type { EquipmentTabProps } from "./equipment-tab";
 import { SensorForm } from "./EquipmentForms";
-import { ARCHIVE_OPTIONS, InstalledCell, PlaceCell } from "./EquipmentParts";
+import { InstalledCell, PlaceCell } from "./EquipmentParts";
 import { useEquipmentRows } from "./useEquipmentRows";
 
 const nameOf = (row: SensorRow) => row.serialNo;
@@ -63,14 +64,15 @@ export function SensorsTab({ isAdding, onAddClosed }: EquipmentTabProps) {
         <FilterSelect
           label="Архів"
           value={filters.archived}
-          options={ARCHIVE_OPTIONS}
+          options={ARCHIVE_FILTER.options}
+          anyLabel={ARCHIVE_FILTER.anyLabel}
           onChange={(value) => setFilter("archived", value)}
         />
       </FilterBar>
       <DataTable
         {...table}
         columns={columns}
-        empty={hasFilters ? <NothingFound onReset={resetFilters} /> : "Датчиків ще немає"}
+        empty={hasFilters ? <NothingFound onReset={resetFilters} q={filters.q} /> : "Датчиків ще немає"}
       />
       <SensorForm
         key={editing?.id ?? "new"}

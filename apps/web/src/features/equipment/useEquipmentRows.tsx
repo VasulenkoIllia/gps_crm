@@ -14,6 +14,7 @@ interface EquipmentRecord {
   id: string;
   isArchived: boolean;
   place: EquipmentPlace | null;
+  hasHistory?: boolean;
 }
 
 interface Rights {
@@ -23,12 +24,13 @@ interface Rights {
 }
 
 // Whatever stands on an object leaves it first: П4, and the server refuses all the same
-function actionsOf({ isArchived, place }: EquipmentRecord, rights: Rights) {
+function actionsOf({ isArchived, place, hasHistory }: EquipmentRecord, rights: Rights) {
   const all: { key: RowAction; label: string; isOn: boolean }[] = [
     { key: "edit", label: "Змінити", isOn: rights.canWrite && !isArchived },
     { key: "archive", label: "Архівувати", isOn: rights.canArchive && !isArchived && !place },
     { key: "restore", label: "Відновити", isOn: rights.canArchive && isArchived },
-    { key: "delete", label: "Видалити", isOn: rights.canDelete && !isArchived && !place },
+    // П5: one that stood on an object can only be archived, and the server refuses its deletion all the same
+    { key: "delete", label: "Видалити", isOn: rights.canDelete && !isArchived && !place && !hasHistory },
   ];
   return all.filter(({ isOn }) => isOn);
 }

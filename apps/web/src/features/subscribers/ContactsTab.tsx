@@ -15,9 +15,9 @@ import { ContactForm } from "./ContactForm";
 import { contactAction, contactsKey, deleteContact, fetchContacts } from "./subscribers.api";
 import { useConfirmedAction, type PlannedAction } from "./useConfirmedAction";
 
-type ContactActionKey = "edit" | "primary" | "archive" | "restore" | "delete";
-
 const PRIMARY_META: StatusMeta = { label: "Основна", tone: "pending" };
+
+type ContactActionKey = "edit" | "primary" | "archive" | "restore" | "delete";
 
 interface ContactRights {
   canWrite: boolean;
@@ -27,12 +27,14 @@ interface ContactRights {
 
 function actionsOf(contact: Contact, { canWrite, canArchive, canDelete }: ContactRights) {
   const isLive = !contact.isArchived;
+  // The server refuses to archive or delete the primary one: the menu does not offer what fails anyway
+  const isSpare = isLive && !contact.isPrimary;
   const all: { key: ContactActionKey; label: string; isOn: boolean }[] = [
     { key: "edit", label: "Змінити", isOn: canWrite && isLive },
-    { key: "primary", label: "Зробити основною", isOn: canWrite && isLive && !contact.isPrimary },
-    { key: "archive", label: "Архівувати", isOn: canArchive && isLive },
+    { key: "primary", label: "Зробити основною", isOn: canWrite && isSpare },
+    { key: "archive", label: "Архівувати", isOn: canArchive && isSpare },
     { key: "restore", label: "Відновити", isOn: canArchive && !isLive },
-    { key: "delete", label: "Видалити", isOn: canDelete && isLive },
+    { key: "delete", label: "Видалити", isOn: canDelete && isSpare },
   ];
   return all.filter(({ isOn }) => isOn);
 }
@@ -89,7 +91,7 @@ function buildColumns(rights: ContactRights, onAction: (row: Contact, key: Conta
       key: "fullName",
       render: (_, row) => (
         <>
-          {row.fullName} {row.isPrimary && <StatusTag status={PRIMARY_META} />}
+          {row.fullName} {row.isPrimary && <StatusTag status={PRIMARY_META} isMark />}
         </>
       ),
     },

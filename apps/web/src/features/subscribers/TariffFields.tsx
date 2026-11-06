@@ -9,10 +9,12 @@ interface TariffFieldsProps {
   open: boolean;
   dateName: string;
   initial?: { programId: string };
+  // The first tariff of a new client is from today, a change of it from the next month (D89)
+  isFirst?: boolean;
 }
 
 // П25: the program first, then its tariffs, with the server and the period in view
-export function TariffFields({ open, dateName, initial }: TariffFieldsProps) {
+export function TariffFields({ open, dateName, initial, isFirst = false }: TariffFieldsProps) {
   const form = Form.useFormInstance();
   const programs = useReferenceOptions("programs", open);
   const tariffs = useReferenceOptions("tariffs", open);
@@ -36,13 +38,18 @@ export function TariffFields({ open, dateName, initial }: TariffFieldsProps) {
         />
       </Form.Item>
       <Form.Item label="Тариф" name="tariffId" required rules={[{ required: true, message: "Оберіть тариф" }]}>
-        <DictSelect options={options} isLoading={tariffs.isLoading} hasError={tariffs.hasError} />
+        <DictSelect
+          options={options}
+          isLoading={tariffs.isLoading}
+          hasError={tariffs.hasError}
+          emptyText={programId ? "У цієї програми ще немає тарифів" : "Спершу оберіть програму"}
+        />
       </Form.Item>
       <Form.Item
         label="Діє з"
         name={dateName}
         required
-        initialValue={firstOfNextMonth(todayKyiv())}
+        initialValue={isFirst ? todayKyiv() : firstOfNextMonth(todayKyiv())}
         rules={[{ required: true, message: "Оберіть дату" }]}
       >
         <DateInput className="form-control-wide" disabledDate={isTariffDateRefused} />

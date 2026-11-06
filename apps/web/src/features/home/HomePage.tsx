@@ -12,9 +12,9 @@ import { countText, fetchHome, HOME_KEY } from "./home.api";
 
 function Counters({ counts }: { counts: Home["counts"] }) {
   const items = [
-    { label: "Клієнтів", to: "/subscribers", count: counts.clients },
-    { label: "Активних об'єктів", to: "/objects?status=active", count: counts.activeObjects },
-    { label: "Договорів спливає", to: "/contracts?expiring=true", count: counts.expiringContracts },
+    { label: "Клієнти", to: "/subscribers", count: counts.clients },
+    { label: "Активні об'єкти", to: "/objects?status=active", count: counts.activeObjects },
+    { label: "Спливають договори", to: "/contracts?expiring=true", count: counts.expiringContracts },
   ];
   return (
     <div className="home-counters">
@@ -22,8 +22,9 @@ function Counters({ counts }: { counts: Home["counts"] }) {
         ({ label, to, count }) =>
           count && (
             <Link key={to} to={to} className="home-counter">
-              <span className="home-counter-value">{countText(count)}</span>
               <span className="list-meta">{label}</span>
+              <span className="home-counter-value">{countText(count)}</span>
+              <span className="home-counter-link">Відкрити список</span>
             </Link>
           ),
       )}

@@ -5,7 +5,16 @@ import {
   type ObjectListItem,
   type ObjectStatus,
 } from "@gps_crm/shared";
-import { DateText, DateTimeText, EmptyValue, EntityLink, StatusTag, type DataTableColumn } from "../../ui";
+import {
+  DateText,
+  DateTimeText,
+  DigitsText,
+  EmptyValue,
+  EntityLink,
+  PlannedFrom,
+  StatusTag,
+  type DataTableColumn,
+} from "../../ui";
 
 interface StatusFacts {
   status: ObjectStatus;
@@ -42,8 +51,8 @@ const CLIENT_COLUMN: DataTableColumn<ObjectListItem> = {
   sorter: true,
   render: (_, row) => (
     <>
-      <EntityLink to={`/subscribers/${row.subscriberId}`}>{row.subscriberCode}</EntityLink>
-      <div className="table-note">{row.subscriberName}</div>
+      <EntityLink to={`/subscribers/${row.subscriberId}`}>{row.subscriberName}</EntityLink>
+      <div className="table-note">ID {row.subscriberCode}</div>
     </>
   ),
 };
@@ -56,6 +65,7 @@ const DETAIL_COLUMNS: DataTableColumn<ObjectListItem>[] = [
     render: (_, row) => (
       <>
         {tariffText({ tariffName: row.tariffName, isOwn: row.hasOwnTariff })}
+        <PlannedFrom value={row.tariffFrom} />
         {row.addonNames.length > 0 && <div className="table-note">{row.addonNames.join(", ")}</div>}
       </>
     ),
@@ -66,7 +76,11 @@ const DETAIL_COLUMNS: DataTableColumn<ObjectListItem>[] = [
     render: (_, row) => (
       <>
         {row.modelName ?? <EmptyValue />}
-        {row.imei && <div className="table-note">{row.imei}</div>}
+        {row.imei && (
+          <div className="table-note">
+            <DigitsText value={row.imei} />
+          </div>
+        )}
       </>
     ),
   },

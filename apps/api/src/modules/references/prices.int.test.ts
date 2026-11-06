@@ -1,4 +1,12 @@
-import { currentPrice, firstOfNextMonth, nextPrice, todayKyiv, type Addon, type Server } from "@gps_crm/shared";
+import {
+  currentPrice,
+  dateText,
+  firstOfNextMonth,
+  nextPrice,
+  todayKyiv,
+  type Addon,
+  type Server,
+} from "@gps_crm/shared";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import type { DbClient } from "../../core/db/client.js";
 import { connectTestAppDatabase, connectTestDatabase } from "../../core/db/test-database.js";
@@ -14,6 +22,7 @@ import {
 } from "../../test-references.js";
 
 const TOO_EARLY = "Нова ціна не може діяти раніше за чинну";
+const COST_TOO_EARLY = "Нова собівартість не може діяти раніше за чинну";
 const UNKNOWN_ID = "019a0000-0000-7000-8000-000000000000";
 
 describe("prices with a date", () => {
@@ -23,6 +32,7 @@ describe("prices with a date", () => {
   let place: PlaceIds;
 
   const addons = async () => items<Addon>(await client.get("/addons"));
+  const remove = (path: string) => api(client.app, "DELETE", path, { cookie: client.cookie });
 
   beforeAll(async () => {
     client = await startReferenceClient(db, owner);
@@ -166,6 +176,41 @@ describe("prices with a date", () => {
       expect(answer.statusCode).toBe(404);
     });
 
+    it("cancels a planned price, and the journal keeps what it was", async () => {
+      const id = await createAddon(client, [place.programId]);
+      const planned = firstOfNextMonth(todayKyiv());
+      await client.post(`/addons/${id}/prices`, { amountKop: 18_000, validFrom: planned });
+      const plannedId = (await addons())[0]?.prices[1]?.id ?? "";
+
+      const cancelled = await remove(`/references/addon-prices/${plannedId}`);
+
+      expect(cancelled.statusCode, cancelled.body).toBe(204);
+      expect((await addons())[0]?.prices.map(({ amountKop }) => amountKop)).toEqual([15_000]);
+      expect((await client.journal("reference.price_cancelled"))[0]).toMatchObject({
+        entityType: "addon",
+        entityId: id,
+        entityLabel: "Послуга 1",
+        details: [
+          { field: "priceKop", value: 18_000 },
+          { field: "validFrom", value: planned },
+        ],
+      });
+    });
+
+    it("keeps a price in force, and has no price to cancel behind an unknown id", async () => {
+      await createAddon(client, [place.programId]);
+      const startedId = (await addons())[0]?.prices[0]?.id ?? "";
+
+      const started = await remove(`/references/addon-prices/${startedId}`);
+      const unknown = await remove(`/references/addon-prices/${UNKNOWN_ID}`);
+
+      expect(started.statusCode).toBe(409);
+      expect(started.json()).toMatchObject({ code: "price_started" });
+      expect(unknown.statusCode).toBe(404);
+      expect((await addons())[0]?.prices).toHaveLength(1);
+      expect(await client.journal("reference.price_cancelled")).toEqual([]);
+    });
+
     it.each(["2026-02-30", "01.01.2027", "0000-01-01"])("takes %s for no date", async (validFrom) => {
       const id = await createAddon(client, [place.programId]);
 
@@ -221,8 +266,9 @@ describe("prices with a date", () => {
       const early = await cost({ ...subject, validFrom: "2026-05-31" });
       const same = await cost({ ...subject, validFrom: "2026-06-01" });
 
-      expect(early.json()).toMatchObject({ fieldErrors: { validFrom: TOO_EARLY } });
+      expect(early.json()).toMatchObject({ fieldErrors: { validFrom: COST_TOO_EARLY } });
       expect(same.statusCode).toBe(409);
+      expect(same.json()).toMatchObject({ fieldErrors: { validFrom: "На цю дату собівартість вже є" } });
     });
 
     it("gives 404 for a subject that is not there, and refuses a kind that has no cost", async () => {
@@ -241,6 +287,52 @@ describe("prices with a date", () => {
 
       expect(unknown.statusCode).toBe(404);
       expect(wrongKind.statusCode).toBe(400);
+    });
+
+    // The way of 05.11.2026 on staging: a first cost left on its planned date, and today refused behind it
+    it("names the planned cost that stands in the way, and after its cancel a cost for today goes in", async () => {
+      const today = todayKyiv();
+      const planned = firstOfNextMonth(today);
+      const subject = { subjectType: "server", subjectId: place.serverId, amountKop: 1_250 };
+      await cost({ ...subject, validFrom: planned });
+
+      const blocked = await cost({ ...subject, validFrom: today });
+      expect(blocked.statusCode).toBe(422);
+      expect(blocked.json()).toMatchObject({
+        code: "price_too_early",
+        fieldErrors: {
+          validFrom: `Уже є запланована з ${dateText(planned)}: нова має діяти пізніше. Помилкову заплановану видаліть в історії`,
+        },
+      });
+
+      const plannedId = items<Server>(await client.get("/servers"))[0]?.costs?.[0]?.id ?? "";
+      expect((await remove(`/references/cost-prices/${plannedId}`)).statusCode).toBe(204);
+      expect((await cost({ ...subject, validFrom: today })).statusCode).toBe(201);
+
+      const [server] = items<Server>(await client.get("/servers"));
+      expect(server?.costs).toEqual([{ id: expect.any(String) as string, amountKop: 1_250, validFrom: today }]);
+      expect((await client.journal("reference.cost_cancelled"))[0]).toMatchObject({
+        entityType: "monitoring_server",
+        entityId: place.serverId,
+        details: [
+          { field: "costKop", value: 1_250 },
+          { field: "validFrom", value: planned },
+        ],
+      });
+    });
+
+    it("keeps a cost in force", async () => {
+      await cost({ subjectType: "server", subjectId: place.serverId, amountKop: 4_500, validFrom: "2026-01-01" });
+      const startedId = items<Server>(await client.get("/servers"))[0]?.costs?.[0]?.id ?? "";
+
+      const refused = await remove(`/references/cost-prices/${startedId}`);
+
+      expect(refused.statusCode).toBe(409);
+      expect(refused.json()).toMatchObject({
+        code: "price_started",
+        message: "Ця собівартість вже діє: видалити можна лише заплановану",
+      });
+      expect(items<Server>(await client.get("/servers"))[0]?.costs).toHaveLength(1);
     });
   });
 });

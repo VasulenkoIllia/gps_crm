@@ -9,9 +9,24 @@ import {
   pastDateSchema,
   simChoiceSchema,
   simCreateSchema,
+  simStatesFor,
+  deviceStatesFor,
 } from "./equipment.ts";
 
 const SOME_ID = "0190b5a0-0000-7000-8000-000000000001";
+
+// В-10 of the manual test of 05.11.2026: the form offered states the server refused
+describe("the states a person may choose", () => {
+  it("leaves a tracker on an object as it is, and one in the stock off the object", () => {
+    expect(deviceStatesFor(true)).toEqual(["installed"]);
+    expect(deviceStatesFor(false)).not.toContain("installed");
+  });
+
+  it("keeps a SIM in a tracker from the stock, and one in the stock from a tracker", () => {
+    expect(simStatesFor(true)).toEqual(["active", "blocked"]);
+    expect(simStatesFor(false)).toEqual(["free", "blocked"]);
+  });
+});
 
 describe("normalizeNumber", () => {
   it("drops what a sticker has between the digits", () => {

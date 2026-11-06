@@ -86,6 +86,7 @@ export const jobListSchema = z.strictObject({
     verdictSchema.extend({
       name: z.string(),
       title: z.string(),
+      description: z.string(),
       scheduleLabel: z.string(),
       canRunByHand: z.boolean(),
       lastSuccessAt: z.string().nullable(),

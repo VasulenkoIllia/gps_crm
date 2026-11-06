@@ -1,8 +1,9 @@
 import {
   SUBSCRIBER_SORTS,
-  SUBSCRIBER_STATUS_META,
+  SUBSCRIBER_STATUS_FILTER_META,
+  SUBSCRIBER_TYPE_SHORT,
   SUBSCRIBER_TYPES,
-  ARCHIVED_STATUS_META,
+  subscriberStatusMeta,
   type SubscriberListItem,
 } from "@gps_crm/shared";
 import { keepPreviousData, useInfiniteQuery, useQuery } from "@tanstack/react-query";
@@ -11,14 +12,16 @@ import { useMemo, useState } from "react";
 import { useNavigate } from "react-router";
 import { listRows } from "../../lib/list-rows";
 import { useCan } from "../../lib/session";
-import { useUrlFilters, useUrlSort } from "../../lib/url-filters";
+import { chosenCount, useUrlFilters, useUrlSort } from "../../lib/url-filters";
 import {
+  ARCHIVE_FILTER,
   EntityLink,
   FilterBar,
   FilterSelect,
   ListPage,
   NoAccess,
   NothingFound,
+  PlannedFrom,
   SearchField,
   StatusTag,
   type DataTableColumn,
@@ -36,40 +39,41 @@ import {
 } from "./subscribers.api";
 
 const SEARCH_HINT = "Назва, ID, старий номер, ЄДРПОУ, телефон, email, IMEI, SIM";
-const STATUS_OPTIONS = Object.entries(SUBSCRIBER_STATUS_META).map(([value, { label }]) => ({ value, label }));
+const STATUS_OPTIONS = Object.entries(SUBSCRIBER_STATUS_FILTER_META).map(([value, { label }]) => ({ value, label }));
 const TYPE_OPTIONS = Object.entries(SUBSCRIBER_TYPES).map(([value, label]) => ({ value, label }));
-const ARCHIVE_OPTIONS = [{ value: "true", label: "В архіві" }];
 
 const COLUMNS: DataTableColumn<SubscriberListItem>[] = [
-  {
-    title: "ID",
-    key: "code",
-    sorter: true,
-    render: (_, row) => (
-      <>
-        <EntityLink to={`/subscribers/${row.id}`}>{row.code}</EntityLink>
-        {row.legacyCode && <div className="table-note">{row.legacyCode}</div>}
-      </>
-    ),
-  },
   {
     title: "Назва",
     key: "name",
     sorter: true,
     render: (_, row) => (
       <>
-        {row.name}
-        {row.taxId && <div className="table-note">{row.taxId}</div>}
+        <EntityLink to={`/subscribers/${row.id}`}>{row.name}</EntityLink>
+        {row.taxId && (
+          <div className="table-note">
+            {row.type === "B2C" ? "ІПН" : "ЄДРПОУ"} {row.taxId}
+          </div>
+        )}
       </>
     ),
   },
-  { title: "Тип", dataIndex: "type" },
+  {
+    title: "ID",
+    key: "code",
+    sorter: true,
+    render: (_, row) => (
+      <>
+        {row.code}
+        {row.legacyCode && <div className="table-note">стар. {row.legacyCode}</div>}
+      </>
+    ),
+  },
+  { title: "Тип", key: "type", render: (_, row) => SUBSCRIBER_TYPE_SHORT[row.type] },
   {
     title: "Статус",
     key: "status",
-    render: (_, row) => (
-      <StatusTag status={row.isArchived ? ARCHIVED_STATUS_META : SUBSCRIBER_STATUS_META[row.status]} />
-    ),
+    render: (_, row) => <StatusTag status={subscriberStatusMeta(row.status, row.objectsTotal, row.isArchived)} />,
   },
   {
     title: "Програма й тариф",
@@ -78,6 +82,7 @@ const COLUMNS: DataTableColumn<SubscriberListItem>[] = [
       <>
         {row.programName}
         <div className="table-note">{row.tariffName}</div>
+        <PlannedFrom value={row.tariffFrom} />
       </>
     ),
   },
@@ -86,7 +91,13 @@ const COLUMNS: DataTableColumn<SubscriberListItem>[] = [
     key: "objects",
     align: "right",
     sorter: true,
-    render: (_, row) => `${row.objectsActive} / ${row.objectsTotal}`,
+    // Active of all: «1 / 2» alone read as nothing (manual test 05.11.2026)
+    render: (_, row) => (
+      <span title="Активні з усіх об'єктів клієнта">
+        {row.objectsActive} з {row.objectsTotal}
+        <div className="table-note">активні</div>
+      </span>
+    ),
   },
   { title: "Менеджер", dataIndex: "managerName" },
 ];
@@ -98,6 +109,9 @@ interface ListFiltersProps {
   onReset: () => void;
 }
 
+// The rest of the filters behind «Ще фільтри»: on a phone the list starts on the first screen (manual test 05.11.2026)
+const MORE_FILTERS = ["type", "tariffId", "archived"] as const;
+
 function ListFilters({ filters, hasFilters, onChange, onReset }: ListFiltersProps) {
   const programs = useReferenceOptions("programs", true);
   const tariffs = useReferenceOptions("tariffs", true);
@@ -107,7 +121,36 @@ function ListFilters({ filters, hasFilters, onChange, onReset }: ListFiltersProp
     [tariffs.items],
   );
   return (
-    <FilterBar hasFilters={hasFilters} onReset={onReset}>
+    <FilterBar
+      hasFilters={hasFilters}
+      onReset={onReset}
+      moreChosen={chosenCount(filters, MORE_FILTERS)}
+      more={
+        <>
+          <FilterSelect
+            label="Тип"
+            value={filters.type}
+            options={TYPE_OPTIONS}
+            onChange={(value) => onChange("type", value)}
+          />
+          <FilterSelect
+            label="Тариф"
+            value={filters.tariffId}
+            options={tariffOptions}
+            isLoading={tariffs.isLoading}
+            hasError={tariffs.hasError}
+            onChange={(value) => onChange("tariffId", value)}
+          />
+          <FilterSelect
+            label="Архів"
+            value={filters.archived}
+            options={ARCHIVE_FILTER.options}
+            anyLabel={ARCHIVE_FILTER.anyLabel}
+            onChange={(value) => onChange("archived", value)}
+          />
+        </>
+      }
+    >
       <SearchField
         label="Пошук"
         placeholder={SEARCH_HINT}
@@ -121,12 +164,6 @@ function ListFilters({ filters, hasFilters, onChange, onReset }: ListFiltersProp
         onChange={(value) => onChange("status", value)}
       />
       <FilterSelect
-        label="Тип"
-        value={filters.type}
-        options={TYPE_OPTIONS}
-        onChange={(value) => onChange("type", value)}
-      />
-      <FilterSelect
         label="Програма"
         value={filters.programId}
         options={programs.options}
@@ -135,26 +172,12 @@ function ListFilters({ filters, hasFilters, onChange, onReset }: ListFiltersProp
         onChange={(value) => onChange("programId", value)}
       />
       <FilterSelect
-        label="Тариф"
-        value={filters.tariffId}
-        options={tariffOptions}
-        isLoading={tariffs.isLoading}
-        hasError={tariffs.hasError}
-        onChange={(value) => onChange("tariffId", value)}
-      />
-      <FilterSelect
         label="Менеджер"
         value={filters.managerId}
         options={managers.options}
         isLoading={managers.isLoading}
         hasError={managers.hasError}
         onChange={(value) => onChange("managerId", value)}
-      />
-      <FilterSelect
-        label="Архів"
-        value={filters.archived}
-        options={ARCHIVE_OPTIONS}
-        onChange={(value) => onChange("archived", value)}
       />
     </FilterBar>
   );
@@ -207,7 +230,7 @@ function SubscribersScreen() {
           columns: COLUMNS,
           rowKey: "id",
           error: pages.error,
-          empty: hasFilters ? <NothingFound onReset={resetFilters} /> : "Клієнтів ще немає",
+          empty: hasFilters ? <NothingFound onReset={resetFilters} q={filters.q} /> : "Клієнтів ще немає",
           onRetry: () => void pages.refetch(),
           hasMore: pages.hasNextPage && !pages.isPlaceholderData,
           isLoadingMore: pages.isFetchingNextPage,

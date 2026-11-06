@@ -92,6 +92,7 @@ export async function listJobs(deps: AppDeps): Promise<JobList> {
         ...jobVerdict(row, definition.maxSilenceMs, now),
         name: definition.name,
         title: definition.title,
+        description: definition.description,
         scheduleLabel: definition.scheduleLabel,
         canRunByHand: definition.canRunByHand,
         lastSuccessAt: row?.lastSuccessAt?.toISOString() ?? null,

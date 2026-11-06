@@ -61,6 +61,8 @@ export async function requireAddonOfProgram(
 interface ObjectTerms {
   tariff: TariffFact;
   versions: repo.NewTerm[];
+  // D91: the start of the last version, which is the one with the tariff of the row
+  tariffFrom: string;
 }
 
 // П18: a tariff of its own, from its date. Before that date the object stands on the tariff of the client.
@@ -74,14 +76,18 @@ async function firstTerms(
   const base = { payerId, createdBy };
   if (!ownTariff) {
     const tariff = await findTariffFact(tx, clientTariffId);
-    return { tariff, versions: [{ ...base, ownTariffId: null, validFrom: connectedOn, validTo: null }] };
+    const versions = [{ ...base, ownTariffId: null, validFrom: connectedOn, validTo: null }];
+    return { tariff, versions, tariffFrom: connectedOn };
   }
   await selectTariff(tx, ownTariff.programId, ownTariff.tariffId);
   const tariff = await findTariffFact(tx, ownTariff.tariffId);
   const own = { ...base, ownTariffId: ownTariff.tariffId, validTo: null };
-  if (ownTariff.validFrom <= connectedOn) return { tariff, versions: [{ ...own, validFrom: connectedOn }] };
+  if (ownTariff.validFrom <= connectedOn) {
+    return { tariff, versions: [{ ...own, validFrom: connectedOn }], tariffFrom: connectedOn };
+  }
   return {
     tariff,
+    tariffFrom: ownTariff.validFrom,
     versions: [
       { ...base, ownTariffId: null, validFrom: connectedOn, validTo: ownTariff.validFrom },
       { ...own, validFrom: ownTariff.validFrom },
@@ -169,7 +175,7 @@ export function createObject(
     const payer = await requireClientPayer(tx, subscriberId, payerId);
     const reasonId = input.disconnectReasonId ?? null;
     if (reasonId) await requireActive(tx, "disconnect-reasons", reasonId, "disconnectReasonId", REASON_TEXT);
-    const { tariff, versions } = await firstTerms(tx, input, subscriber.tariffId, actorId);
+    const { tariff, versions, tariffFrom } = await firstTerms(tx, input, subscriber.tariffId, actorId);
     const device = await takeDevice(tx, context, scope, input.device);
     const sim = await takeSim(tx, context, input.sim);
     const id = await repo.insertObject(tx, {
@@ -182,6 +188,7 @@ export function createObject(
       payerId,
       tariff,
       hasOwnTariff: Boolean(input.ownTariff),
+      tariffFrom,
       currentDeviceId: device.id,
       note,
       createdBy: actorId,

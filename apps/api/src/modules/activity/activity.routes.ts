@@ -1,5 +1,6 @@
 import {
   activityListQuerySchema,
+  activityPackageQuerySchema,
   archiveBatchParamsSchema,
   archiveListQuerySchema,
   type ActivityActorList,
@@ -14,6 +15,7 @@ import {
   listActivity,
   listActivityActors,
   listArchive,
+  listPackageItems,
   restoreArchiveBatch,
   type ArchiveRestorers,
 } from "./activity.service.js";
@@ -24,6 +26,17 @@ export function registerActivityRoutes(app: FastifyInstance, deps: AppDeps, rest
   app.get(`${API_PREFIX}/activity`, { config: { access: can("activity.read") } }, (request): Promise<ActivityList> => {
     return listActivity(deps.db, parseInput(activityListQuerySchema, request.query), recordScope(request));
   });
+
+  // D92: what a line of a package stands for, read when the line is opened
+  app.get(
+    `${API_PREFIX}/activity/packages/:batchId`,
+    { config: { access: can("activity.read") } },
+    (request): Promise<ActivityList> => {
+      const { batchId } = parseInput(archiveBatchParamsSchema, request.params);
+      const { action } = parseInput(activityPackageQuerySchema, request.query);
+      return listPackageItems(deps.db, batchId, action, recordScope(request));
+    },
+  );
 
   // The filter by person: open to whoever reads the journal, unlike the list of users
   app.get(

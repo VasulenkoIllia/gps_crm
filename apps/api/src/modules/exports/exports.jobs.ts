@@ -13,10 +13,11 @@ export const EXPORT_BUILD_TASK: TaskDefinition = {
 export const EXPORTS_CLEANUP_JOB: JobDefinition = {
   name: "exports.cleanup",
   title: "Видалення старих файлів експорту",
+  description: "Прибирає файли Excel, яким понад добу. Працює сама, вручну запускати не потрібно.",
   // Every hour, at the clock change too: a run skipped or doubled then removes the same files a little later
   cron: "20 * * * *",
   scheduleLabel: "Щогодини о 20 хвилині",
   maxSilenceMs: MAX_SILENCE_MS,
-  canRunByHand: true,
+  canRunByHand: false,
   run: (context) => cleanUpExports(context),
 };

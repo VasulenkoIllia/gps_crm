@@ -1,10 +1,12 @@
 import {
   DEVICE_OWNERSHIPS,
   DEVICE_STATUS_META,
+  deviceStatesFor,
   iccidSchema,
   imeiSchema,
   serialNoSchema,
   SIM_STATUS_META,
+  simStatesFor,
   type DeviceRow,
   type SensorRow,
   type SimRow,
@@ -21,12 +23,10 @@ import { NumberHint, useNumberCheck } from "./NumberHint";
 const OWNERSHIP_OPTIONS = Object.entries(DEVICE_OWNERSHIPS).map(([value, label]) => ({ value, label, isActive: true }));
 const NOTE_ROWS = 3;
 
-function statusOptions(meta: Record<string, { label: string }>) {
-  return Object.entries(meta).map(([value, { label }]) => ({ value, label, isActive: true }));
+// Only what the server takes (П12): a tracker on an object has no other state here, and a SIM follows its tracker
+function statusOptions<K extends string>(meta: Record<K, { label: string }>, allowed: K[]) {
+  return allowed.map((value) => ({ value, label: meta[value].label, isActive: true }));
 }
-
-const DEVICE_STATE_OPTIONS = statusOptions(DEVICE_STATUS_META);
-const SIM_STATE_OPTIONS = statusOptions(SIM_STATUS_META);
 
 interface RowFormProps<T> {
   row: T | null;
@@ -75,7 +75,7 @@ export function DeviceForm({ row, open, onClose }: RowFormProps<DeviceRow>) {
       </Form.Item>
       {row && (
         <Form.Item label="Стан" name="status" required initialValue={row.status}>
-          <DictSelect options={DEVICE_STATE_OPTIONS} />
+          <DictSelect options={statusOptions(DEVICE_STATUS_META, deviceStatesFor(row.place !== null))} />
         </Form.Item>
       )}
       <Form.Item label="Примітка" name="note" initialValue={row?.note ?? undefined}>
@@ -133,7 +133,7 @@ export function SimForm({ row, open, onClose }: RowFormProps<SimRow>) {
       <SimDetailFields open={open} initial={row ?? undefined} />
       {row && (
         <Form.Item label="Стан" name="status" required initialValue={row.status}>
-          <DictSelect options={SIM_STATE_OPTIONS} />
+          <DictSelect options={statusOptions(SIM_STATUS_META, simStatesFor(row.deviceImei !== null))} />
         </Form.Item>
       )}
       <Form.Item label="Примітка" name="note" initialValue={row?.note ?? undefined}>

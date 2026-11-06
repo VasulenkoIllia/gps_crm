@@ -15,8 +15,9 @@ function queryOf(taxId?: string, phone?: string, crmUrl?: string, legacyCode?: s
   };
 }
 
-// К6: a match is a hint with a link, and never a refusal
-export function DuplicatesNotice() {
+// К6: a match is a hint with a link, and never a refusal. `excludeId`: the client being changed, who is no duplicate of
+// themselves; the form of a change shows the link too, or a taken old number would come back as bare words (П9)
+export function DuplicatesNotice({ excludeId }: { excludeId?: string }) {
   const form = Form.useFormInstance();
   const taxId = Form.useWatch("taxId", form) as string | undefined;
   const phone = Form.useWatch(["contact", "phone"], form) as string | undefined;
@@ -27,8 +28,8 @@ export function DuplicatesNotice() {
   const hasValue = Object.values(query).some(Boolean);
 
   const found = useQuery({
-    queryKey: [...SUBSCRIBERS_KEY, "duplicates", query],
-    queryFn: ({ signal }) => fetchDuplicates(query, signal),
+    queryKey: [...SUBSCRIBERS_KEY, "duplicates", query, excludeId],
+    queryFn: ({ signal }) => fetchDuplicates({ ...query, excludeId }, signal),
     enabled: hasValue,
     placeholderData: keepPreviousData,
   });

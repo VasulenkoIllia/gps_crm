@@ -76,6 +76,8 @@ describe("tariffs", () => {
         priceKop: 10_000,
         isSelected: false,
         clientCount: 0,
+        basedOnName: null,
+        newerVersionName: null,
       },
     ]);
   });
@@ -218,8 +220,17 @@ describe("tariffs", () => {
         billingModel: "year",
         priceKop: 200_000,
         isSelected: false,
+        basedOnName: "Тариф 1",
+        newerVersionName: null,
       });
-      expect(await byName("Тариф 1")).toMatchObject({ id: oldId, priceKop: 120_000, isSelected: true, isActive: true });
+      expect(await byName("Тариф 1")).toMatchObject({
+        id: oldId,
+        priceKop: 120_000,
+        isSelected: true,
+        isActive: true,
+        basedOnName: null,
+        newerVersionName: "Тариф 1 2027",
+      });
       expect(await client.journal("reference.tariff_version_created")).toMatchObject([
         {
           entityId: id,
@@ -227,6 +238,16 @@ describe("tariffs", () => {
           details: expect.arrayContaining([{ field: "basedOn", value: "Тариф 1" }]) as unknown,
         },
       ]);
+    });
+
+    // D88: two versions of one tariff, and the old one names the latest
+    it("names the latest version on the old tariff", async () => {
+      const oldId = await createTariff(client, place);
+      await client.create(`/tariffs/${oldId}/new-version`, { name: "Тариф 1 2027", priceKop: 20_000 });
+      await client.create(`/tariffs/${oldId}/new-version`, { name: "Тариф 1 2028", priceKop: 30_000 });
+
+      expect(await byName("Тариф 1")).toMatchObject({ newerVersionName: "Тариф 1 2028" });
+      expect(await byName("Тариф 1 2028")).toMatchObject({ basedOnName: "Тариф 1" });
     });
 
     it("needs a new name", async () => {

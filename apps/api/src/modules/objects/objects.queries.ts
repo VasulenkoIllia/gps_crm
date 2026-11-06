@@ -169,12 +169,13 @@ const PAGE_ROW = {
   nameNorm: true,
   subscriberId: true,
   hasOwnTariff: true,
+  tariffFrom: true,
   status: true,
   statusFrom: true,
   connectedOn: true,
   createdAt: true,
   archivedAt: true,
-  subscriber: { select: { code: true, name: true } },
+  subscriber: { select: { code: true, name: true, tariffFrom: true } },
   program: { select: { name: true } },
   tariff: { select: { name: true } },
   currentDevice: { select: { imei: true, model: { select: { name: true } } } },
@@ -182,6 +183,13 @@ const PAGE_ROW = {
 } satisfies Prisma.MonitoredObjectSelect;
 
 type PageRow = Prisma.MonitoredObjectGetPayload<{ select: typeof PAGE_ROW }>;
+
+// D91: on the client's tariff the object takes it from the later of its own terms and the client's version
+function tariffFromOf({ hasOwnTariff, tariffFrom, subscriber }: PageRow): string {
+  const own = fromDbDate(tariffFrom);
+  const client = fromDbDate(subscriber.tariffFrom);
+  return hasOwnTariff || own > client ? own : client;
+}
 
 function toListItem(row: PageRow): ObjectListItem {
   const { subscriber, program, tariff, currentDevice, addonPeriods, statusFrom, connectedOn, createdAt } = row;
@@ -194,6 +202,7 @@ function toListItem(row: PageRow): ObjectListItem {
     programName: program.name,
     tariffName: tariff.name,
     hasOwnTariff: row.hasOwnTariff,
+    tariffFrom: tariffFromOf(row),
     addonNames: addonPeriods.map((period) => period.addon.name),
     modelName: currentDevice?.model?.name ?? null,
     imei: currentDevice?.imei ?? null,

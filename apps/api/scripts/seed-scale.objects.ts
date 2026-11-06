@@ -100,7 +100,7 @@ const objects: Step = {
     return [
       q.statement(`INSERT INTO objects (id, subscriber_id, name, name_norm, status, status_from, connected_on,
              disconnected_on, disconnect_reason_id, payer_id, tariff_id, program_id, server_id, has_own_tariff,
-             current_device_id, archived_at, archived_by, archive_batch_id)
+             tariff_from, current_device_id, archived_at, archived_by, archive_batch_id)
            SELECT o.id, c.id, ${objectName(q, "shown")}, ${objectName(q, "norm")}, o.status,
              x.connected + CASE o.status WHEN 'active' THEN 0 WHEN 'suspended' THEN ${SUSPENDED_AFTER}
                                          ELSE ${DISCONNECTED_AFTER} END,
@@ -109,7 +109,7 @@ const objects: Step = {
              CASE WHEN o.status = 'disconnected' THEN r.id END,
              p.id,
              coalesce(own.id, t.id), coalesce(own.parent_id, t.program_id), coalesce(own.server_id, t.server_id),
-             own.id IS NOT NULL,
+             own.id IS NOT NULL, x.connected,
              CASE WHEN NOT o.archived THEN d.id END,
              CASE WHEN o.archived THEN coalesce(s.archived_at, now() - interval '10 days') END,
              CASE WHEN o.archived THEN a.id END,

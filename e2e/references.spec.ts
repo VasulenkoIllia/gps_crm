@@ -19,6 +19,9 @@ const SERVER = "Сервер 1";
 const SECOND_SERVER = "Сервер 2";
 const TARIFF = "Тариф 1";
 const NEW_TARIFF = "Тариф 1 2027";
+// D88: each of the two names the other under its name
+const NEW_VERSION_ROW = new RegExp(`${NEW_TARIFF} нова версія тарифу ${TARIFF}`);
+const OLD_VERSION_ROW = new RegExp(`${TARIFF} є нова версія: ${NEW_TARIFF}`);
 const ADDON = "Послуга 1";
 const OPERATOR = "Оператор 1";
 const PAST_DATE = "01.01.2026";
@@ -36,13 +39,25 @@ async function addNamed(page: Page, tab: string, addLabel: string, name: string)
   await expect(page.getByRole("cell", { name, exact: true })).toBeVisible();
 }
 
-async function addServer(page: Page, name: string): Promise<void> {
-  await openAddForm(page, "servers", "Додати сервер");
-  await pick(page, "Програма", PROGRAM);
+async function fillServer(page: Page, name: string): Promise<void> {
   await page.getByRole("dialog").getByLabel("Назва").fill(name);
   await page.getByRole("dialog").getByLabel("Адреса").fill("https://monitoring.example.test");
   await page.getByRole("dialog").getByLabel("Собівартість ліцензії за 1 об'єкт").fill("12,50");
+}
+
+// The first with «Зберегти й додати ще»: the emptied fields of the next one show no refusals before a press (П7)
+async function addServers(page: Page, first: string, second: string): Promise<void> {
+  await openAddForm(page, "servers", "Додати сервер");
+  await pick(page, "Програма", PROGRAM);
+  await fillServer(page, first);
   await typeDate(page, "Собівартість діє з", PAST_DATE);
+  await pressInForm(page, "Зберегти й додати ще");
+  const form = page.getByRole("dialog");
+  await expect(page.getByRole("row", { name: new RegExp(first) })).toBeVisible();
+  await expect(form.getByLabel("Назва")).toHaveValue("");
+  await expect(form.locator(".ant-form-item-explain-error")).toHaveCount(0);
+
+  await fillServer(page, second);
   await save(page);
 }
 
@@ -82,8 +97,7 @@ test.describe.serial("the references", () => {
   });
 
   test("the rest of the references fill in", async ({ page }) => {
-    await addServer(page, SERVER);
-    await addServer(page, SECOND_SERVER);
+    await addServers(page, SERVER, SECOND_SERVER);
     await expect(page.getByRole("row", { name: new RegExp(SERVER) })).toContainText("12,50 грн");
     await expect(page.getByRole("row", { name: new RegExp(SERVER) })).toContainText(PAST_DATE);
 
@@ -157,8 +171,8 @@ test.describe.serial("the references", () => {
     await form.getByLabel("Нова ціна за період").fill("180");
     await save(page, "Створити тариф");
 
-    await expect(page.getByRole("row", { name: new RegExp(NEW_TARIFF) })).toContainText("180,00 грн");
-    await expect(page.getByRole("row", { name: /Тариф 1.*165,50/ })).toBeVisible();
+    await expect(page.getByRole("row", { name: NEW_VERSION_ROW })).toContainText("180,00 грн");
+    await expect(page.getByRole("row", { name: OLD_VERSION_ROW })).toContainText("165,50 грн");
   });
 
   test("an addon's price goes forward by date, never back", async ({ page }) => {
@@ -183,7 +197,8 @@ test.describe.serial("the references", () => {
     await form.getByLabel("Ціна за місяць").fill("70");
     await typeDate(page, "Діє з", "02.01.2026");
     await pressInForm(page, "Додати");
-    await expect(form.getByText("Нова ціна не може діяти раніше за чинну")).toBeVisible();
+    // D87: a planned price stands after the one in force, and the refusal says where to remove a wrong one
+    await expect(form.getByText(/^Уже є запланована з .*: нова має діяти пізніше/)).toBeVisible();
     await form.getByRole("button", { name: "Скасувати" }).click();
     await page
       .getByRole("dialog", { name: "Закрити без збереження?" })
@@ -202,7 +217,7 @@ test.describe.serial("the references", () => {
     await deactivate(page, "programs", PROGRAM);
 
     await page.goto("/references?tab=tariffs&status=inactive");
-    await expect(page.getByRole("row", { name: new RegExp(NEW_TARIFF) })).toContainText("Деактивований");
+    await expect(page.getByRole("row", { name: NEW_VERSION_ROW })).toContainText("Деактивований");
     await expect(page.getByRole("button", { name: `Дії: ${NEW_TARIFF}`, exact: true })).toHaveCount(0);
     await page.goto("/references?tab=tariffs&status=active");
     await expect(page.getByText("За цими фільтрами нічого немає")).toBeVisible();
@@ -224,7 +239,7 @@ test.describe.serial("the references", () => {
     await expect(page.getByText("В архіві поки нічого немає")).toBeVisible();
 
     await page.goto("/references?tab=tariffs&status=active");
-    await expect(page.getByRole("cell", { name: NEW_TARIFF, exact: true })).toBeVisible();
+    await expect(page.getByRole("cell", { name: NEW_VERSION_ROW })).toBeVisible();
     await page.goto("/references?tab=servers&status=inactive");
     await expect(page.getByText("За цими фільтрами нічого немає")).toBeVisible();
   });
@@ -240,7 +255,11 @@ test.describe.serial("the references", () => {
     await expect(details.getByText(TARIFF, { exact: true })).toBeVisible();
 
     await page.goto("/activity?action=record.archived");
-    await expect(page.getByRole("row", { name: new RegExp(`Програма: ${PROGRAM}`) })).toBeVisible();
+    const pack = page.getByRole("row", { name: new RegExp(`Програма: ${PROGRAM}`) });
+    await expect(pack).toBeVisible();
+    // D92: one line for the package, which opens to what went to the archive with it
+    await pack.getByRole("button", { name: "Розгорнути рядок" }).click();
+    await expect(page.getByText(`Деактивація запису довідника: ${PROGRAM}`, { exact: true })).toBeVisible();
     await page.goto("/activity?action=reference.restored");
     await expect(page.getByRole("row", { name: new RegExp(`Тариф: ${NEW_TARIFF}`) })).toBeVisible();
   });

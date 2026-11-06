@@ -1,5 +1,6 @@
 import { App, Button, type FormInstance } from "antd";
 import { useId, useRef, type ReactNode } from "react";
+import { FIELD_SCROLL } from "./form-rules";
 
 export interface FormShellProps<T> {
   submitLabel: string;
@@ -63,8 +64,8 @@ export function useFormShell<T>(props: FormShellProps<T>) {
     form,
     layout: "vertical" as const,
     preserve: false,
-    // A form of several screens on a phone: the refused field may be far above the button
-    scrollToFirstError: true,
+    // A form of several screens: the refused field may be far from the button
+    scrollToFirstError: FIELD_SCROLL,
     // The check, because Enter goes through neither the button that shows the loading state nor the closing form
     onFinish: (values: T) => {
       if (open && !isSubmitting) onSubmit(values, isAddingAnother.current);

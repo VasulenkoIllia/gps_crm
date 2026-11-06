@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { firstOfNextMonth, todayKyiv } from "./dates.ts";
 import {
   deriveSubscriberStatus,
+  subscriberStatusMeta,
   discountTextSchema,
   isTariffDateAllowed,
   paymentFormat,
@@ -48,6 +49,19 @@ describe("client status", () => {
       expect(deriveSubscriberStatus({ objectsActive, objectsSuspended, objectsDisconnected })).toBe(label);
     },
   );
+});
+
+// D89: the base keeps `disconnected` for a client with no object (П17), the screen says so in its own words
+describe("subscriberStatusMeta", () => {
+  it("reads a client with no object as one without objects", () => {
+    expect(subscriberStatusMeta("disconnected", 0, false).label).toBe("Без об'єктів");
+    expect(subscriberStatusMeta("disconnected", 2, false).label).toBe("Відключений");
+    expect(subscriberStatusMeta("active", 1, false).label).toBe("Активний");
+  });
+
+  it("puts the archive above all", () => {
+    expect(subscriberStatusMeta("disconnected", 0, true).label).toBe("В архіві");
+  });
 });
 
 describe("payment format", () => {
@@ -129,7 +143,7 @@ describe("the ID typed by hand", () => {
 
   it.each(["9999", "1234", "12a45", "", "1234567890123456", "00123", "012345"])("refuses %s", (code) => {
     expect(subscriberCodeSchema.safeParse(code).error?.issues[0]?.message).toBe(
-      "ID складається лише з цифр, не менше 5",
+      "ID складається лише з цифр, не менше 5, і не починається з нуля",
     );
   });
 });

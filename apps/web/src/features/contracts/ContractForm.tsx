@@ -118,8 +118,10 @@ export function ContractForm({ subscriberId, row, open, onClose }: ContractFormP
     form,
     refresh: refreshClients,
     onDone: onClose,
+    // One message: «Збережено» beside «the file did not load» read as two answers to one press
+    savedText: (fileProblem) => (fileProblem ? null : "Збережено"),
     onSaved: (fileProblem) => {
-      if (fileProblem) void message.error(`Договір збережено, але файл не завантажився: ${fileProblem}`);
+      if (fileProblem) void message.warning(`Договір збережено, але файл не завантажився: ${fileProblem}`);
     },
   });
 

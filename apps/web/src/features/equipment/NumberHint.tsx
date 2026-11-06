@@ -3,18 +3,22 @@ import { Alert } from "antd";
 import type { EquipmentCheck } from "@gps_crm/shared";
 import { EntityLink, useDebouncedValue } from "../../ui";
 import { EQUIPMENT_KEY } from "./equipment.api";
-import { hintOf } from "./number-check";
+import { checkOfTyped, hintOf } from "./number-check";
 
 type CheckNumber = (value: string, excludeId: string, signal: AbortSignal) => Promise<EquipmentCheck>;
 
+// Never from the cache: a tracker taken off an object a minute ago is free now, and the hint must say so (П6)
 export function useNumberCheck(kind: string, value: string | undefined, check: CheckNumber, excludeId = "") {
-  const settled = useDebouncedValue(value?.trim() ?? "");
+  const typed = value?.trim() ?? "";
+  const settled = useDebouncedValue(typed);
   const found = useQuery({
     queryKey: [...EQUIPMENT_KEY, "check", kind, settled, excludeId],
     queryFn: ({ signal }) => check(settled, excludeId, signal),
     enabled: settled.length > 0,
+    staleTime: 0,
+    gcTime: 0,
   });
-  return settled ? found.data : undefined;
+  return checkOfTyped(typed, settled, found.data);
 }
 
 interface NumberHintProps {

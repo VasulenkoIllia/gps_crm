@@ -1,9 +1,9 @@
-import { Button, Tabs } from "antd";
+import { Button } from "antd";
 import { useState } from "react";
 import { useSearchParams } from "react-router";
 import { useCan } from "../../lib/session";
 import { readFilters } from "../../lib/url-filters";
-import { NoAccess, PageHeader, Panel } from "../../ui";
+import { NoAccess, PageHeader, PageTabs, Panel } from "../../ui";
 import { ExportButton } from "../exports/ExportButton";
 import { DevicesTab } from "./DevicesTab";
 import { DEVICE_FILTER_KEYS, SENSOR_FILTER_KEYS, SIM_FILTER_KEYS } from "./equipment.api";
@@ -45,7 +45,7 @@ function EquipmentScreen() {
         }
       />
       <Panel>
-        <Tabs
+        <PageTabs
           activeKey={tab.key}
           items={TABS.map(({ key, label }) => (key === tab.key ? { key, label, children: active } : { key, label }))}
           // A new tab starts from its whole list: the filter of the last one means nothing here

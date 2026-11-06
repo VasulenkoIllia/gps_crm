@@ -54,3 +54,10 @@ export function useAddonOptions(programId: string | undefined, isEnabled: boolea
   );
   return { options, isLoading: addons.isLoading, hasError: addons.hasError };
 }
+
+// «Додати послугу» puts in a row with no value at all: an empty row is no repeat, and the row asks for its service itself
+export function refuseRepeatedAddon(_: unknown, rows: ({ addonId?: string } | undefined)[] | undefined): Promise<void> {
+  const chosen = (rows ?? []).flatMap((row) => (row?.addonId ? [row.addonId] : []));
+  if (new Set(chosen).size === chosen.length) return Promise.resolve();
+  return Promise.reject(new Error("Ця послуга вже є в списку"));
+}

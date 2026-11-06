@@ -1,4 +1,4 @@
-import { ARCHIVED_STATUS_META } from "@gps_crm/shared";
+import { ARCHIVED_STATUS_META, searchTooShortText } from "@gps_crm/shared";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { Skeleton } from "antd";
 import { Link } from "react-router";
@@ -51,7 +51,9 @@ function Results({ q, withArchive }: { q: string; withArchive: boolean }) {
   if (search.error) return <LoadError error={search.error} onRetry={() => void search.refetch()} />;
   if (!search.data) return <Skeleton active />;
   const found = sectionsOf(search.data, q).filter((section) => section.lines.length > 0);
-  if (found.length === 0) return <p className="nothing-found">Нічого не знайдено. Перевірте номер або назву.</p>;
+  if (found.length === 0) {
+    return <p className="nothing-found">{searchTooShortText(q) ?? "Нічого не знайдено. Перевірте номер або назву."}</p>;
+  }
   return (
     <div className="panel-grid">
       {found.map((section) => (
@@ -83,7 +85,9 @@ function SearchScreen() {
           />
         </FilterBar>
         {!q && (
-          <p className="list-meta">Введіть ID чи старий номер клієнта, назву, телефон, IMEI, ICCID чи номер SIM.</p>
+          <p className="list-meta">
+            Шукає за ID чи старим номером клієнта, назвою, телефоном, IMEI, ICCID і номером SIM.
+          </p>
         )}
       </Panel>
       {q && <Results q={q} withArchive={filters.archived === "true"} />}

@@ -67,6 +67,7 @@ export function SubscriberFields({ managers, initial }: SubscriberFieldsProps) {
         name="taxId"
         required={isTaxIdRequired}
         initialValue={initial?.taxId ?? undefined}
+        validateFirst
         rules={[{ required: isTaxIdRequired, message: TAX_ID_REQUIRED }, zodRule(payerTaxIdSchema.optional())]}
       >
         <Input inputMode="numeric" autoComplete="off" />

@@ -8,6 +8,7 @@ import {
   objectTariffOn,
   objectTermsChangeSchema,
   replaceDeviceSchema,
+  workBeforeTrackerText,
 } from "./objects.ts";
 
 const SOME_ID = "0190b5a0-0000-7000-8000-000000000001";
@@ -145,5 +146,23 @@ describe("objectTariffOn", () => {
       { ownTariffId: "own", validFrom: "2026-02-01", validTo: "2026-02-01" },
     ];
     expect(objectTariffOn("2026-02-01", replaced, client)?.isOwn).toBe(false);
+  });
+});
+
+// Р8 of the manual test of 05.11.2026: an object active 24 days before its tracker, saved without a word
+describe("workBeforeTrackerText", () => {
+  it("warns when the object works before the tracker came", () => {
+    expect(workBeforeTrackerText({ status: "active", statusFrom: "2026-10-01", installedOn: "2026-10-25" })).toContain(
+      "25.10.2026",
+    );
+    expect(workBeforeTrackerText({ connectedOn: "2026-10-01", installedOn: "2026-10-25" })).not.toBeNull();
+  });
+
+  it("says nothing for a disconnected object, the same day or no tracker date", () => {
+    expect(workBeforeTrackerText({ status: "disconnected", statusFrom: "2026-10-01", installedOn: "2026-10-25" })).toBe(
+      null,
+    );
+    expect(workBeforeTrackerText({ status: "active", statusFrom: "2026-10-25", installedOn: "2026-10-25" })).toBeNull();
+    expect(workBeforeTrackerText({ status: "active", statusFrom: "2026-10-01" })).toBeNull();
   });
 });

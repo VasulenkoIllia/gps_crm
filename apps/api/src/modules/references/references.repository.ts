@@ -219,7 +219,12 @@ export function findSimPlan(db: DbOrTx, id: string) {
   });
 }
 
-export function createTariff(db: DbOrTx, input: TariffCreate, createdBy: string | null): Promise<{ id: string }> {
+// `basedOnId` only from «Нова версія тарифу» (D88)
+export function createTariff(
+  db: DbOrTx,
+  input: TariffCreate & { basedOnId?: string },
+  createdBy: string | null,
+): Promise<{ id: string }> {
   const { priceKop, ...fields } = input;
   return db.tariff.create({
     data: { ...fields, nameNorm: normalizeName(input.name), priceKop: BigInt(priceKop), createdBy },
@@ -348,4 +353,44 @@ export async function lastCostDate(
     select: { validFrom: true },
   });
   return last ? fromDbDate(last.validFrom) : null;
+}
+
+export interface StoredPrice {
+  amountKop: number;
+  validFrom: string;
+}
+
+export async function findAddonPrice(db: DbOrTx, id: string): Promise<(StoredPrice & { addonId: string }) | null> {
+  const row = await db.addonPrice.findUnique({
+    where: { id },
+    select: { addonId: true, priceKop: true, validFrom: true },
+  });
+  return row && { addonId: row.addonId, amountKop: Number(row.priceKop), validFrom: fromDbDate(row.validFrom) };
+}
+
+export async function findCostPrice(
+  db: DbOrTx,
+  id: string,
+): Promise<(StoredPrice & { subjectType: CostSubjectType; subjectId: string }) | null> {
+  const row = await db.costPrice.findUnique({
+    where: { id },
+    select: { subjectType: true, subjectId: true, costKop: true, validFrom: true },
+  });
+  return (
+    row && {
+      subjectType: row.subjectType,
+      subjectId: row.subjectId,
+      amountKop: Number(row.costKop),
+      validFrom: fromDbDate(row.validFrom),
+    }
+  );
+}
+
+// Only a price not yet in force: the service checks it, and a trigger refuses the rest (D87)
+export async function deleteAddonPriceRow(db: DbOrTx, id: string): Promise<void> {
+  await db.addonPrice.delete({ where: { id } });
+}
+
+export async function deleteCostRow(db: DbOrTx, id: string): Promise<void> {
+  await db.costPrice.delete({ where: { id } });
 }

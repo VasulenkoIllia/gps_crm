@@ -16,6 +16,11 @@ export function readFilters<K extends string>(params: URLSearchParams, keys: rea
   return filters;
 }
 
+// How many of the given filters are set: the number on «Ще фільтри»
+export function chosenCount<K extends string>(filters: Filters<K>, keys: readonly K[]): number {
+  return keys.filter((key) => Boolean(filters[key])).length;
+}
+
 export function withFilter(params: URLSearchParams, key: string, value: string | undefined): URLSearchParams {
   const next = new URLSearchParams(params);
   if (value) next.set(key, value);

@@ -1,3 +1,4 @@
+import { searchTooShortText } from "@gps_crm/shared";
 import { SearchOutlined } from "@ant-design/icons";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { AutoComplete, Input } from "antd";
@@ -7,7 +8,8 @@ import { errorMessage, useDebouncedValue } from "../../ui";
 import { queryOf } from "../subscribers/subscribers.api";
 import { fetchSearch, SEARCH_KEY, sectionsOf, type SearchSection } from "./search.api";
 
-export const SEARCH_PLACEHOLDER = "ID, назва, телефон, IMEI, SIM";
+// The same words in the header and on the page of the search (manual test 05.11.2026)
+export const SEARCH_PLACEHOLDER = "ID, назва, телефон, IMEI, ICCID, SIM";
 const MIN_QUERY_LENGTH = 2;
 const ALL_RESULTS = "all";
 const STATE_LINE = "state";
@@ -62,7 +64,7 @@ export function GlobalSearch({ isLarge = false }: { isLarge?: boolean }) {
     : !search.data
       ? "Шукаю"
       : groups.length === 0
-        ? "Нічого не знайдено"
+        ? (searchTooShortText(q) ?? "Нічого не знайдено")
         : null;
   const options = isReady
     ? [

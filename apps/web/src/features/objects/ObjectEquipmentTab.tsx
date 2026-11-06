@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import {
   DataTable,
   DateText,
+  DigitsText,
   EmptyValue,
   FactList,
   Phone,
@@ -34,7 +35,7 @@ function installed({ installedOn, contractorName }: { installedOn: string; contr
 
 function deviceFacts(device: NonNullable<ObjectCard["device"]>): Fact[] {
   return [
-    { label: "IMEI", value: device.imei },
+    { label: "IMEI", value: <DigitsText value={device.imei} /> },
     { label: "Модель", value: device.modelName ?? <EmptyValue /> },
     ...installed(device),
   ];
@@ -42,7 +43,7 @@ function deviceFacts(device: NonNullable<ObjectCard["device"]>): Fact[] {
 
 function simFacts(sim: NonNullable<ObjectCard["sim"]>): Fact[] {
   return [
-    { label: "ICCID", value: sim.iccid },
+    { label: "ICCID", value: <DigitsText value={sim.iccid} /> },
     { label: "Номер", value: <Phone value={sim.msisdn} /> },
     { label: "Оператор", value: sim.operatorName ?? <EmptyValue /> },
     { label: "Тариф оператора", value: sim.planName ?? <EmptyValue /> },

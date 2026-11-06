@@ -166,8 +166,31 @@ export async function save(page: Page, button = "Зберегти"): Promise<voi
   await expect(page.getByRole("dialog")).toHaveCount(0);
 }
 
+// A tab on a wide screen, an item of the list «Вкладка» on a phone (PageTabs)
+export function pageTabs(page: Page, name: string) {
+  return page.getByRole("tab", { name }).or(page.getByRole("combobox", { name: "Вкладка" }));
+}
+
+export async function openPageTab(page: Page, name: string): Promise<void> {
+  const tab = page.getByRole("tab", { name });
+  await expect(pageTabs(page, name)).toBeVisible();
+  if ((await tab.count()) > 0) {
+    await tab.click();
+    return;
+  }
+  await page.getByRole("combobox", { name: "Вкладка" }).click();
+  // antd gives the role «option» only to the items next to the chosen one: the list as seen holds them all by title
+  await page.locator(".ant-select-dropdown").getByTitle(name, { exact: true }).click();
+}
+
 export async function rowAction(page: Page, rowName: string, action: string): Promise<void> {
   await page.getByRole("button", { name: `Дії: ${rowName}`, exact: true }).click();
+  await page.getByRole("menuitem", { name: action, exact: true }).click();
+}
+
+// The head of a card: two buttons, the rest under «Ще» (CardActions)
+export async function cardAction(page: Page, cardName: string, action: string): Promise<void> {
+  await page.getByRole("button", { name: `Ще: ${cardName}`, exact: true }).click();
   await page.getByRole("menuitem", { name: action, exact: true }).click();
 }
 
@@ -206,10 +229,10 @@ export async function createClient(page: Page, client: NewClient): Promise<numbe
   await form.getByRole("radio", { name: "Telegram" }).check();
   await form.getByLabel("Telegram Chat ID").fill("123456789");
   if (type === PERSON) {
-    await pick(page, "Форма оплати", "IBAN-реквізити");
+    await pick(page, "Спосіб оплати", "IBAN-реквізити");
     await form.getByLabel("Куди надсилати реквізити: телефон або пошта").fill(PAYER_PHONE);
   } else {
-    await pick(page, "Форма оплати", "Рахунок");
+    await pick(page, "Спосіб оплати", "Рахунок");
     await form.getByLabel("Повна назва юрособи").fill(`ТОВ ${client.name}`);
   }
   await pressInForm(page, "Створити");

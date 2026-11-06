@@ -1,9 +1,15 @@
-import { ARCHIVED_STATUS_META, PAYMENT_METHODS, type Payer, type SubscriberCard } from "@gps_crm/shared";
+import {
+  ARCHIVED_STATUS_META,
+  normalizePhone,
+  PAYMENT_METHODS,
+  type Payer,
+  type SubscriberCard,
+} from "@gps_crm/shared";
 import { useQuery } from "@tanstack/react-query";
 import { Button, Empty, Skeleton } from "antd";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useCan } from "../../lib/session";
-import { EmptyValue, EntityLink, FactList, LoadError, RowActions, StatusTag, type Fact } from "../../ui";
+import { EmptyValue, EntityLink, FactList, LoadError, Phone, RowActions, StatusTag, type Fact } from "../../ui";
 import { PayerForm, PayerLinkModal } from "./PayerForm";
 import { fetchPayers, payerAction, payersKey, unlinkPayer } from "./subscribers.api";
 import { useConfirmedAction, type PlannedAction } from "./useConfirmedAction";
@@ -54,12 +60,18 @@ function planFor(payer: Payer, subscriberId: string, key: Exclude<PayerActionKey
   return plans[key];
 }
 
+// A phone reads as the phones of the contacts do, an email as it is (П10)
+function detailsContactOf({ detailsContact }: Payer) {
+  if (!detailsContact) return <EmptyValue />;
+  return normalizePhone(detailsContact) ? <Phone value={detailsContact} /> : detailsContact;
+}
+
 function factsOf(payer: Payer): Fact[] {
   const others = payer.otherClients;
   return [
-    { label: "Форма оплати", value: PAYMENT_METHODS[payer.paymentMethod] },
+    { label: "Спосіб оплати", value: PAYMENT_METHODS[payer.paymentMethod] },
     { label: "ЄДРПОУ / ІПН", value: payer.taxId ?? <EmptyValue /> },
-    { label: "Контакт для реквізитів", value: payer.detailsContact ?? <EmptyValue /> },
+    { label: "Контакт для реквізитів", value: detailsContactOf(payer) },
     {
       label: "Інші клієнти",
       value:
@@ -108,6 +120,7 @@ export function PayersTab({ card }: { card: SubscriberCard }) {
   const confirm = useConfirmedAction();
   const payers = useQuery({ queryKey: payersKey(card.id), queryFn: ({ signal }) => fetchPayers(card.id, signal) });
   const rows = payers.data?.items;
+  const linkedIds = useMemo(() => (rows ?? []).map((row) => row.id), [rows]);
 
   function act(payer: Payer, key: PayerActionKey) {
     if (key === "edit") setEditing(payer);
@@ -147,7 +160,7 @@ export function PayersTab({ card }: { card: SubscriberCard }) {
         open={editing !== null}
         onClose={() => setEditing(null)}
       />
-      <PayerLinkModal subscriberId={card.id} open={isLinking} onClose={() => setLinking(false)} />
+      <PayerLinkModal subscriberId={card.id} linkedIds={linkedIds} open={isLinking} onClose={() => setLinking(false)} />
       {confirm.dialog}
     </>
   );

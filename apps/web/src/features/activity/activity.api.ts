@@ -39,6 +39,12 @@ export function fetchActivityPage(filters: ActivityFilters, cursor: string | nul
   return apiGet(`/activity${activityQuery(filters, cursor)}`, activityListSchema, signal);
 }
 
+// D92: the records one line of a package stands for
+export function fetchPackageItems(batchId: string, action: string, signal: AbortSignal) {
+  const query = new URLSearchParams({ action }).toString();
+  return apiGet(`/activity/packages/${batchId}?${query}`, activityListSchema, signal);
+}
+
 export function fetchActivityActors(signal: AbortSignal) {
   return apiGet("/activity/actors", activityActorListSchema, signal);
 }

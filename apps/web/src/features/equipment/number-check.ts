@@ -24,3 +24,8 @@ export function hintOf(result: EquipmentCheck | undefined, isForInstallation: bo
   if (holder.label) return { type: "warning", text: `Уже встановлено: ${holder.label}`, objectId: holder.objectId };
   return isForInstallation ? { type: "info", text: FREE_TEXT } : { type: "warning", text: TAKEN_TEXT };
 }
+
+// A hint answers the number it was asked about: once another one is typed, it waits for the answer of its own (П6)
+export function checkOfTyped<T>(typed: string, settled: string, result: T | undefined): T | undefined {
+  return settled.length > 0 && settled === typed ? result : undefined;
+}

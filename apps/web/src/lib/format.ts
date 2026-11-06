@@ -13,3 +13,12 @@ export function formatBytes(bytes: number): string {
   }
   return `${SIZE_FORMAT.format(value)} ${BYTE_UNITS[unit] ?? ""}`;
 }
+
+const DIGIT_GROUP = 4;
+
+// IMEI, ICCID: groups of four from the start, so a long number reads and compares by eye (05-ui-standard.md §5.7)
+export function digitGroups(value: string): string[] {
+  const groups: string[] = [];
+  for (let start = 0; start < value.length; start += DIGIT_GROUP) groups.push(value.slice(start, start + DIGIT_GROUP));
+  return groups;
+}

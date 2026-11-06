@@ -184,7 +184,7 @@ export async function requireContractor(tx: DbOrTx, id: string | null | undefine
 function assertAfter(last: installed.InstallationFact | null, validFrom: string, field: string): void {
   const end = last?.validTo ?? last?.validFrom;
   if (!end || validFrom >= end) return;
-  const message = `Це обладнання вже стояло до ${dateText(end)}: дата встановлення має бути не раніше`;
+  const message = `Це обладнання вже стояло до ${dateText(end)}: вкажіть цю дату або пізнішу`;
   throw new AppError(409, "installation_date_overlap", message, { [field]: message });
 }
 
@@ -248,7 +248,7 @@ async function closeSimOf(tx: DbOrTx, deviceId: string, validTo: string): Promis
 
 function assertClosable(open: installed.InstallationFact | null, validTo: string): void {
   if (!open || validTo >= open.validFrom) return;
-  const message = `Поточне встановлення почалося ${dateText(open.validFrom)}: дата не може бути раніше`;
+  const message = `Поточне встановлення почалося ${dateText(open.validFrom)}: вкажіть цю дату або пізнішу`;
   throw new AppError(409, "installation_date_overlap", message, { installedOn: message });
 }
 

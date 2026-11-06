@@ -187,6 +187,10 @@ a {
 .filter-bar > .ant-btn {
   align-self: end;
 }
+/* The fields behind «Ще фільтри» stand in the same grid as the rest */
+.filter-bar-more {
+  display: contents;
+}
 .filter-field {
   min-width: 0;
 }
@@ -230,6 +234,13 @@ a {
 .code-text {
   font-family: ui-monospace, Menlo, Consolas, monospace;
   overflow-wrap: anywhere;
+}
+.digits-text {
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  white-space: nowrap;
+}
+.digits-text > span + span {
+  margin-inline-start: 0.4ch;
 }
 .simple-list {
   margin: 0 0 8px;
@@ -414,6 +425,14 @@ a {
   border: 1px solid var(--border);
   border-radius: 12px;
   color: var(--ink);
+}
+/* A tile is a link to its list, and has to look like one (manual test 05.11.2026) */
+.home-counter:hover {
+  border-color: var(--accent);
+}
+.home-counter-link {
+  color: var(--accent);
+  font-size: 13px;
 }
 .home-counter-value {
   font-size: 24px;
@@ -610,4 +629,13 @@ a {
 .duplicates-list {
   margin: 0;
   padding-left: 18px;
+}
+
+/* Tabs on a phone: one list instead of a bar that hides most of them (PageTabs) */
+.page-tabs-select {
+  width: 100%;
+  margin-bottom: 12px;
+}
+.package-items {
+  margin: 0;
 }

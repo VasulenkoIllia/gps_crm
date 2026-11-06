@@ -14,7 +14,7 @@ import type {
 import type { RecordScope } from "../../core/access/access.js";
 import { withSearchPlan } from "../../core/db/search-plan.queries.js";
 import type { AppDeps } from "../../core/deps.js";
-import { listActivity } from "../activity/index.js";
+import { CARD_VIEW, listActivity } from "../activity/index.js";
 import { notFound } from "../references/index.js";
 import * as queries from "./subscribers.queries.js";
 import { findVisibleId } from "./subscribers.repository.js";
@@ -76,5 +76,5 @@ export async function listClientActivity(
   scope: RecordScope,
 ): Promise<ActivityList> {
   if (!(await findVisibleId(deps.db, id, scope))) throw notFound();
-  return listActivity(deps.db, { ...query, subscriberId: id }, scope);
+  return listActivity(deps.db, { ...query, subscriberId: id }, scope, CARD_VIEW);
 }

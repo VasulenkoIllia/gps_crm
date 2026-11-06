@@ -11,7 +11,7 @@ import type {
 import type { RecordScope } from "../../core/access/access.js";
 import { withSearchPlan } from "../../core/db/search-plan.queries.js";
 import type { AppDeps } from "../../core/deps.js";
-import { listActivity } from "../activity/index.js";
+import { CARD_VIEW, listActivity } from "../activity/index.js";
 import { notFound } from "../references/index.js";
 import { getObjectCard } from "./objects.card.queries.js";
 import { getObjectHistory } from "./objects.history.queries.js";
@@ -49,5 +49,5 @@ export async function listObjectActivity(
   scope: RecordScope,
 ): Promise<ActivityList> {
   await requireVisible(deps, id, scope);
-  return listActivity(deps.db, { ...query, entityType: "object", entityId: id }, scope);
+  return listActivity(deps.db, { ...query, entityType: "object", entityId: id }, scope, CARD_VIEW);
 }

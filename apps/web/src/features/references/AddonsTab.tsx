@@ -1,21 +1,28 @@
-import { currentPrice, nextPrice, PROGRAM_REQUIRED, referenceNameSchema, todayKyiv, type Addon } from "@gps_crm/shared";
+import { currentPrice, PROGRAM_REQUIRED, referenceNameSchema, todayKyiv, type Addon } from "@gps_crm/shared";
 import { Form, Input } from "antd";
 import { useCan } from "../../lib/session";
 import { DateText, DictSelect, EmptyValue, FormModal, Money, zodRule, type DataTableColumn } from "../../ui";
 import { PricedTab } from "./PricedTab";
-import { FirstCostFields, firstCostOf, PriceFields, type FirstCostValues } from "./PriceParts";
+import { FirstCostFields, firstCostOf, NextPriceText, PriceFields, type FirstCostValues } from "./PriceParts";
 import type { RowFormProps, TabProps } from "./ReferenceTab";
 import { toDatedPrice, useReferenceSave } from "./reference-form";
 import { REFERENCE_TEXTS } from "./reference-texts";
-import { addAddonPrice, createReference, updateReference, useReferenceOptions } from "./references.api";
+import {
+  addAddonPrice,
+  createReference,
+  removeAddonPrice,
+  removeCostPrice,
+  updateReference,
+  useReferenceOptions,
+} from "./references.api";
 
 const PRICE_LABEL = "Ціна за місяць";
 const COST_LABEL = "Собівартість";
 const LABELS = { cost: COST_LABEL, newCost: "Нова собівартість", history: "Історія цін" };
 const SALE_PRICE = { label: PRICE_LABEL, save: addAddonPrice };
 const historyBlocks = (row: Addon) => [
-  { title: "Ціна", history: row.prices },
-  { title: COST_LABEL, history: row.costs },
+  { title: "Ціна", history: row.prices, remove: removeAddonPrice, noun: "ціну" },
+  { title: COST_LABEL, history: row.costs, remove: removeCostPrice, noun: "собівартість" },
 ];
 
 interface AddonValues extends FirstCostValues {
@@ -62,7 +69,7 @@ function AddonForm({ row, open, onClose }: RowFormProps<Addon>) {
           hasError={programs.hasError}
         />
       </Form.Item>
-      {!row && <PriceFields amountLabel={PRICE_LABEL} />}
+      {!row && <PriceFields amountLabel={PRICE_LABEL} isFirst />}
       {!row && canReadCost && <FirstCostFields label={COST_LABEL} />}
     </FormModal>
   );
@@ -90,15 +97,7 @@ const COLUMNS: DataTableColumn<Addon>[] = [
   {
     title: "Наступна ціна",
     key: "next",
-    render: (_, row) => {
-      const next = nextPrice(row.prices, todayKyiv());
-      if (!next) return <EmptyValue />;
-      return (
-        <>
-          <Money kop={next.amountKop} /> з <DateText value={next.validFrom} />
-        </>
-      );
-    },
+    render: (_, row) => <NextPriceText history={row.prices} />,
   },
 ];
 

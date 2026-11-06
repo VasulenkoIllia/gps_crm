@@ -1,7 +1,17 @@
 import { DEVICE_OWNERSHIPS, DEVICE_STATUS_META, SIM_STATUS_META, type DeviceCard, type SimCard } from "@gps_crm/shared";
 import { useQuery } from "@tanstack/react-query";
 import { Skeleton } from "antd";
-import { DetailDrawer, EmptyValue, FactList, LoadError, Money, Phone, StatusTag, type Fact } from "../../ui";
+import {
+  DetailDrawer,
+  DigitsText,
+  EmptyValue,
+  FactList,
+  LoadError,
+  Money,
+  Phone,
+  StatusTag,
+  type Fact,
+} from "../../ui";
 import { deviceKey, fetchDevice, fetchSim, simKey } from "./equipment.api";
 import { InstallationHistory, InstalledCell, PlaceCell } from "./EquipmentParts";
 
@@ -12,7 +22,7 @@ interface CardDrawerProps {
 
 function deviceFacts(card: DeviceCard): Fact[] {
   return [
-    { label: "IMEI", value: card.imei },
+    { label: "IMEI", value: <DigitsText value={card.imei} /> },
     { label: "Модель", value: card.modelName ?? <EmptyValue /> },
     { label: "Власність", value: card.ownership ? DEVICE_OWNERSHIPS[card.ownership] : <EmptyValue /> },
     { label: "Стан", value: <StatusTag status={DEVICE_STATUS_META[card.status]} /> },
@@ -24,7 +34,7 @@ function deviceFacts(card: DeviceCard): Fact[] {
 
 function simFacts(card: SimCard): Fact[] {
   return [
-    { label: "ICCID", value: card.iccid },
+    { label: "ICCID", value: <DigitsText value={card.iccid} /> },
     { label: "Номер", value: <Phone value={card.msisdn} /> },
     { label: "Оператор", value: card.operatorName ?? <EmptyValue /> },
     { label: "Тариф оператора", value: card.planName ?? <EmptyValue /> },

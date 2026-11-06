@@ -4,7 +4,7 @@ import { useMemo } from "react";
 import { useNavigate } from "react-router";
 import { listRows } from "../../lib/list-rows";
 import { useCan } from "../../lib/session";
-import { useUrlFilters } from "../../lib/url-filters";
+import { chosenCount, useUrlFilters } from "../../lib/url-filters";
 import {
   DateFilter,
   DateText,
@@ -57,6 +57,9 @@ const COLUMNS: DataTableColumn<Contract>[] = [
   { title: "Файл", key: "file", render: (_, row) => <ContractFile contract={row} /> },
 ];
 
+// The rest of the filters behind «Ще фільтри»: on a phone the list starts on the first screen (manual test 05.11.2026)
+const MORE_FILTERS = ["signedFrom", "signedTo", "subscriberId"] as const;
+
 function ContractsScreen() {
   const navigate = useNavigate();
   const { filters, hasFilters, setFilter, resetFilters } = useUrlFilters(CONTRACT_FILTER_KEYS);
@@ -75,7 +78,28 @@ function ContractsScreen() {
       subtitle="Договори всіх клієнтів"
       actions={<ExportButton request={{ entity: "contracts", filters }} />}
       filters={
-        <FilterBar hasFilters={hasFilters} onReset={resetFilters}>
+        <FilterBar
+          hasFilters={hasFilters}
+          onReset={resetFilters}
+          moreChosen={chosenCount(filters, MORE_FILTERS)}
+          more={
+            <>
+              <DateFilter
+                label="Підписано від"
+                value={filters.signedFrom}
+                max={filters.signedTo}
+                onChange={(value) => setFilter("signedFrom", value)}
+              />
+              <DateFilter
+                label="Підписано до"
+                value={filters.signedTo}
+                min={filters.signedFrom}
+                onChange={(value) => setFilter("signedTo", value)}
+              />
+              <SubscriberFilter value={filters.subscriberId} onChange={(value) => setFilter("subscriberId", value)} />
+            </>
+          }
+        >
           <SearchField
             label="Пошук"
             placeholder="Номер, клієнт, ID, платник, ЄДРПОУ"
@@ -94,19 +118,6 @@ function ContractsScreen() {
             options={EXPIRING_OPTIONS}
             onChange={(value) => setFilter("expiring", value)}
           />
-          <DateFilter
-            label="Підписано від"
-            value={filters.signedFrom}
-            max={filters.signedTo}
-            onChange={(value) => setFilter("signedFrom", value)}
-          />
-          <DateFilter
-            label="Підписано до"
-            value={filters.signedTo}
-            min={filters.signedFrom}
-            onChange={(value) => setFilter("signedTo", value)}
-          />
-          <SubscriberFilter value={filters.subscriberId} onChange={(value) => setFilter("subscriberId", value)} />
         </FilterBar>
       }
       table={{
@@ -114,7 +125,7 @@ function ContractsScreen() {
         columns: COLUMNS,
         rowKey: "id",
         error: pages.error,
-        empty: hasFilters ? <NothingFound onReset={resetFilters} /> : "Договорів ще немає",
+        empty: hasFilters ? <NothingFound onReset={resetFilters} q={filters.q} /> : "Договорів ще немає",
         onRetry: () => void pages.refetch(),
         hasMore: pages.hasNextPage && !pages.isPlaceholderData,
         isLoadingMore: pages.isFetchingNextPage,

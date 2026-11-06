@@ -1,3 +1,4 @@
+import { searchTooShortText } from "@gps_crm/shared";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { Select } from "antd";
 import { useMemo, useState } from "react";
@@ -23,13 +24,15 @@ interface RemoteSelectProps {
   chosenLabel?: string;
   className?: string;
   allowClear?: boolean;
+  // Records the server would refuse anyway, such as a payer already linked to this client
+  excludeIds?: readonly string[];
   search: (text: string, signal: AbortSignal) => Promise<RemoteOption[]>;
   onChange?: (value: string | undefined) => void;
 }
 
 // The server does the search: a list of a million does not come to the browser (05-ui-standard.md §5.2)
 export function RemoteSelect(props: RemoteSelectProps) {
-  const { name, value, chosenLabel, search, ...select } = props;
+  const { name, value, chosenLabel, excludeIds, search, ...select } = props;
   const [text, setText] = useState("");
   const settled = useDebouncedValue(text.trim());
   const found = useQuery({
@@ -38,10 +41,10 @@ export function RemoteSelect(props: RemoteSelectProps) {
     placeholderData: keepPreviousData,
   });
   const options = useMemo(() => {
-    const rows = found.data ?? [];
+    const rows = (found.data ?? []).filter((row) => !excludeIds?.includes(row.value));
     const isShown = !value || !chosenLabel || rows.some((row) => row.value === value);
     return isShown ? rows : [{ value, label: chosenLabel }, ...rows];
-  }, [found.data, value, chosenLabel]);
+  }, [found.data, value, chosenLabel, excludeIds]);
 
   return (
     <Select
@@ -51,7 +54,7 @@ export function RemoteSelect(props: RemoteSelectProps) {
       placeholder={PLACEHOLDER}
       loading={found.isFetching}
       status={found.isError ? "error" : undefined}
-      notFoundContent={found.isError ? LOAD_FAILED : NOTHING_FOUND}
+      notFoundContent={found.isError ? LOAD_FAILED : (searchTooShortText(text) ?? NOTHING_FOUND)}
       popupMatchSelectWidth={false}
       showSearch={{ filterOption: false, onSearch: setText }}
       onChange={(next: string | undefined) => props.onChange?.(next)}

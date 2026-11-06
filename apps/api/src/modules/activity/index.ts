@@ -1,6 +1,7 @@
 export { ACTIVITY_PARTITIONS_JOB } from "./activity.jobs.js";
 export { registerActivityRoutes } from "./activity.routes.js";
 export {
+  CARD_VIEW,
   dropArchiveBatches,
   listActivity,
   lockOpenBatches,

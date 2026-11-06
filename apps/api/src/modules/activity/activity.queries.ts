@@ -2,12 +2,16 @@ import {
   ACTIVITY_ENTITY_LABEL_FIELD,
   decodeActivityCursor,
   encodeActivityCursor,
+  FILE_READ_ACTIONS,
+  PACKAGE_ITEM_ACTIONS,
+  PACKAGE_ITEMS_MAX,
   type ActivityActorList,
   type ActivityEvent,
   type ActivityList,
   type ActivityListQuery,
   type ArchiveList,
   type ArchiveListQuery,
+  type PackageAction,
 } from "@gps_crm/shared";
 import { Prisma } from "../../generated/prisma/client.js";
 import type { RecordScope } from "../../core/access/access.js";
@@ -31,14 +35,24 @@ interface EventRow {
   requestId: string | null;
 }
 
-function conditionsOf(query: ActivityListQuery, scope: RecordScope): Prisma.Sql[] {
-  const conditions: Prisma.Sql[] = [];
-  // The level `own`: an event with no client (sign-ins, the reference lists) is nobody's own
-  if (scope.managerId) {
-    conditions.push(
-      Prisma.sql`e.subscriber_id IN (SELECT id FROM subscribers WHERE manager_id = ${scope.managerId}::uuid)`,
-    );
+export interface ActivityView {
+  // D92: a card and the home page, where a look at a file is no news
+  hidesFileReads?: boolean;
+}
+
+// The level `own`: an event with no client (sign-ins, the reference lists) is nobody's own
+function scopeConditions(scope: RecordScope): Prisma.Sql[] {
+  if (!scope.managerId) return [];
+  return [Prisma.sql`e.subscriber_id IN (SELECT id FROM subscribers WHERE manager_id = ${scope.managerId}::uuid)`];
+}
+
+function conditionsOf(query: ActivityListQuery, scope: RecordScope, view: ActivityView): Prisma.Sql[] {
+  const conditions = scopeConditions(scope);
+  // D92: the line of a package stands for its records, unless the person looks for an action or a record as such
+  if (!query.action && !query.entityType && !query.entityId) {
+    conditions.push(Prisma.sql`e.action NOT IN (${Prisma.join([...PACKAGE_ITEM_ACTIONS])})`);
   }
+  if (view.hidesFileReads) conditions.push(Prisma.sql`e.action NOT IN (${Prisma.join([...FILE_READ_ACTIONS])})`);
   if (query.from) conditions.push(Prisma.sql`e.occurred_at >= ${query.from}::timestamptz`);
   if (query.to) conditions.push(Prisma.sql`e.occurred_at < ${query.to}::timestamptz`);
   if (query.actorId) conditions.push(Prisma.sql`e.actor_id = ${query.actorId}::uuid`);
@@ -84,29 +98,43 @@ function toEvent(row: EventRow): ActivityEvent {
   };
 }
 
+const EVENT_COLUMNS = Prisma.sql`
+  e.id::text AS id,
+  e.occurred_at AS "occurredAt",
+  to_char(e.occurred_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') AS "cursorAt",
+  e.actor_kind::text AS "actorKind",
+  actor.full_name AS "actorName",
+  e.action,
+  e.entity_type AS "entityType",
+  e.entity_id::text AS "entityId",
+  COALESCE(target.full_name, e.changes ->> ${ACTIVITY_ENTITY_LABEL_FIELD}) AS "entityLabel",
+  e.changes AS payload,
+  e.ip,
+  e.request_id AS "requestId"
+`;
+
+const EVENT_PEOPLE = Prisma.sql`
+  LEFT JOIN users actor ON actor.id = e.actor_id
+  LEFT JOIN users target ON e.entity_type = 'user' AND target.id = e.entity_id
+`;
+
+function whereOf(conditions: Prisma.Sql[]): Prisma.Sql {
+  return conditions.length > 0 ? Prisma.sql`WHERE ${Prisma.join(conditions, " AND ")}` : Prisma.empty;
+}
+
 // Newest first on the primary key, walked backwards. A count is left out on purpose: a long period would have to read
 // every partition in it (activity.md §11).
-export async function listActivity(db: DbOrTx, query: ActivityListQuery, scope: RecordScope): Promise<ActivityList> {
-  const conditions = conditionsOf(query, scope);
-  const where = conditions.length > 0 ? Prisma.sql`WHERE ${Prisma.join(conditions, " AND ")}` : Prisma.empty;
+export async function listActivity(
+  db: DbOrTx,
+  query: ActivityListQuery,
+  scope: RecordScope,
+  view: ActivityView = {},
+): Promise<ActivityList> {
   const rows = await db.$queryRaw<EventRow[]>`
-    SELECT
-      e.id::text AS id,
-      e.occurred_at AS "occurredAt",
-      to_char(e.occurred_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') AS "cursorAt",
-      e.actor_kind::text AS "actorKind",
-      actor.full_name AS "actorName",
-      e.action,
-      e.entity_type AS "entityType",
-      e.entity_id::text AS "entityId",
-      COALESCE(target.full_name, e.changes ->> ${ACTIVITY_ENTITY_LABEL_FIELD}) AS "entityLabel",
-      e.changes AS payload,
-      e.ip,
-      e.request_id AS "requestId"
+    SELECT ${EVENT_COLUMNS}
     FROM activity_events e
-    LEFT JOIN users actor ON actor.id = e.actor_id
-    LEFT JOIN users target ON e.entity_type = 'user' AND target.id = e.entity_id
-    ${where}
+    ${EVENT_PEOPLE}
+    ${whereOf(conditionsOf(query, scope, view))}
     ORDER BY e.occurred_at DESC, e.id DESC
     LIMIT ${query.limit + 1}
   `;
@@ -117,6 +145,49 @@ export async function listActivity(db: DbOrTx, query: ActivityListQuery, scope: 
     nextCursor:
       rows.length > query.limit && last ? encodeActivityCursor({ occurredAt: last.cursorAt, id: last.id }) : null,
   };
+}
+
+// D92: the package and its records write their lines in one request and one transaction, which Prisma ends within
+// seconds, around the moment the batch keeps. Minutes either side of that moment, passed as values, let both reads prune
+// to its partition; the request then tells the lines of this package from the rest of those minutes.
+const PACKAGE_WINDOW_MS = 5 * 60_000;
+
+export async function listPackageItems(
+  db: DbOrTx,
+  batchId: string,
+  action: PackageAction,
+  scope: RecordScope,
+): Promise<ActivityList> {
+  const batch = await db.archiveBatch.findUnique({
+    where: { id: batchId },
+    select: { archivedAt: true, restoredAt: true },
+  });
+  const moment = action === "record.archived" ? batch?.archivedAt : batch?.restoredAt;
+  if (!moment) return { items: [], nextCursor: null };
+  const from = new Date(moment.getTime() - PACKAGE_WINDOW_MS).toISOString();
+  const to = new Date(moment.getTime() + PACKAGE_WINDOW_MS).toISOString();
+  const inWindow = (alias: Prisma.Sql) =>
+    Prisma.sql`${alias}.occurred_at > ${from}::timestamptz AND ${alias}.occurred_at < ${to}::timestamptz`;
+  const conditions = [
+    inWindow(Prisma.raw("e")),
+    Prisma.sql`e.request_id = (
+      SELECT p.request_id FROM activity_events p
+      WHERE ${inWindow(Prisma.raw("p"))} AND p.entity_id = ${batchId}::uuid AND p.action = ${action}
+      ORDER BY p.occurred_at DESC, p.id DESC
+      LIMIT 1
+    )`,
+    Prisma.sql`e.action IN (${Prisma.join([...PACKAGE_ITEM_ACTIONS])})`,
+    ...scopeConditions(scope),
+  ];
+  const rows = await db.$queryRaw<EventRow[]>`
+    SELECT ${EVENT_COLUMNS}
+    FROM activity_events e
+    ${EVENT_PEOPLE}
+    ${whereOf(conditions)}
+    ORDER BY e.occurred_at, e.id
+    LIMIT ${PACKAGE_ITEMS_MAX}
+  `;
+  return { items: rows.map(toEvent), nextCursor: null };
 }
 
 export async function listActivityActors(db: DbOrTx): Promise<ActivityActorList> {

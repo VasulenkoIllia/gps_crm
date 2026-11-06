@@ -405,14 +405,18 @@ model Tariff {
   isActive       Boolean      @default(true) @map("is_active")
   // Set while deactivated: the package of the archive that brings the record back (references.md П4)
   archiveBatchId String?      @map("archive_batch_id") @db.Uuid
+  // The tariff «Нова версія тарифу» made this one from; none on a tariff made before the link (D88)
+  basedOnId      String?      @map("based_on_id") @db.Uuid
   version        Int          @default(1)
   createdAt      DateTime     @default(now()) @map("created_at") @db.Timestamptz
   createdBy      String?      @map("created_by") @db.Uuid
   updatedAt      DateTime     @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
   updatedBy      String?      @map("updated_by") @db.Uuid
 
-  program Program          @relation(fields: [programId], references: [id], onDelete: Restrict)
-  server  MonitoringServer @relation(fields: [serverId, programId], references: [id, programId], onDelete: Restrict, onUpdate: Restrict)
+  program  Program          @relation(fields: [programId], references: [id], onDelete: Restrict)
+  server   MonitoringServer @relation(fields: [serverId, programId], references: [id, programId], onDelete: Restrict, onUpdate: Restrict)
+  basedOn  Tariff?          @relation("TariffVersions", fields: [basedOnId], references: [id], onDelete: SetNull)
+  versions Tariff[]         @relation("TariffVersions")
 
   subscribers       Subscriber[]
   subscriberPeriods SubscriberTariffPeriod[]
@@ -426,6 +430,7 @@ model Tariff {
   @@unique([id, serverId, programId])
   @@index([programId, serverId, nameNorm, billingModel, id])
   @@index([archiveBatchId])
+  @@index([basedOnId])
   @@map("tariffs")
 }
 
@@ -680,6 +685,8 @@ model Subscriber {
   // here, and on a million clients a join with the history would cost every page (D60)
   programId           String           @map("program_id") @db.Uuid
   tariffId            String           @map("tariff_id") @db.Uuid
+  // The day that tariff takes over (D91): later than today, the list marks the tariff as planned
+  tariffFrom          DateTime         @map("tariff_from") @db.Date
   status              SubscriberStatus @default(disconnected)
   objectsActive       Int              @default(0) @map("objects_active")
   objectsSuspended    Int              @default(0) @map("objects_suspended")
@@ -947,6 +954,9 @@ model MonitoredObject {
   programId          String       @map("program_id") @db.Uuid
   serverId           String       @map("server_id") @db.Uuid
   hasOwnTariff       Boolean      @default(false) @map("has_own_tariff")
+  // The day the object takes its tariff of its own, or the client's (D91). On the client's, the list takes the later of
+  // this day and the client's own `tariff_from`.
+  tariffFrom         DateTime     @map("tariff_from") @db.Date
   // Empty only on a disconnected object that went through the archive (D71)
   currentDeviceId    String?      @unique @map("current_device_id") @db.Uuid
   // Copies of the model of the current tracker and the manager of the client, for the filters of the list and the own

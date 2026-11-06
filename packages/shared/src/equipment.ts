@@ -21,9 +21,11 @@ const ICCID_DIGITS = /^\d{19,20}$/;
 const LUHN_BASE = 10;
 const LUHN_DOUBLED_MAX = 9;
 
+// One pair of words for where a thing is, the same for a tracker and a SIM (manual test 05.11.2026). A removed
+// tracker and a free SIM are the stock: no state of a warehouse of their own until that module (П13).
 export const DEVICE_STATUS_META = {
-  installed: { label: "Встановлено", tone: "good" },
-  removed: { label: "Знято", tone: "neutral" },
+  installed: { label: "На об'єкті", tone: "good" },
+  removed: { label: "На складі", tone: "neutral" },
   repair: { label: "Ремонт", tone: "warning" },
   written_off: { label: "Списано", tone: "critical" },
 } as const satisfies Record<string, StatusMeta>;
@@ -31,9 +33,9 @@ export type DeviceStatus = keyof typeof DEVICE_STATUS_META;
 const DEVICE_STATUS_KEYS = Object.keys(DEVICE_STATUS_META) as DeviceStatus[];
 
 export const SIM_STATUS_META = {
-  active: { label: "Активна", tone: "good" },
+  active: { label: "У трекері", tone: "good" },
   blocked: { label: "Заблокована", tone: "critical" },
-  free: { label: "Вільна", tone: "neutral" },
+  free: { label: "На складі", tone: "neutral" },
 } as const satisfies Record<string, StatusMeta>;
 export type SimStatus = keyof typeof SIM_STATUS_META;
 const SIM_STATUS_KEYS = Object.keys(SIM_STATUS_META) as SimStatus[];
@@ -43,6 +45,15 @@ export type DeviceOwnership = keyof typeof DEVICE_OWNERSHIPS;
 const OWNERSHIP_KEYS = Object.keys(DEVICE_OWNERSHIPS) as DeviceOwnership[];
 
 // equipment.md §11: a number is read off a sticker, with whatever spaces and dashes it has there
+// П12: the states a person may choose by hand, by the same rule the server keeps
+export function deviceStatesFor(isOnObject: boolean): DeviceStatus[] {
+  return isOnObject ? ["installed"] : DEVICE_STATUS_KEYS.filter((status) => status !== "installed");
+}
+
+export function simStatesFor(isInTracker: boolean): SimStatus[] {
+  return isInTracker ? ["active", "blocked"] : ["free", "blocked"];
+}
+
 export function normalizeNumber(text: string): string {
   return text.replace(SEPARATORS, "");
 }
@@ -237,7 +248,15 @@ const placeSchema = z.strictObject({
 });
 export type EquipmentPlace = z.infer<typeof placeSchema>;
 
-const rowFields = { id: z.string(), version: z.number(), note: z.string().nullable(), isArchived: z.boolean() };
+const rowFields = {
+  id: z.string(),
+  version: z.number(),
+  note: z.string().nullable(),
+  isArchived: z.boolean(),
+  // Stood on an object at least once: only the archive then, no deletion (П5). The lists say it; a choice of a form
+  // does not need it.
+  hasHistory: z.boolean().optional(),
+};
 
 const deviceRowSchema = z.strictObject({
   ...rowFields,

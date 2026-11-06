@@ -130,3 +130,12 @@ export function addAddonPrice(id: string, input: DatedPrice): Promise<void> {
 export function addCostPrice(input: CostPriceInput): Promise<void> {
   return apiSend("POST", "/references/cost-prices", input);
 }
+
+// Only a planned one: the API refuses a price in force (D87)
+export function removeAddonPrice(priceId: string): Promise<void> {
+  return apiSend("DELETE", `/references/addon-prices/${priceId}`);
+}
+
+export function removeCostPrice(priceId: string): Promise<void> {
+  return apiSend("DELETE", `/references/cost-prices/${priceId}`);
+}

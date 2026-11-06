@@ -124,6 +124,9 @@ export type PayerUpdate = z.infer<typeof payerUpdateSchema>;
 
 const payerClientSchema = z.strictObject({ id: z.string(), name: z.string(), code: z.number() });
 
+// The clients a payer row carries: a payer of more is a rare thing, and the list says «і ще» past it (D90)
+export const PAYER_CLIENTS_MAX = 30;
+
 const payerSchema = z.strictObject({
   id: z.string(),
   version: z.number(),

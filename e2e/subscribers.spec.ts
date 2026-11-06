@@ -2,11 +2,14 @@ import { addDays, firstOfNextMonth, todayKyiv } from "@gps_crm/shared";
 import { expect, test, type Page, type Request } from "@playwright/test";
 import {
   ADMIN_SESSION_FILE,
+  cardAction,
   createClient,
   expectNoSidewaysScroll,
   PHONE,
   pick,
   pressInForm,
+  openPageTab,
+  pageTabs,
   rowAction,
   save,
   typeDate,
@@ -37,7 +40,7 @@ async function openCard(page: Page, name: string): Promise<void> {
 }
 
 async function openTab(page: Page, tab: string): Promise<void> {
-  await page.getByRole("tab", { name: tab }).click();
+  await openPageTab(page, tab);
 }
 
 async function searchList(page: Page, text: string): Promise<void> {
@@ -136,7 +139,7 @@ test.describe.serial("the clients", () => {
 
   test("an ID changed by hand stands in the journal, and the old one is free again", async ({ page }) => {
     await openCard(page, COMPANY);
-    await page.getByRole("button", { name: "Змінити ID" }).click();
+    await cardAction(page, COMPANY, "Змінити ID");
     const form = page.getByRole("dialog");
     await form.getByLabel("Новий ID").fill("10000");
     await expect(form.getByText("ID уже використовує клієнт", { exact: false })).toBeVisible();
@@ -145,7 +148,7 @@ test.describe.serial("the clients", () => {
     await save(page);
     await expect(page.getByText(FREE_CODE, { exact: true })).toBeVisible();
 
-    await openTab(page, "Журнал змін");
+    await openTab(page, "Журнал дій");
     await expect(page.getByRole("row", { name: /Новий клієнт/ })).toBeVisible();
     await page
       .getByRole("row", { name: /Зміна ID клієнта/ })
@@ -169,9 +172,18 @@ test.describe.serial("the clients", () => {
 
     await expect(page.getByText("Тариф 1, Сервер 1", { exact: false })).toBeVisible();
     await page.getByRole("button", { name: "Змінити тариф" }).click();
-    await expect(page.getByRole("dialog").getByText("Попередні версії")).toBeVisible();
+    // П3: the one in force now and the planned one, each under its own word
+    await expect(page.getByRole("dialog").getByText("Зараз", { exact: true })).toBeVisible();
     await expect(page.getByRole("dialog").getByText("Тариф 1 2027", { exact: false })).toBeVisible();
+    await expect(page.getByRole("dialog").getByText("Заплановано", { exact: true })).toBeVisible();
     await page.getByRole("dialog").getByRole("button", { name: "Скасувати" }).click();
+
+    // D91: the list shows the newest version, with the day it takes over
+    await page.goto("/subscribers");
+    await page.getByLabel("Пошук", { exact: true }).fill(PERSON);
+    await expect(page.getByRole("row", { name: new RegExp(PERSON) })).toContainText(
+      `з ${shownDate(firstOfNextMonth(todayKyiv()))}`,
+    );
   });
 
   test("a second contact takes over as the primary one", async ({ page }) => {
@@ -214,7 +226,7 @@ test.describe.serial("the clients", () => {
 
     await page.getByRole("button", { name: "Додати платника" }).click();
     await form.getByLabel("Назва або ПІБ").fill("Платник 3");
-    await pick(page, "Форма оплати", "Рахунок");
+    await pick(page, "Спосіб оплати", "Рахунок");
     await form.getByLabel("Повна назва юрособи").fill("Платник 3 повна назва");
     let sent = 0;
     const countSent = (request: Request) => {
@@ -226,7 +238,7 @@ test.describe.serial("the clients", () => {
     page.off("request", countSent);
     expect(sent).toBe(0);
 
-    await pick(page, "Форма оплати", "IBAN-реквізити");
+    await pick(page, "Спосіб оплати", "IBAN-реквізити");
     await form.getByLabel("Куди надсилати реквізити: телефон або пошта").fill("pay@example.test");
     await save(page);
     await expect(page.getByRole("heading", { name: "Платник 3", exact: true })).toBeVisible();
@@ -234,6 +246,13 @@ test.describe.serial("the clients", () => {
     await openCard(page, COMPANY);
     await openTab(page, "Платники");
     await expect(page.getByRole("link", { name: SECOND_COMPANY })).toBeVisible();
+
+    // D90: the list of payers finds one by its code and names every client it pays for
+    await page.goto("/payers");
+    await page.getByLabel("Пошук", { exact: true }).fill(EDRPOU);
+    const row = page.getByRole("row", { name: new RegExp(EDRPOU) });
+    await expect(row.getByRole("link", { name: COMPANY, exact: true })).toBeVisible();
+    await expect(row.getByRole("link", { name: SECOND_COMPANY, exact: true })).toBeVisible();
   });
 
   test("a contract with a file shows in the list as running out", async ({ page }) => {
@@ -272,7 +291,7 @@ test.describe.serial("the clients", () => {
 
   test("a client goes to the archive with what is theirs, and comes back as a package", async ({ page }) => {
     await openCard(page, STATE_CLIENT);
-    await rowAction(page, STATE_CLIENT, "Архівувати");
+    await cardAction(page, STATE_CLIENT, "Архівувати");
     await page.getByRole("dialog").getByRole("button", { name: "Архівувати" }).click();
     await expect(page.getByText("В архіві", { exact: true }).first()).toBeVisible();
     await expect(page.getByRole("button", { name: "Змінити", exact: true })).toHaveCount(0);
@@ -306,9 +325,9 @@ test.describe.serial("the clients", () => {
       .getByRole("row", { name: new RegExp(COMPANY) })
       .first()
       .click();
-    await expect(page.getByRole("tab", { name: "Контакти" })).toBeVisible();
+    await expect(pageTabs(page, "Контакти")).toBeVisible();
     await expectNoSidewaysScroll(page);
-    for (const tab of ["Контакти", "Платники", "Договори", "Журнал змін"]) {
+    for (const tab of ["Контакти", "Платники", "Договори", "Журнал дій"]) {
       await openTab(page, tab);
       await expectNoSidewaysScroll(page);
     }
