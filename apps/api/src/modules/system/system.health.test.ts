@@ -102,7 +102,7 @@ describe("the state of a job (П2)", () => {
   const limit = 3 * DAY_MS;
 
   it("is green after a recent success", () => {
-    expect(jobVerdict(healthy, limit, NOW).state).toBe("good");
+    expect(jobVerdict(healthy, limit, NOW)).toMatchObject({ state: "good", label: "Справна" });
   });
 
   it("is red after a failure, however recent the last success", () => {

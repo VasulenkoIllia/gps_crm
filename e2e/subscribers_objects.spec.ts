@@ -2,11 +2,14 @@ import { addDays, firstOfNextMonth, todayKyiv } from "@gps_crm/shared";
 import { expect, test, type Page } from "@playwright/test";
 import {
   ADMIN_SESSION_FILE,
+  cardAction,
   createClient,
   expectNoSidewaysScroll,
   PHONE,
   pick,
   pressInForm,
+  openPageTab,
+  pageTabs,
   rowAction,
   save,
   TABLET,
@@ -85,7 +88,7 @@ test.describe.serial("the objects and the equipment", () => {
     await pick(page, "Модель", MODEL);
     await pick(page, "Власність", "Оренда");
     await save(page);
-    await expect(page.getByRole("row", { name: new RegExp(IMEI) })).toContainText("Знято");
+    await expect(page.getByRole("row", { name: new RegExp(IMEI) })).toContainText("На складі");
 
     await page.getByRole("button", { name: "Новий трекер" }).click();
     await form.getByLabel("IMEI").fill(IMEI);
@@ -174,7 +177,7 @@ test.describe.serial("the objects and the equipment", () => {
   test("an object goes on a tariff of its own, and the card keeps the version", async ({ page }) => {
     await openObject(page, OBJECT);
     await expect(page.getByRole("main")).toContainText("(тариф клієнта)");
-    await page.getByRole("button", { name: "Тариф об'єкта" }).click();
+    await page.getByRole("button", { name: "Змінити тариф" }).click();
     await page.getByRole("dialog").getByText("Свій тариф", { exact: true }).click();
     await pick(page, "Програма", PROGRAM);
     await pick(page, "Тариф", OTHER_TARIFF);
@@ -187,11 +190,16 @@ test.describe.serial("the objects and the equipment", () => {
     await expect(
       page.getByRole("row", { name: new RegExp(`Тариф 1.*${shownDate(firstOfNextMonth(TODAY))}`) }),
     ).toBeVisible();
+
+    await page.goto("/objects");
+    const row = page.getByRole("row", { name: new RegExp(OBJECT) });
+    await expect(row).toContainText("Тариф 1 (свій)");
+    await expect(row).toContainText(`з ${shownDate(firstOfNextMonth(TODAY))}`);
   });
 
   test("a new tracker takes over the SIM, and the old one stays in the history", async ({ page }) => {
     await openObject(page, OBJECT);
-    await page.getByRole("button", { name: "Замінити трекер" }).click();
+    await cardAction(page, OBJECT, "Замінити трекер");
     const form = page.getByRole("dialog");
     await form.getByLabel("IMEI").fill(NEW_IMEI);
     await pick(page, "Модель", MODEL);
@@ -208,7 +216,7 @@ test.describe.serial("the objects and the equipment", () => {
     await expect(page.getByRole("row", { name: new RegExp(NEW_IMEI) }).first()).toBeVisible();
 
     await page.goto("/equipment");
-    await expect(page.getByRole("row", { name: new RegExp(IMEI) })).toContainText("Знято");
+    await expect(page.getByRole("row", { name: new RegExp(IMEI) })).toContainText("На складі");
     await page.getByRole("button", { name: IMEI, exact: true }).click();
     const card = page.getByRole("dialog");
     await expect(card.getByRole("row", { name: new RegExp(OBJECT) })).toContainText(shownDate(WEEK_AGO));
@@ -227,7 +235,7 @@ test.describe.serial("the objects and the equipment", () => {
     await save(page);
     await expect(page.getByRole("row", { name: new RegExp(SENSOR) })).toBeVisible();
     await rowAction(page, `Датчик ${SENSOR}`, "Зняти");
-    await save(page);
+    await save(page, "Зняти");
     await expect(page.getByRole("row", { name: new RegExp(SENSOR) })).toHaveCount(0);
   });
 
@@ -235,7 +243,7 @@ test.describe.serial("the objects and the equipment", () => {
     await page.goto("/subscribers");
     await page.getByLabel("Пошук", { exact: true }).fill(CLIENT);
     await page.getByRole("row", { name: new RegExp(CLIENT) }).click();
-    await rowAction(page, CLIENT, "Архівувати");
+    await cardAction(page, CLIENT, "Архівувати");
     await page.getByRole("dialog").getByRole("button", { name: "Архівувати" }).click();
     await expect(page.getByText(/об'єкт/).first()).toBeVisible();
   });
@@ -244,18 +252,20 @@ test.describe.serial("the objects and the equipment", () => {
     await openObject(page, OBJECT);
     await changeStatus(page, "Відключений", TODAY, REASON);
     await expect(page.getByRole("main")).toContainText(REASON);
-    await rowAction(page, OBJECT, "Архівувати");
+    // A disconnected object: «Змінити статус» and «Архівувати» stand as buttons, «Видалити» waits under «Ще»
+    await page.getByRole("main").getByRole("button", { name: "Архівувати", exact: true }).click();
     await page.getByRole("dialog").getByRole("button", { name: "Архівувати" }).click();
     await expect(page.getByRole("main")).toContainText("В архіві");
 
     await page.goto("/equipment");
-    await expect(page.getByRole("row", { name: new RegExp(NEW_IMEI) })).toContainText("Знято");
+    await expect(page.getByRole("row", { name: new RegExp(NEW_IMEI) })).toContainText("На складі");
 
     await page.goto("/archive");
     await expect(page.getByRole("row", { name: new RegExp(OBJECT) })).toBeVisible();
     await page.goto("/objects?archived=true");
     await page.getByRole("row", { name: new RegExp(OBJECT) }).click();
-    await rowAction(page, OBJECT, "Відновити");
+    // The only action of an archived object stands as a button
+    await page.getByRole("main").getByRole("button", { name: "Відновити", exact: true }).click();
     await page.getByRole("dialog").getByRole("button", { name: "Відновити" }).click();
     await expect(page.getByRole("button", { name: "Встановити трекер" })).toBeVisible();
     await expect(page.getByRole("button", { name: "Змінити статус" })).toHaveCount(0);
@@ -289,7 +299,7 @@ test.describe.serial("the objects and the equipment", () => {
     await page.getByLabel("Пошук", { exact: true }).fill(SECOND_OBJECT);
     await page.getByRole("row", { name: new RegExp(SECOND_OBJECT) }).click();
     await expect(page.getByRole("heading", { name: SECOND_OBJECT, exact: true })).toBeVisible();
-    await rowAction(page, SECOND_OBJECT, "Видалити");
+    await cardAction(page, SECOND_OBJECT, "Видалити");
     await page.getByRole("dialog").getByRole("button", { name: "Видалити" }).click();
     await expect(page.getByRole("heading", { name: "Об'єкти" })).toBeVisible();
     await expect(page.getByRole("row", { name: new RegExp(SECOND_OBJECT) })).toHaveCount(0);
@@ -311,16 +321,16 @@ test.describe.serial("the objects and the equipment", () => {
       await page.getByRole("dialog").getByRole("button", { name: "Скасувати" }).click();
 
       await page.getByRole("row", { name: new RegExp(OBJECT) }).click();
-      await expect(page.getByRole("tab", { name: "Обладнання" })).toBeVisible();
-      for (const tab of ["Обладнання", "Послуги", "Історія", "Журнал змін"]) {
-        await page.getByRole("tab", { name: tab }).click();
+      await expect(pageTabs(page, "Обладнання")).toBeVisible();
+      for (const tab of ["Обладнання", "Послуги", "Історія", "Журнал дій"]) {
+        await openPageTab(page, tab);
         await expectNoSidewaysScroll(page);
       }
 
       await page.goto("/equipment");
       await expect(page.getByRole("cell").first()).toBeVisible();
       for (const tab of ["Трекери", "SIM-картки", "Датчики"]) {
-        await page.getByRole("tab", { name: tab }).click();
+        await openPageTab(page, tab);
         await expectNoSidewaysScroll(page);
       }
     });

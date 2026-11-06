@@ -1,3 +1,4 @@
+import { chosenCount } from "../../lib/url-filters";
 import { ACTIVITY_ACTIONS, ACTIVITY_ENTITY_TYPES, activityEntityIdSchema } from "@gps_crm/shared";
 import { useQuery } from "@tanstack/react-query";
 import { Input } from "antd";
@@ -58,6 +59,9 @@ function EntityIdFilter({
   );
 }
 
+// The rest of the filters behind «Ще фільтри»: on a phone the list starts on the first screen (manual test 05.11.2026)
+const MORE_FILTERS = ["subscriberId", "entityType", "entityId"] as const;
+
 interface ActivityFiltersProps {
   filters: Filters;
   hasFilters: boolean;
@@ -73,7 +77,23 @@ export function ActivityFilters({ filters, hasFilters, onChange, onReset }: Acti
   );
 
   return (
-    <FilterBar hasFilters={hasFilters} onReset={onReset}>
+    <FilterBar
+      hasFilters={hasFilters}
+      onReset={onReset}
+      moreChosen={chosenCount(filters, MORE_FILTERS)}
+      more={
+        <>
+          <SubscriberFilter value={filters.subscriberId} onChange={(value) => onChange("subscriberId", value)} />
+          <FilterSelect
+            label="Вид запису"
+            value={filters.entityType}
+            options={ENTITY_OPTIONS}
+            onChange={(value) => onChange("entityType", value)}
+          />
+          <EntityIdFilter value={filters.entityId} onChange={(value) => onChange("entityId", value)} />
+        </>
+      }
+    >
       <DateFilter label="Від" value={filters.from} max={filters.to} onChange={(value) => onChange("from", value)} />
       <DateFilter label="До" value={filters.to} min={filters.from} onChange={(value) => onChange("to", value)} />
       <FilterSelect
@@ -84,20 +104,12 @@ export function ActivityFilters({ filters, hasFilters, onChange, onReset }: Acti
         hasError={actors.isError}
         onChange={(value) => onChange("actorId", value)}
       />
-      <SubscriberFilter value={filters.subscriberId} onChange={(value) => onChange("subscriberId", value)} />
       <FilterSelect
         label="Дія"
         value={filters.action}
         options={ACTION_OPTIONS}
         onChange={(value) => onChange("action", value)}
       />
-      <FilterSelect
-        label="Вид запису"
-        value={filters.entityType}
-        options={ENTITY_OPTIONS}
-        onChange={(value) => onChange("entityType", value)}
-      />
-      <EntityIdFilter value={filters.entityId} onChange={(value) => onChange("entityId", value)} />
     </FilterBar>
   );
 }

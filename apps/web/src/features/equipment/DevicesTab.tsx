@@ -1,9 +1,11 @@
 import { ARCHIVED_STATUS_META, DEVICE_STATUS_META, type DeviceRow } from "@gps_crm/shared";
 import { Button } from "antd";
 import { useCallback, useMemo, useState } from "react";
-import { useUrlFilters } from "../../lib/url-filters";
+import { chosenCount, useUrlFilters } from "../../lib/url-filters";
 import {
+  ARCHIVE_FILTER,
   DataTable,
+  DigitsText,
   EmptyValue,
   FilterBar,
   FilterSelect,
@@ -16,7 +18,7 @@ import { useReferenceOptions } from "../references/references.api";
 import { DEVICE_FILTER_KEYS, fetchDevices, type DeviceFilters } from "./equipment.api";
 import { DeviceDrawer } from "./EquipmentCards";
 import { DeviceForm } from "./EquipmentForms";
-import { ARCHIVE_OPTIONS, InstalledCell, PlaceCell } from "./EquipmentParts";
+import { InstalledCell, PlaceCell } from "./EquipmentParts";
 import type { EquipmentTabProps } from "./equipment-tab";
 import { useEquipmentRows } from "./useEquipmentRows";
 
@@ -30,7 +32,7 @@ function columnsOf(onOpen: (id: string) => void): DataTableColumn<DeviceRow>[] {
       key: "imei",
       render: (_, row) => (
         <Button type="link" className="table-link" onClick={() => onOpen(row.id)}>
-          {row.imei}
+          <DigitsText value={row.imei} />
         </Button>
       ),
     },
@@ -52,11 +54,37 @@ interface DeviceFiltersBarProps {
   onReset: () => void;
 }
 
+// The rest of the filters behind «Ще фільтри»: on a phone the list starts on the first screen (manual test 05.11.2026)
+const MORE_FILTERS = ["contractorId", "archived"] as const;
+
 function DeviceFiltersBar({ filters, hasFilters, onChange, onReset }: DeviceFiltersBarProps) {
   const models = useReferenceOptions("tracker-models", true);
   const contractors = useReferenceOptions("contractors", true);
   return (
-    <FilterBar hasFilters={hasFilters} onReset={onReset}>
+    <FilterBar
+      hasFilters={hasFilters}
+      onReset={onReset}
+      moreChosen={chosenCount(filters, MORE_FILTERS)}
+      more={
+        <>
+          <FilterSelect
+            label="Підрядник"
+            value={filters.contractorId}
+            options={contractors.options}
+            isLoading={contractors.isLoading}
+            hasError={contractors.hasError}
+            onChange={(value) => onChange("contractorId", value)}
+          />
+          <FilterSelect
+            label="Архів"
+            value={filters.archived}
+            options={ARCHIVE_FILTER.options}
+            anyLabel={ARCHIVE_FILTER.anyLabel}
+            onChange={(value) => onChange("archived", value)}
+          />
+        </>
+      }
+    >
       <SearchField
         label="Пошук"
         placeholder="IMEI або останні цифри"
@@ -76,20 +104,6 @@ function DeviceFiltersBar({ filters, hasFilters, onChange, onReset }: DeviceFilt
         isLoading={models.isLoading}
         hasError={models.hasError}
         onChange={(value) => onChange("modelId", value)}
-      />
-      <FilterSelect
-        label="Підрядник"
-        value={filters.contractorId}
-        options={contractors.options}
-        isLoading={contractors.isLoading}
-        hasError={contractors.hasError}
-        onChange={(value) => onChange("contractorId", value)}
-      />
-      <FilterSelect
-        label="Архів"
-        value={filters.archived}
-        options={ARCHIVE_OPTIONS}
-        onChange={(value) => onChange("archived", value)}
       />
     </FilterBar>
   );
@@ -118,7 +132,7 @@ export function DevicesTab({ isAdding, onAddClosed }: EquipmentTabProps) {
       <DataTable
         {...table}
         columns={columns}
-        empty={hasFilters ? <NothingFound onReset={resetFilters} /> : "Трекерів ще немає"}
+        empty={hasFilters ? <NothingFound onReset={resetFilters} q={filters.q} /> : "Трекерів ще немає"}
         onRowClick={(row) => setOpenedId(row.id)}
       />
       <DeviceForm

@@ -1,17 +1,11 @@
-import {
-  ARCHIVED_STATUS_META,
-  BILLING_MODELS,
-  paymentFormat,
-  SUBSCRIBER_STATUS_META,
-  SUBSCRIBER_TYPES,
-  type SubscriberCard,
-} from "@gps_crm/shared";
+import { paymentFormat, subscriberStatusMeta, SUBSCRIBER_TYPES, todayKyiv, type SubscriberCard } from "@gps_crm/shared";
 import { useQuery } from "@tanstack/react-query";
-import { Button, Skeleton } from "antd";
+import { Skeleton } from "antd";
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router";
 import { useCan } from "../../lib/session";
 import {
+  CardActions,
   DateText,
   DetailPage,
   EmptyValue,
@@ -20,7 +14,6 @@ import {
   LoadError,
   Money,
   NoAccess,
-  RowActions,
   StatusTag,
   type DetailTab,
   type Fact,
@@ -38,13 +31,16 @@ import {
   restoreSubscriber,
   subscriberKey,
 } from "./subscribers.api";
+import { tariffVersionsOf, tariffVersionText } from "./subscriber-form";
 import { useConfirmedAction, type PlannedAction } from "./useConfirmedAction";
 
-type CardForm = "edit" | "tariff" | "code";
+const CARD_FORMS = ["edit", "tariff", "code"] as const;
+type CardForm = (typeof CARD_FORMS)[number];
+const isCardForm = (key: string): key is CardForm => (CARD_FORMS as readonly string[]).includes(key);
 type RecordAction = "archive" | "restore" | "delete";
 
 function factsOf(card: SubscriberCard): Fact[] {
-  const [tariff] = card.tariffHistory;
+  const { current: tariff, next } = tariffVersionsOf(card.tariffHistory, todayKyiv());
   return [
     { label: "ID", value: card.code },
     { label: "Старий номер", value: card.legacyCode ?? <EmptyValue /> },
@@ -53,14 +49,22 @@ function factsOf(card: SubscriberCard): Fact[] {
     { label: "Менеджер", value: card.managerName },
     { label: "Посилання на CRM", value: <ExternalLink href={card.crmUrl}>Відкрити</ExternalLink> },
     { label: "Програма", value: card.programName },
-    {
-      label: "Тариф",
-      value:
-        tariff && `${tariff.tariffName}, ${tariff.serverName}, ${BILLING_MODELS[tariff.billingModel].toLowerCase()}`,
-    },
+    { label: "Тариф", value: tariff ? tariffVersionText(tariff) : <EmptyValue /> },
     { label: "Ціна за тарифом", value: <Money kop={tariff?.priceKop} /> },
     { label: "Діє з", value: <DateText value={tariff?.validFrom} /> },
-    { label: "Формат оплати", value: paymentFormat(card.graceDays) },
+    ...(next
+      ? [
+          {
+            label: "Наступний тариф",
+            value: (
+              <>
+                {tariffVersionText(next)}, <Money kop={next.priceKop} /> з <DateText value={next.validFrom} />
+              </>
+            ),
+          },
+        ]
+      : []),
+    { label: "Оплата", value: paymentFormat(card.graceDays) },
     { label: "Знижка", value: <Money kop={card.discountKop} /> },
     { label: "Договір діє до", value: <DateText value={card.contractValidUntil} /> },
     {
@@ -130,7 +134,7 @@ function SubscriberView({ card }: { card: SubscriberCard }) {
     { key: "payers", label: "Платники", render: () => <PayersTab card={card} /> },
     { key: "contracts", label: "Договори", render: () => <ContractsTab card={card} /> },
     ...(canReadActivity
-      ? [{ key: "activity", label: "Журнал змін", render: () => <ClientActivityTab subscriberId={card.id} /> }]
+      ? [{ key: "activity", label: "Журнал дій", render: () => <ClientActivityTab subscriberId={card.id} /> }]
       : []),
   ];
 
@@ -140,20 +144,33 @@ function SubscriberView({ card }: { card: SubscriberCard }) {
         title={card.name}
         subtitle={
           <div className="detail-subtitle">
-            <StatusTag status={card.isArchived ? ARCHIVED_STATUS_META : SUBSCRIBER_STATUS_META[card.status]} />
+            <StatusTag
+              status={subscriberStatusMeta(
+                card.status,
+                card.objectsActive + card.objectsSuspended + card.objectsDisconnected,
+                card.isArchived,
+              )}
+            />
           </div>
         }
         actions={
-          <div className="detail-actions">
-            {canWrite && <Button onClick={() => openForm("edit")}>Змінити</Button>}
-            {canWrite && <Button onClick={() => openForm("tariff")}>Змінити тариф</Button>}
-            {canChangeCode && <Button onClick={() => openForm("code")}>Змінити ID</Button>}
-            <RowActions
-              rowName={card.name}
-              actions={recordActions}
-              onAction={(key) => confirm.ask(planFor(card, key, () => void navigate("/subscribers")))}
-            />
-          </div>
+          <CardActions<CardForm | RecordAction>
+            rowName={card.name}
+            actions={[
+              ...(canWrite
+                ? [
+                    { key: "edit" as const, label: "Змінити" },
+                    { key: "tariff" as const, label: "Змінити тариф" },
+                  ]
+                : []),
+              ...(canChangeCode ? [{ key: "code" as const, label: "Змінити ID" }] : []),
+              ...recordActions,
+            ]}
+            onAction={(key) => {
+              if (isCardForm(key)) openForm(key);
+              else confirm.ask(planFor(card, key, () => void navigate("/subscribers")));
+            }}
+          />
         }
         facts={<FactList items={factsOf(card)} />}
         tabs={tabs}

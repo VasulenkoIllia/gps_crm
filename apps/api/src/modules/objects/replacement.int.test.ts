@@ -184,7 +184,9 @@ describe("equipment on an object, the archive and the delete", () => {
       expect(response.statusCode).toBe(409);
       expect(response.json()).toMatchObject({
         code: "installation_date_overlap",
-        fieldErrors: { installedOn: `Поточне встановлення почалося ${dateText(WEEK_AGO)}: дата не може бути раніше` },
+        fieldErrors: {
+          installedOn: `Поточне встановлення почалося ${dateText(WEEK_AGO)}: вкажіть цю дату або пізнішу`,
+        },
       });
     });
 

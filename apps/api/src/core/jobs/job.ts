@@ -25,6 +25,8 @@ export interface JobOutcome {
 export interface JobDefinition {
   name: string;
   title: string;
+  // What it does and when a person runs it by hand, in the words of the screen «Система» (D89)
+  description: string;
   // In Europe/Kyiv, clear of the clock change at 03:00-04:59 (03-data-model.md §3.1)
   cron: string;
   scheduleLabel: string;

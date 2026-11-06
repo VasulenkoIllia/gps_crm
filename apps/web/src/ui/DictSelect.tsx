@@ -15,10 +15,12 @@ interface DictSelectProps<V extends string | string[]> {
   isLoading?: boolean;
   hasError?: boolean;
   disabled?: boolean;
+  // What an empty list says instead of «Даних немає», when its emptiness has a reason
+  emptyText?: string;
 }
 
 export function DictSelect<V extends string | string[]>(props: DictSelectProps<V>) {
-  const { value, options, isMultiple, isLoading, hasError, ...select } = props;
+  const { value, options, isMultiple, isLoading, hasError, emptyText, ...select } = props;
   return (
     <Select
       {...select}
@@ -28,6 +30,7 @@ export function DictSelect<V extends string | string[]>(props: DictSelectProps<V
       placeholder={hasError ? LOAD_FAILED : PLACEHOLDER}
       status={hasError ? "error" : undefined}
       loading={isLoading}
+      notFoundContent={emptyText && !isLoading ? emptyText : undefined}
       // Until the list is here a chosen value has only its id to show, which means nothing to a person
       labelRender={({ label }) => label ?? (hasError ? LOAD_FAILED : LOADING)}
       showSearch={{ optionFilterProp: "label" }}

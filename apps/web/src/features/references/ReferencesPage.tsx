@@ -1,9 +1,9 @@
 import { REFERENCE_KINDS, type ReferenceKind } from "@gps_crm/shared";
-import { Button, Tabs } from "antd";
+import { Button } from "antd";
 import { useState } from "react";
 import { useSearchParams } from "react-router";
 import { useCan } from "../../lib/session";
-import { NoAccess, PageHeader, Panel } from "../../ui";
+import { NoAccess, PageHeader, PageTabs, Panel } from "../../ui";
 import { AddonsTab } from "./AddonsTab";
 import type { TabProps } from "./ReferenceTab";
 import { REFERENCE_TEXTS } from "./reference-texts";
@@ -62,7 +62,7 @@ function ReferencesScreen() {
         }
       />
       <Panel>
-        <Tabs
+        <PageTabs
           activeKey={kind}
           items={TAB_ITEMS.map((item) => (item.key === kind ? { ...item, children: active } : item))}
           // A new tab starts from its whole list: the filter of the last one means nothing here

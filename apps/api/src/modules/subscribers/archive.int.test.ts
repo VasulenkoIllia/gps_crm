@@ -106,6 +106,43 @@ describe("the archive of a client", () => {
     expect(await batches()).toEqual([]);
   });
 
+  // D92: the rows in the database stay as they were, the journal shows the package as one line
+  it("shows a package as one line, in the journal and in the card, that opens to its records", async () => {
+    const { id } = await clientWithRecords();
+    await client.call("POST", `/subscribers/${id}/archive`, {});
+    const [batch] = await batches();
+    const actionsOf = async (path: string) =>
+      items<{ action: string }>(await client.call("GET", path)).map((line) => line.action);
+    const packageOf = (action: string) => actionsOf(`/activity/packages/${batch?.id}?action=${action}`);
+
+    for (const path of ["/activity", `/subscribers/${id}/activity`, `/activity?subscriberId=${id}`]) {
+      const shown = await actionsOf(path);
+      expect(shown).toContain("record.archived");
+      expect(shown).not.toContain("subscriber.archived");
+      expect(shown).not.toContain("contact.archived");
+    }
+    expect(await actionsOf("/activity?action=contact.archived")).toEqual(["contact.archived", "contact.archived"]);
+    expect((await packageOf("record.archived")).sort()).toEqual(
+      ["contact.archived", "contact.archived", "contract.archived", "payer.archived", "subscriber.archived"].sort(),
+    );
+    expect(await packageOf("record.restored")).toEqual([]);
+
+    await client.call("POST", `/archive/${batch?.id}/restore`, {});
+
+    expect(await packageOf("record.restored")).toHaveLength(5);
+    expect(await actionsOf("/activity")).not.toContain("subscriber.restored");
+  });
+
+  it("refuses a package line of an action that is no package", async () => {
+    const { id } = await clientWithRecords();
+    await client.call("POST", `/subscribers/${id}/archive`, {});
+    const [batch] = await batches();
+
+    const response = await client.call("GET", `/activity/packages/${batch?.id}?action=subscriber.archived`);
+
+    expect(response.statusCode).toBe(400);
+  });
+
   it("brings it back through the archive screen too", async () => {
     const { id } = await clientWithRecords();
     await client.call("POST", `/subscribers/${id}/archive`, {});

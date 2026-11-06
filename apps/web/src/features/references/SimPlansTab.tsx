@@ -8,11 +8,13 @@ import { FirstCostFields, firstCostOf, priceColumns, type FirstCostValues } from
 import type { RowFormProps, TabProps } from "./ReferenceTab";
 import { useReferenceSave } from "./reference-form";
 import { REFERENCE_TEXTS } from "./reference-texts";
-import { createReference, updateReference, useReferenceOptions } from "./references.api";
+import { createReference, removeCostPrice, updateReference, useReferenceOptions } from "./references.api";
 
 const COST_LABEL = "Вартість для нас";
 const LABELS = { cost: COST_LABEL, newCost: "Нова вартість", history: "Історія вартості" };
-const historyBlocks = (row: SimPlan) => [{ title: COST_LABEL, history: row.costs }];
+const historyBlocks = (row: SimPlan) => [
+  { title: COST_LABEL, history: row.costs, remove: removeCostPrice, noun: "вартість" },
+];
 
 interface SimPlanValues extends FirstCostValues {
   operatorId: string;
@@ -63,7 +65,7 @@ function SimPlanForm({ row, open, onClose }: RowFormProps<SimPlan>) {
       <Form.Item label="Порядок у списку" name="sortOrder" initialValue={row?.sortOrder ?? 0}>
         <InputNumber className="form-control-wide" min={0} precision={0} />
       </Form.Item>
-      {!row && canReadCost && <FirstCostFields label={COST_LABEL} />}
+      {!row && canReadCost && <FirstCostFields label={COST_LABEL} dateLabel="Вартість діє з" />}
     </FormModal>
   );
 }
@@ -72,7 +74,7 @@ function buildColumns(canReadCost: boolean): DataTableColumn<SimPlan>[] {
   return [
     { title: "Оператор", dataIndex: "operatorName" },
     { title: "Назва", dataIndex: "name" },
-    ...(canReadCost ? priceColumns<SimPlan>(COST_LABEL, (row) => row.costs) : []),
+    ...(canReadCost ? priceColumns<SimPlan>(COST_LABEL, "Наступна вартість", (row) => row.costs) : []),
   ];
 }
 

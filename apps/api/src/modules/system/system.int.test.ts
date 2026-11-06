@@ -23,6 +23,7 @@ function job(name: string, canRunByHand: boolean): JobDefinition {
   return {
     name,
     title: `Задача ${name}`,
+    description: `Опис ${name}`,
     cron: "0 2 * * *",
     scheduleLabel: "Щоночі",
     maxSilenceMs: DAY_MS,
@@ -217,6 +218,14 @@ describe("the «Система» screen", () => {
         "subscribers.rollup-reconcile",
       ]);
       expect(TASKS.map(({ name }) => name)).toEqual(["exports.build"]);
+    });
+
+    // D89: in the ТЗ «Система» shows the state of the jobs; a person runs by hand only the one a person may need
+    it("lets a person run only the reconcile of statuses, and says what each job is for", () => {
+      expect(JOBS.filter(({ canRunByHand }) => canRunByHand).map(({ name }) => name)).toEqual([
+        "subscribers.rollup-reconcile",
+      ]);
+      expect(JOBS.every(({ description }) => description.length > 0)).toBe(true);
     });
   });
 

@@ -19,6 +19,7 @@ function definition(run: () => Promise<JobOutcome>, name = NAME): JobDefinition 
   return {
     name,
     title: "Тестова задача",
+    description: "Для тесту",
     cron: NEVER_BY_ITSELF,
     scheduleLabel: "Ніколи",
     maxSilenceMs: DAY_MS,

@@ -89,17 +89,19 @@ export interface NewSubscriber {
   note: string | null;
   programId: string;
   tariffId: string;
+  tariffFrom: string;
   createdBy: string | null;
 }
 
 // ON CONFLICT DO NOTHING, so a number taken by hand costs a try and not the transaction (03-data-model.md §3.2).
 // It also says nothing for a legacy number taken in between: null is either of the two, and the caller tells them apart.
 export async function insertSubscriber(tx: DbOrTx, input: NewSubscriber, code: number): Promise<string | null> {
-  const { createdBy, ...fields } = input;
+  const { createdBy, tariffFrom, ...fields } = input;
   const rows = await tx.subscriber.createManyAndReturn({
     data: [
       {
         ...fields,
+        tariffFrom: toDbDate(tariffFrom),
         code: BigInt(code),
         nameNorm: normalizeName(input.name),
         discountKop: BigInt(input.discountKop),
@@ -171,14 +173,20 @@ export async function openTariffPeriod(
   });
 }
 
+export interface TariffMirror {
+  programId: string;
+  tariffId: string;
+  tariffFrom: string;
+}
+
 // The version does not move: an open form of the client's data has nothing against a new tariff, which has its own route
 export async function mirrorTariff(
   tx: DbOrTx,
   id: string,
-  tariff: { programId: string; tariffId: string },
+  { tariffFrom, ...tariff }: TariffMirror,
   updatedBy: string | null,
 ): Promise<void> {
-  await tx.subscriber.update({ where: { id }, data: { ...tariff, updatedBy } });
+  await tx.subscriber.update({ where: { id }, data: { ...tariff, tariffFrom: toDbDate(tariffFrom), updatedBy } });
 }
 
 export async function countContracts(tx: DbOrTx, subscriberId: string): Promise<number> {

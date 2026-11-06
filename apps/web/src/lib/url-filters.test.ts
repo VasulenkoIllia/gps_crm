@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { readFilters, readSort, withFilter } from "./url-filters";
+import { chosenCount, readFilters, readSort, withFilter, type Filters } from "./url-filters";
 
 const KEYS = ["from", "action"] as const;
 
@@ -42,5 +42,14 @@ describe("readSort", () => {
   it("leaves the order of the server when the key means nothing", () => {
     expect(readSort(new URLSearchParams("sort=phone"), SORTS)).toBeUndefined();
     expect(readSort(new URLSearchParams(), SORTS)).toBeUndefined();
+  });
+});
+
+describe("chosenCount", () => {
+  it("counts only the given filters that are set", () => {
+    const filters: Filters<(typeof KEYS)[number]> = { from: "2026-01-01" };
+    expect(chosenCount(filters, KEYS)).toBe(1);
+    expect(chosenCount({ ...filters, action: "x" }, ["action"])).toBe(1);
+    expect(chosenCount({}, KEYS)).toBe(0);
   });
 });

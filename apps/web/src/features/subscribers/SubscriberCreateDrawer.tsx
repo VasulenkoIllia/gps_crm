@@ -76,7 +76,7 @@ export function SubscriberCreateDrawer({ open, onClose }: { open: boolean; onClo
       <DuplicatesNotice />
       <SubscriberFields managers={managers} initial={{ managerId: me?.id }} />
       <h3 className="form-section-title">Тариф</h3>
-      <TariffFields open={open} dateName="tariffValidFrom" />
+      <TariffFields open={open} dateName="tariffValidFrom" isFirst />
       <h3 className="form-section-title">Контактна особа</h3>
       <ContactMainFields prefix={["contact"]} />
       <ContactChannelFields prefix={["contact"]} />

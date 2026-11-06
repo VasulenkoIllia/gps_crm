@@ -34,6 +34,8 @@ export interface SearchSection {
 }
 
 const join = (...parts: (string | null | undefined)[]) => parts.filter(Boolean).join(" · ") || null;
+// The name first, the ID after it, everywhere a client is named (manual test 05.11.2026)
+const clientText = (name: string, code: number) => `${name}, ID ${code}`;
 
 // search-exports.md П3: each line leads to the card of its record. A tracker and a SIM have no page of their own: the
 // line opens the object they stand on, or the stock list found by the number.
@@ -41,7 +43,7 @@ const LINES = {
   clients: (row: ClientHit): SearchLine => ({
     key: row.id,
     to: `/subscribers/${row.id}`,
-    title: `${row.code} ${row.name}`,
+    title: clientText(row.name, row.code),
     meta: join(row.legacyCode && `старий номер ${row.legacyCode}`, row.taxId),
     isArchived: row.isArchived,
   }),
@@ -49,14 +51,14 @@ const LINES = {
     key: row.id,
     to: `/subscribers/${row.subscriberId}?tab=contacts`,
     title: row.fullName,
-    meta: join(formatPhone(row.phone), `${row.subscriberCode} ${row.subscriberName}`),
+    meta: join(formatPhone(row.phone), clientText(row.subscriberName, row.subscriberCode)),
     isArchived: row.isArchived,
   }),
   objects: (row: ObjectHit): SearchLine => ({
     key: row.id,
     to: `/objects/${row.id}`,
     title: row.name,
-    meta: join(`${row.subscriberCode} ${row.subscriberName}`, row.imei && `IMEI ${row.imei}`),
+    meta: join(clientText(row.subscriberName, row.subscriberCode), row.imei && `IMEI ${row.imei}`),
     isArchived: row.isArchived,
   }),
   devices: (row: DeviceHit): SearchLine => ({

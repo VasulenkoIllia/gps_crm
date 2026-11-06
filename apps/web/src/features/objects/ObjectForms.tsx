@@ -2,11 +2,12 @@ import {
   nextObjectStatuses,
   objectNameSchema,
   OBJECT_STATUS_META,
+  workBeforeTrackerText,
   type ObjectAddonAction,
   type ObjectCard,
   type ObjectStatus,
 } from "@gps_crm/shared";
-import { Form, Input, Radio } from "antd";
+import { Alert, Form, Input, Radio } from "antd";
 import { useMemo } from "react";
 import { DateInput, DictSelect, FormModal, zodRule } from "../../ui";
 import { PastDateField } from "../equipment/EquipmentFields";
@@ -67,6 +68,8 @@ export function ObjectStatusModal({ card, open, onClose }: ObjectFormProps) {
   const [form] = Form.useForm<StatusValues>();
   const reasons = useReferenceOptions("disconnect-reasons", open);
   const status = Form.useWatch("status", form) as ObjectStatus | undefined;
+  const validFrom = Form.useWatch("validFrom", form) as string | undefined;
+  const earlyText = workBeforeTrackerText({ status, statusFrom: validFrom, installedOn: card.device?.installedOn });
   const save = useRecordSave((input: object) => objectAction(card.id, "status", input), {
     form,
     refresh: refreshClients,
@@ -92,6 +95,7 @@ export function ObjectStatusModal({ card, open, onClose }: ObjectFormProps) {
         <DictSelect options={options} />
       </Form.Item>
       <PastDateField label="Діє з" name="validFrom" />
+      {earlyText && <Alert type="warning" showIcon className="form-alert" title={earlyText} />}
       {status === "disconnected" && (
         <Form.Item
           label="Причина відключення"
@@ -135,7 +139,7 @@ export function ObjectTariffModal({ card, open, onClose }: ObjectFormProps) {
   return (
     <FormModal
       {...save.modal}
-      title="Тариф об'єкта"
+      title="Змінити тариф"
       open={open}
       onSubmit={({ source: chosen, validFrom, programId, tariffId }) =>
         save.submit({ validFrom, ownTariff: chosen === "own" ? { programId, tariffId } : null }, false)

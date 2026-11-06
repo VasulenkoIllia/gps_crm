@@ -20,6 +20,13 @@ export const SUBSCRIBER_TYPES: Record<SubscriberType, string> = {
   B2G: "Держзамовник (B2G)",
 };
 
+// A list has no room for the brackets, and B2B means nothing to whoever reads it (manual test 05.11.2026)
+export const SUBSCRIBER_TYPE_SHORT: Record<SubscriberType, string> = {
+  B2C: "Фізособа",
+  B2B: "Юрособа / ФОП",
+  B2G: "Держзамовник",
+};
+
 export const seriesNumberSchema = z
   .number({ error: NUMBER_TEXT })
   .int(NUMBER_TEXT)

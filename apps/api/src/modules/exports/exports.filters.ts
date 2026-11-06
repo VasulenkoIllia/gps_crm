@@ -5,7 +5,7 @@ import {
   DEVICE_STATUS_META,
   OBJECT_STATUS_META,
   SIM_STATUS_META,
-  SUBSCRIBER_STATUS_META,
+  SUBSCRIBER_STATUS_FILTER_META,
   SUBSCRIBER_TYPES,
   type ExportEntity,
   type ExportRequest,
@@ -33,7 +33,7 @@ const FILTER_LABELS: Record<string, string> = {
 };
 
 const STATUS_LABELS: Record<ExportEntity, Record<string, StatusMeta> | null> = {
-  subscribers: SUBSCRIBER_STATUS_META,
+  subscribers: SUBSCRIBER_STATUS_FILTER_META,
   objects: OBJECT_STATUS_META,
   devices: DEVICE_STATUS_META,
   sims: SIM_STATUS_META,

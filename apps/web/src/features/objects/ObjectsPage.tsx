@@ -5,8 +5,8 @@ import { useMemo, useState } from "react";
 import { useNavigate } from "react-router";
 import { listRows } from "../../lib/list-rows";
 import { useCan } from "../../lib/session";
-import { useUrlFilters, useUrlSort } from "../../lib/url-filters";
-import { FilterBar, FilterSelect, ListPage, NoAccess, NothingFound, SearchField } from "../../ui";
+import { chosenCount, useUrlFilters, useUrlSort } from "../../lib/url-filters";
+import { ARCHIVE_FILTER, FilterBar, FilterSelect, ListPage, NoAccess, NothingFound, SearchField } from "../../ui";
 import { ExportButton } from "../exports/ExportButton";
 import { useReferenceOptions } from "../references/references.api";
 import { tariffLabel, useManagerOptions } from "../subscribers/subscriber-form";
@@ -17,7 +17,6 @@ import { fetchObjectCount, fetchObjects, OBJECT_FILTER_KEYS, OBJECTS_KEY, type O
 
 const SEARCH_HINT = "Назва, IMEI, ICCID, номер SIM, клієнт";
 const STATUS_OPTIONS = Object.entries(OBJECT_STATUS_META).map(([value, { label }]) => ({ value, label }));
-const ARCHIVE_OPTIONS = [{ value: "true", label: "В архіві" }];
 
 interface ListFiltersProps {
   filters: ObjectFilters;
@@ -82,10 +81,29 @@ function ReferenceFilters({ filters, onChange }: Pick<ListFiltersProps, "filters
   );
 }
 
+// The rest of the filters behind «Ще фільтри»: on a phone the list starts on the first screen (manual test 05.11.2026)
+const MORE_FILTERS = ["programId", "serverId", "tariffId", "modelId", "addonId", "archived"] as const;
+
 function ListFilters({ filters, hasFilters, onChange, onReset }: ListFiltersProps) {
   const managers = useManagerOptions(true);
   return (
-    <FilterBar hasFilters={hasFilters} onReset={onReset}>
+    <FilterBar
+      hasFilters={hasFilters}
+      onReset={onReset}
+      moreChosen={chosenCount(filters, MORE_FILTERS)}
+      more={
+        <>
+          <ReferenceFilters filters={filters} onChange={onChange} />
+          <FilterSelect
+            label="Архів"
+            value={filters.archived}
+            options={ARCHIVE_FILTER.options}
+            anyLabel={ARCHIVE_FILTER.anyLabel}
+            onChange={(value) => onChange("archived", value)}
+          />
+        </>
+      }
+    >
       <SearchField
         label="Пошук"
         placeholder={SEARCH_HINT}
@@ -98,7 +116,6 @@ function ListFilters({ filters, hasFilters, onChange, onReset }: ListFiltersProp
         options={STATUS_OPTIONS}
         onChange={(value) => onChange("status", value)}
       />
-      <ReferenceFilters filters={filters} onChange={onChange} />
       <SubscriberFilter value={filters.subscriberId} onChange={(value) => onChange("subscriberId", value)} />
       <FilterSelect
         label="Менеджер"
@@ -107,12 +124,6 @@ function ListFilters({ filters, hasFilters, onChange, onReset }: ListFiltersProp
         isLoading={managers.isLoading}
         hasError={managers.hasError}
         onChange={(value) => onChange("managerId", value)}
-      />
-      <FilterSelect
-        label="Архів"
-        value={filters.archived}
-        options={ARCHIVE_OPTIONS}
-        onChange={(value) => onChange("archived", value)}
       />
     </FilterBar>
   );
@@ -165,7 +176,7 @@ function ObjectsScreen() {
           columns: OBJECT_COLUMNS,
           rowKey: "id",
           error: pages.error,
-          empty: hasFilters ? <NothingFound onReset={resetFilters} /> : "Об'єктів ще немає",
+          empty: hasFilters ? <NothingFound onReset={resetFilters} q={filters.q} /> : "Об'єктів ще немає",
           onRetry: () => void pages.refetch(),
           hasMore: pages.hasNextPage && !pages.isPlaceholderData,
           isLoadingMore: pages.isFetchingNextPage,

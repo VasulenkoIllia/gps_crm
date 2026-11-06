@@ -9,7 +9,17 @@ type TariffAction = "edit" | "version";
 const COLUMNS: DataTableColumn<Tariff>[] = [
   { title: "Програма", dataIndex: "programName" },
   { title: "Сервер", dataIndex: "serverName" },
-  { title: "Назва", dataIndex: "name" },
+  {
+    title: "Назва",
+    key: "name",
+    render: (_, row) => (
+      <>
+        {row.name}
+        {row.basedOnName && <div className="table-note">нова версія тарифу {row.basedOnName}</div>}
+        {row.newerVersionName && <div className="table-note">є нова версія: {row.newerVersionName}</div>}
+      </>
+    ),
+  },
   { title: "Період", dataIndex: "billingModel", render: (value: BillingModel) => BILLING_MODELS[value] },
   { title: "Ціна", dataIndex: "priceKop", align: "right", render: (kop: number) => <Money kop={kop} /> },
   { title: "Клієнтів", dataIndex: "clientCount", align: "right" },

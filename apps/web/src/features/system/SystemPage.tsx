@@ -1,5 +1,6 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button, Skeleton } from "antd";
+import { useState } from "react";
 import { useCan } from "../../lib/session";
 import { DateTimeText, FormAlert, LoadError, NoAccess, PageHeader } from "../../ui";
 import { BackupsPanel } from "./BackupsPanel";
@@ -15,8 +16,13 @@ import {
   SYSTEM_STATUS_KEY,
 } from "./system.api";
 
+// A job run by hand ends in seconds: the list follows it for a while instead of a minute later (manual test 05.11.2026)
+const FOLLOW_RUN_MS = 2_000;
+const FOLLOW_RUN_FOR_MS = 30_000;
+
 function SystemScreen() {
   const client = useQueryClient();
+  const [followRunUntil, setFollowRunUntil] = useState(0);
   const canReadActivity = useCan("activity.read");
   const status = useQuery({
     queryKey: SYSTEM_STATUS_KEY,
@@ -26,7 +32,7 @@ function SystemScreen() {
   const jobs = useQuery({
     queryKey: SYSTEM_JOBS_KEY,
     queryFn: ({ signal }) => fetchJobs(signal),
-    refetchInterval: SYSTEM_REFRESH_MS,
+    refetchInterval: () => (Date.now() < followRunUntil ? FOLLOW_RUN_MS : SYSTEM_REFRESH_MS),
   });
   const refresh = () => void client.invalidateQueries({ queryKey: SYSTEM_KEY });
   const retryStatus = () => void status.refetch();
@@ -66,7 +72,12 @@ function SystemScreen() {
       {/* The blocks stay: a refresh that failed takes nothing away, and it must not pass for a fresh reading */}
       <FormAlert error={status.error} />
       <BackupsPanel backups={data.backups} />
-      <JobsPanel jobs={jobs.data?.items} error={jobs.error} onRetry={retryJobs} />
+      <JobsPanel
+        jobs={jobs.data?.items}
+        error={jobs.error}
+        onRetry={retryJobs}
+        onRun={() => setFollowRunUntil(Date.now() + FOLLOW_RUN_FOR_MS)}
+      />
       <QueuesPanel state={data.queueState} queues={data.queues} onRetry={retryStatus} />
       <div className="panel-grid">
         <div>

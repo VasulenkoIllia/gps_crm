@@ -120,6 +120,28 @@ describe("payers", () => {
     expect(items<Payer>(nothing)).toEqual([]);
   });
 
+  // D90: the list of payers is this search with no text, page by page
+  it("lists every working payer page by page, newest first, with the clients it pays for", async () => {
+    const payerId = await add();
+    const other = await client.createClient({ name: "Другий" });
+    await client.call("POST", `/subscribers/${other.id}/payers/${payerId}/link`, {});
+    const archived = await add({ name: "Архівний" });
+    await client.call("POST", `/payers/${archived}/archive`, {});
+
+    const first = await client.call("GET", "/payers?limit=2");
+    const cursor = first.json<{ nextCursor: string | null }>().nextCursor;
+    const rest = items<Payer>(await client.call("GET", `/payers?limit=2&cursor=${cursor}`));
+
+    // The second client came with a payer of its own
+    expect(items<Payer>(first)).toMatchObject([{ name: "Другий" }, { name: "Платник", taxId: OTHER_EDRPOU }]);
+    expect(
+      items<Payer>(first)[1]
+        ?.otherClients.map((row) => row.name)
+        .sort(),
+    ).toEqual(["Другий", "Клієнт"]);
+    expect(rest.map((payer) => payer.name)).toEqual(["Клієнт"]);
+  });
+
   it("looks for a name from three letters, and takes a percent sign for a percent sign", async () => {
     await add({ name: "Платник 50%" });
     await add({ name: "Платник 500" });

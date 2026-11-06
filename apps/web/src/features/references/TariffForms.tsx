@@ -83,6 +83,7 @@ export function TariffForm({ row, open, onClose }: RowFormProps<Tariff>) {
           isLoading={servers.isLoading}
           hasError={servers.hasError}
           disabled={isFrozen}
+          emptyText={programId ? "У цієї програми ще немає серверів" : "Спершу оберіть програму"}
         />
       </Form.Item>
       <Form.Item label="Назва" name="name" required initialValue={row?.name} rules={[zodRule(referenceNameSchema)]}>

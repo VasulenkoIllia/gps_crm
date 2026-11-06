@@ -3,7 +3,7 @@ import pg from "pg";
 import { ADMIN_SESSION_FILE, expectNoSidewaysScroll, PHONE, TABLET } from "./support.ts";
 
 const NEW_NAME = "Адмін Журналу";
-const JOB_TITLE = "Партиції журналу дій";
+const JOB_TITLE = "Звірка статусів клієнтів і лічильників об'єктів";
 
 async function addArchiveBatch(label: string): Promise<void> {
   const client = new pg.Client({ connectionString: process.env.E2E_DATABASE_URL });
@@ -56,6 +56,7 @@ test.describe.serial("the journal, the archive and the «Система» screen
 
   test("an ID that is not one is refused next to the field", async ({ page }) => {
     await page.goto("/activity");
+    await page.getByRole("button", { name: "Ще фільтри" }).click();
     await page.getByRole("searchbox", { name: "ID запису" }).fill("не ідентифікатор");
     await page.getByRole("searchbox", { name: "ID запису" }).press("Enter");
     await expect(page.getByRole("alert")).toHaveText("Це не схоже на ідентифікатор запису");
@@ -76,7 +77,7 @@ test.describe.serial("the journal, the archive and the «Система» screen
     await page.goto("/system");
 
     const backups = page.getByRole("region", { name: "Бекапи" });
-    await expect(backups.getByText("Остання резервна копія")).toBeVisible();
+    await expect(backups.getByText("Останній бекап")).toBeVisible();
     await expect(backups.getByText("Бекапи в порядку")).toBeVisible();
     await expect(backups.getByText("Відновлення перевірене")).toBeVisible();
 

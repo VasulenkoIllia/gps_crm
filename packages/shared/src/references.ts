@@ -110,6 +110,9 @@ const tariffSchema = z.strictObject({
   isSelected: z.boolean(),
   // Clients outside the archive whose latest version of the tariff is this one (references.md §5)
   clientCount: z.number(),
+  // «Нова версія тарифу»: the tariff this one was made from, and the latest made from this one (D88)
+  basedOnName: z.string().nullable(),
+  newerVersionName: z.string().nullable(),
 });
 export type Tariff = z.infer<typeof tariffSchema>;
 

@@ -3,6 +3,7 @@ import {
   isTariffDateAllowed,
   planVersion,
   todayKyiv,
+  valueSince,
   type CreatedSubscriber,
   type IdSeries,
   type SubscriberCodeInput,
@@ -195,6 +196,7 @@ function newSubscriberOf(input: SubscriberCreate, managerId: string, createdBy: 
     note,
     programId,
     tariffId,
+    tariffFrom: input.tariffValidFrom,
     createdBy,
   };
 }
@@ -296,10 +298,16 @@ async function rewritePeriods(tx: DbOrTx, subscriberId: string, validFrom: strin
   const periods = await repo.findTariffPeriods(tx, subscriberId);
   const { blockedBy, closings } = planVersion(periods, validFrom, today);
   if (blockedBy) {
-    const message = `Вже є версія тарифу від ${dateText(blockedBy.validFrom)}: нова дата має бути не раніше`;
+    const message = `Вже є версія тарифу від ${dateText(blockedBy.validFrom)}: вкажіть цю дату або пізнішу`;
     throw new AppError(409, "tariff_date_overlap", message, { validFrom: message });
   }
   for (const { id, validTo } of closings) await repo.closeTariffPeriod(tx, id, validTo);
+}
+
+// D91: a version of the same tariff, say from a later date, leaves the day it took over where it was
+async function tariffSince(tx: DbOrTx, subscriberId: string, validFrom: string): Promise<string> {
+  const periods = await repo.findTariffPeriods(tx, subscriberId);
+  return valueSince(periods, (one, other) => one.tariffId === other.tariffId) ?? validFrom;
 }
 
 export async function changeSubscriberTariff(
@@ -318,7 +326,8 @@ export async function changeSubscriberTariff(
     const actorId = actorIdOf(context);
     await rewritePeriods(tx, id, input.validFrom, today);
     await repo.openTariffPeriod(tx, id, tariff.id, input.validFrom, actorId);
-    await repo.mirrorTariff(tx, id, { programId: tariff.programId, tariffId: tariff.id }, actorId);
+    const tariffFrom = await tariffSince(tx, id, input.validFrom);
+    await repo.mirrorTariff(tx, id, { programId: tariff.programId, tariffId: tariff.id, tariffFrom }, actorId);
     await deps.objects.followClientTariff(tx, id, tariff, actorId);
     await recordActivity(tx, context, {
       action: "subscriber.tariff_changed",

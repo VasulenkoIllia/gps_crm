@@ -12,11 +12,12 @@ function buildColumns(onRun: (name: string) => void, onShow: (name: string) => v
     {
       title: "Задача",
       dataIndex: "title",
-      // The schedule under the name: a column of its own pushes the actions off a laptop screen
+      // The schedule and what the job is for under the name: a column of its own pushes the actions off a laptop screen
       render: (_, job) => (
         <>
           {job.title}
           <div className="list-meta">{job.scheduleLabel}</div>
+          <div className="list-meta">{job.description}</div>
         </>
       ),
     },
@@ -49,9 +50,10 @@ interface JobsPanelProps {
   jobs: JobListItem[] | undefined;
   error: unknown;
   onRetry: () => void;
+  onRun: () => void;
 }
 
-export function JobsPanel({ jobs, error, onRetry }: JobsPanelProps) {
+export function JobsPanel({ jobs, error, onRetry, onRun }: JobsPanelProps) {
   const client = useQueryClient();
   const { message } = App.useApp();
   // Names, so an open history follows the list as it refreshes
@@ -69,6 +71,7 @@ export function JobsPanel({ jobs, error, onRetry }: JobsPanelProps) {
     mutationFn: requestJobRun,
     onSuccess: () => {
       closeConfirmation();
+      onRun();
       void message.success("Задачу поставлено в чергу");
     },
     onError: (failure) => {

@@ -4,6 +4,10 @@ import { ApiError } from "../lib/api";
 
 const UNEXPECTED_ERROR = "Сталася помилка. Спробуйте ще раз.";
 
+// A refused field in the middle of the form, with its label and its text: at the edge the label hid under the title
+// and a press looked like nothing at all (П4)
+export const FIELD_SCROLL = { block: "center" } as const;
+
 interface Schema {
   safeParse: (value: unknown) => { success: boolean; error?: { issues: { message: string }[] } };
 }
@@ -33,5 +37,5 @@ export function showFieldErrors<T>(form: FormInstance<T>, error: unknown, rename
   }));
   form.setFields(fields as Parameters<typeof form.setFields>[0]);
   const [first] = fields;
-  if (first) form.scrollToField(first.name as Parameters<typeof form.scrollToField>[0]);
+  if (first) form.scrollToField(first.name as Parameters<typeof form.scrollToField>[0], FIELD_SCROLL);
 }

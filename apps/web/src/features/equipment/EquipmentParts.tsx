@@ -1,8 +1,6 @@
 import type { EquipmentPlace, Installation } from "@gps_crm/shared";
 import { DataTable, DateText, EmptyValue, EntityLink, type DataTableColumn } from "../../ui";
 
-export const ARCHIVE_OPTIONS = [{ value: "true", label: "В архіві" }];
-
 export function PlaceCell({ place }: { place: EquipmentPlace | null }) {
   if (!place) return <EmptyValue />;
   return (
@@ -10,7 +8,7 @@ export function PlaceCell({ place }: { place: EquipmentPlace | null }) {
       <EntityLink to={`/objects/${place.objectId}`}>{place.objectName}</EntityLink>
       <div className="table-note">
         <EntityLink to={`/subscribers/${place.subscriberId}`}>
-          {place.subscriberCode} {place.subscriberName}
+          {place.subscriberName}, ID {place.subscriberCode}
         </EntityLink>
       </div>
     </>

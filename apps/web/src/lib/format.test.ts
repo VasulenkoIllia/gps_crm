@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatBytes } from "./format";
+import { digitGroups, formatBytes } from "./format";
 
 describe("formatBytes", () => {
   it.each([
@@ -12,5 +12,12 @@ describe("formatBytes", () => {
     [2048 * 1024 ** 4, "2 048 ТБ"],
   ])("shows %d as %s", (bytes, text) => {
     expect(formatBytes(bytes).replace(/\s/g, " ")).toBe(text);
+  });
+});
+
+describe("digitGroups", () => {
+  it("splits a number into fours from its start", () => {
+    expect(digitGroups("356938035643809")).toEqual(["3569", "3803", "5643", "809"]);
+    expect(digitGroups("")).toEqual([]);
   });
 });

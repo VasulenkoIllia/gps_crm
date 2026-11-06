@@ -12,6 +12,11 @@ export type ArchiveRestorer = (tx: DbOrTx, batchId: string, context: ActivityCon
 export type ArchiveRestorers = Record<string, ArchiveRestorer>;
 
 export const listActivity = queries.listActivity;
+export const listPackageItems = queries.listPackageItems;
+export type ActivityView = queries.ActivityView;
+
+// D92: the journal of a card and the home page leave out the looks at files
+export const CARD_VIEW: ActivityView = { hidesFileReads: true };
 export const listActivityActors = queries.listActivityActors;
 export const listArchive = queries.listArchive;
 

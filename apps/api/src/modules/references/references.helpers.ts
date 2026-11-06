@@ -27,22 +27,25 @@ export function recordArchived(): AppError {
   return new AppError(409, "record_archived", "Запис в архіві. Спершу відновіть його");
 }
 
-// Every change of a reference list: the lock first, and a taken name comes back as the text of its list
+// Every change of a reference list takes the lock first
+export function lockedReferences<T>(deps: Pick<AppDeps, "db">, work: (tx: DbOrTx) => Promise<T>): Promise<T> {
+  return deps.db.$transaction(async (tx) => {
+    await repo.lockReferences(tx);
+    return work(tx);
+  });
+}
+
+// A change that writes a name: a taken one comes back as the text of its list
 export function writeReference<T>(
   deps: Pick<AppDeps, "db">,
   kind: ReferenceKind,
   work: (tx: DbOrTx) => Promise<T>,
 ): Promise<T> {
-  return deps.db
-    .$transaction(async (tx) => {
-      await repo.lockReferences(tx);
-      return work(tx);
-    })
-    .catch((error: unknown) => {
-      if (!isUniqueViolation(error)) throw error;
-      const message = NAME_TAKEN[kind];
-      throw new AppError(409, "name_taken", message, { name: message });
-    });
+  return lockedReferences(deps, work).catch((error: unknown) => {
+    if (!isUniqueViolation(error)) throw error;
+    const message = NAME_TAKEN[kind];
+    throw new AppError(409, "name_taken", message, { name: message });
+  });
 }
 
 // Someone saved the form while it stood open here: their change must not be overwritten unseen (03-data-model.md §3.1)

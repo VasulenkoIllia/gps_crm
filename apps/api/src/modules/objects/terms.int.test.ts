@@ -117,7 +117,7 @@ describe("the history of an object", () => {
       expect(before.statusCode).toBe(409);
       expect(before.json()).toMatchObject({
         code: "status_date_overlap",
-        fieldErrors: { validFrom: `Поточний статус діє з ${dateText(WEEK_AGO)}: нова дата має бути не раніше` },
+        fieldErrors: { validFrom: `Поточний статус діє з ${dateText(WEEK_AGO)}: вкажіть цю дату або пізнішу` },
       });
       expect(ahead.statusCode).toBe(400);
     });

@@ -1,10 +1,11 @@
 import { type ObjectCard } from "@gps_crm/shared";
 import { useQuery } from "@tanstack/react-query";
-import { Button, Skeleton } from "antd";
+import { Skeleton } from "antd";
 import { useCallback, useState } from "react";
 import { useNavigate, useParams } from "react-router";
 import { useCan } from "../../lib/session";
 import {
+  CardActions,
   DateText,
   DateTimeText,
   DetailPage,
@@ -13,8 +14,8 @@ import {
   FactList,
   LoadError,
   NoAccess,
-  RowActions,
   type DetailTab,
+  type RowAction,
   type Fact,
 } from "../../ui";
 import { ACTIVITY_KEY } from "../activity/activity.api";
@@ -36,6 +37,26 @@ import { deleteObject, fetchObject, fetchObjectActivity, objectAction, objectKey
 
 type RecordAction = "edit" | "archive" | "restore" | "delete";
 type HeaderForm = "status" | "tariff" | "payer";
+type HeaderAction = HeaderForm | "device";
+const HEADER_ACTIONS: readonly string[] = ["status", "tariff", "payer", "device"];
+const isHeaderAction = (key: string): key is HeaderAction => HEADER_ACTIONS.includes(key);
+
+interface HeaderRights {
+  canChangeStatus: boolean;
+  canChangeTerms: boolean;
+  canReplaceDevice: boolean;
+}
+
+// In the order of need: the two most frequent stand as buttons, the rest under «Ще» (manual test 05.11.2026)
+function headerActions(rights: HeaderRights, card: ObjectCard): RowAction<HeaderAction>[] {
+  const all: (RowAction<HeaderAction> & { isOn: boolean })[] = [
+    { key: "status", label: "Змінити статус", isOn: rights.canChangeStatus },
+    { key: "tariff", label: "Змінити тариф", isOn: rights.canChangeTerms },
+    { key: "payer", label: "Змінити платника", isOn: rights.canChangeTerms },
+    { key: "device", label: "Замінити трекер", isOn: rights.canReplaceDevice && card.device !== null },
+  ];
+  return all.filter(({ isOn }) => isOn).map(({ key, label }) => ({ key, label }));
+}
 type AddonForm = "connectAddon" | "disconnectAddon";
 type CardForm = HeaderForm | AddonForm | EquipmentAction | "edit" | "removeSensor";
 
@@ -53,7 +74,7 @@ function factsOf(card: ObjectCard): Fact[] {
       label: "Клієнт",
       value: (
         <EntityLink to={`/subscribers/${card.subscriberId}`}>
-          {card.subscriberCode} {card.subscriberName}
+          {card.subscriberName}, ID {card.subscriberCode}
         </EntityLink>
       ),
     },
@@ -199,7 +220,7 @@ function ObjectView({ card }: { card: ObjectCard }) {
       ? [
           {
             key: "activity",
-            label: "Журнал змін",
+            label: "Журнал дій",
             render: () => <RecordActivityTab queryKey={[...ACTIVITY_KEY, "object", card.id]} fetchPage={fetchPage} />,
           },
         ]
@@ -221,15 +242,14 @@ function ObjectView({ card }: { card: ObjectCard }) {
           </div>
         }
         actions={
-          <div className="detail-actions">
-            {rights.canChangeStatus && <Button onClick={() => openForm("status")}>Змінити статус</Button>}
-            {rights.canChangeTerms && <Button onClick={() => openForm("tariff")}>Тариф об'єкта</Button>}
-            {rights.canChangeTerms && <Button onClick={() => openForm("payer")}>Змінити платника</Button>}
-            {rights.canReplaceDevice && card.device && (
-              <Button onClick={() => openForm("device")}>Замінити трекер</Button>
-            )}
-            <RowActions rowName={card.name} actions={rights.records} onAction={chooseRecordAction} />
-          </div>
+          <CardActions<HeaderAction | RecordAction>
+            rowName={card.name}
+            actions={[...headerActions(rights, card), ...rights.records]}
+            onAction={(key) => {
+              if (isHeaderAction(key)) openForm(key);
+              else chooseRecordAction(key);
+            }}
+          />
         }
         facts={<FactList items={factsOf(card)} />}
         tabs={tabs}

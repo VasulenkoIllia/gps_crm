@@ -6,6 +6,7 @@ import {
   periodOn,
   planVersion,
   todayKyiv,
+  valueSince,
   type ObjectAddonChange,
   type ObjectStatusChange,
   type ObjectTermsChange,
@@ -46,7 +47,7 @@ function assertTransition(object: repo.ObjectRow, input: ObjectStatusChange): vo
     throw new AppError(409, "status_refused", "Такої зміни статусу немає");
   }
   if (input.validFrom < object.statusFrom) {
-    const message = `Поточний статус діє з ${dateText(object.statusFrom)}: нова дата має бути не раніше`;
+    const message = `Поточний статус діє з ${dateText(object.statusFrom)}: вкажіть цю дату або пізнішу`;
     throw dateRefused("status_date_overlap", "validFrom", message);
   }
   if (input.status === "disconnected" && input.validFrom < object.connectedOn) {
@@ -99,7 +100,7 @@ export async function changeObjectStatus(
 function assertTermsDate(terms: repo.TermRow[], validFrom: string, today: string) {
   const plan = planVersion(terms, validFrom, today);
   if (!plan.blockedBy) return plan;
-  const message = `Вже є версія умов від ${dateText(plan.blockedBy.validFrom)}: нова дата має бути не раніше`;
+  const message = `Вже є версія умов від ${dateText(plan.blockedBy.validFrom)}: вкажіть цю дату або пізнішу`;
   throw dateRefused("terms_date_overlap", "validFrom", message);
 }
 
@@ -144,13 +145,16 @@ async function writeTariffVersion(
 }
 
 async function mirrorOpenTerm(tx: DbOrTx, object: repo.ObjectRow, actorId: string | null): Promise<TariffFact> {
-  const [open] = (await repo.findTerms(tx, object.id)).filter((term) => term.validTo === null);
+  const terms = await repo.findTerms(tx, object.id);
+  const [open] = terms.filter((term) => term.validTo === null);
   if (!open) throw new AppError(409, "terms_missing", "Об'єкт не має чинних умов");
   const tariffId = open.ownTariffId ?? (await findClientTariffId(tx, object.subscriberId));
   const tariff = await findTariffFact(tx, tariffId);
   const { programId, serverId } = tariff;
+  // D91: a new payer under the same tariff leaves the day the tariff took over where it was
+  const tariffFrom = valueSince(terms, (one, other) => one.ownTariffId === other.ownTariffId) ?? open.validFrom;
   const mirror = { payerId: open.payerId, tariffId, programId, serverId, hasOwnTariff: open.ownTariffId !== null };
-  await repo.mirrorTerms(tx, object.id, mirror, actorId);
+  await repo.mirrorTerms(tx, object.id, { ...mirror, tariffFrom }, actorId);
   return tariff;
 }
 
@@ -211,7 +215,7 @@ async function connectAddon(
   const [last] = periods.filter(isLivePeriod);
   if (last && last.validTo === null) throw dateRefused("addon_connected", "addonId", "Цю послугу вже підключено");
   if (last?.validTo && input.date < last.validTo) {
-    const message = `Послуга діяла до ${dateText(last.validTo)}: дата має бути не раніше`;
+    const message = `Послуга діяла до ${dateText(last.validTo)}: вкажіть цю дату або пізнішу`;
     throw dateRefused("addon_date_overlap", "date", message);
   }
   await repo.openAddon(tx, object.id, input.addonId, input.date, actorId);
@@ -222,7 +226,7 @@ async function disconnectAddon(tx: DbOrTx, input: ObjectAddonChange, periods: re
   const open = periods.find((period) => period.validTo === null);
   if (!open) throw dateRefused("addon_not_connected", "addonId", "Цю послугу не підключено");
   if (input.date < open.validFrom) {
-    const message = `Послуга діє з ${dateText(open.validFrom)}: дата має бути не раніше`;
+    const message = `Послуга діє з ${dateText(open.validFrom)}: вкажіть цю дату або пізнішу`;
     throw dateRefused("addon_date_overlap", "date", message);
   }
   await repo.closeAddon(tx, open.id, input.date);

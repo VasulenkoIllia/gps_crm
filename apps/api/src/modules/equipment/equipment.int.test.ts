@@ -530,6 +530,18 @@ describe("equipment", () => {
       expect(response.json()).toMatchObject({ code: "equipment_has_history" });
     });
 
+    // The list says which records stood anywhere, so their menu offers no deletion (manual test 05.11.2026)
+    it("tells in the list a record with a history from one without", async () => {
+      const usedId = await registerDevice();
+      await client.createObject({ device: { deviceId: usedId } });
+      const freshId = await registerDevice();
+
+      const rows = await devices();
+
+      expect(rows.find(({ id }) => id === usedId)).toMatchObject({ hasHistory: true });
+      expect(rows.find(({ id }) => id === freshId)).toMatchObject({ hasHistory: false });
+    });
+
     it("answers 404 for an unknown record", async () => {
       expect((await client.call("POST", `/sensors/${UNKNOWN_ID}/archive`, {})).statusCode).toBe(404);
       expect((await client.call("POST", `/sensors/${UNKNOWN_ID}/restore`, {})).statusCode).toBe(404);

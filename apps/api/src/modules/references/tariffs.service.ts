@@ -146,7 +146,7 @@ export function createTariffVersion(
     if (!source) throw notFound();
     await requirePlace(tx, source);
     const { programId, serverId, billingModel } = source;
-    const fields = { programId, serverId, billingModel, ...input };
+    const fields = { programId, serverId, billingModel, ...input, basedOnId: source.id };
     const { id } = await repo.createTariff(tx, fields, actorIdOf(context));
     await recordActivity(tx, context, {
       action: "reference.tariff_version_created",

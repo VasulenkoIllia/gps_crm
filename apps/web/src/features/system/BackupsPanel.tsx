@@ -12,7 +12,7 @@ export function BackupsPanel({ backups }: { backups: BackupStatus }) {
           <VerdictTag verdict={dump} />
           <FactList
             items={[
-              { label: "Остання резервна копія", value: <DateTimeText value={dump.lastOkAt} /> },
+              { label: "Останній бекап", value: <DateTimeText value={dump.lastOkAt} /> },
               { label: "Останній запуск", value: <DateTimeText value={dump.finishedAt} /> },
               { label: "Розмір", value: dump.dumpBytes === null ? <EmptyValue /> : formatBytes(dump.dumpBytes) },
               { label: "Копій на сервері", value: dump.copies ?? <EmptyValue /> },

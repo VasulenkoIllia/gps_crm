@@ -1,6 +1,6 @@
-import type { CreatedObject } from "@gps_crm/shared";
+import { workBeforeTrackerText, type CreatedObject, type ObjectStatus } from "@gps_crm/shared";
 import { useQuery } from "@tanstack/react-query";
-import { Form, type FormInstance } from "antd";
+import { Alert, Form, type FormInstance } from "antd";
 import { useEffect } from "react";
 import { useNavigate } from "react-router";
 import { DictSelect, FormDrawer } from "../../ui";
@@ -43,6 +43,18 @@ function useOnlyPayer(
     if (live.length !== 1 || !only || form.getFieldValue("payerId")) return;
     form.setFields([{ name: "payerId", value: only.value, touched: false }]);
   }, [form, options, open]);
+}
+
+// Р8: dates the server takes, and a person may have mistyped
+function WorkBeforeTrackerNotice() {
+  const form = Form.useFormInstance();
+  const text = workBeforeTrackerText({
+    status: Form.useWatch("status", form) as ObjectStatus | undefined,
+    statusFrom: Form.useWatch("statusFrom", form) as string | undefined,
+    connectedOn: Form.useWatch("connectedOn", form) as string | undefined,
+    installedOn: Form.useWatch("installedOn", form) as string | undefined,
+  });
+  return text ? <Alert type="warning" showIcon className="form-alert" title={text} /> : null;
 }
 
 interface ObjectCreateDrawerProps {
@@ -99,6 +111,7 @@ export function ObjectCreateDrawer({ open, onClose, subscriberId }: ObjectCreate
       <ObjectTariffFields open={open} client={client.data} />
       <h3 className="form-section-title">Підключення</h3>
       <PastDateField label="Дата підключення" name="connectedOn" />
+      <WorkBeforeTrackerNotice />
       <Form.Item
         label="Платник"
         name="payerId"

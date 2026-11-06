@@ -2,14 +2,25 @@ import {
   moneyToText,
   parseMoneyToKop,
   subscriberCodeSchema,
+  todayKyiv,
   type SubscriberCard,
   type SubscriberCodeCheck,
 } from "@gps_crm/shared";
 import { useQuery } from "@tanstack/react-query";
 import { Form, Input } from "antd";
-import { EntityLink, FactList, FormDrawer, FormModal, DateText, useDebouncedValue, zodRule } from "../../ui";
+import {
+  DateText,
+  EmptyValue,
+  EntityLink,
+  FactList,
+  FormDrawer,
+  FormModal,
+  useDebouncedValue,
+  zodRule,
+} from "../../ui";
 import { useRecordSave } from "../references/reference-form";
-import { useManagerOptions } from "./subscriber-form";
+import { DuplicatesNotice } from "./DuplicatesNotice";
+import { tariffVersionsOf, useManagerOptions } from "./subscriber-form";
 import { SubscriberFields, type SubscriberValues } from "./SubscriberFields";
 import {
   changeCode,
@@ -55,6 +66,7 @@ export function SubscriberEditDrawer({ card, open, onClose }: CardFormProps) {
         })
       }
     >
+      <DuplicatesNotice excludeId={card.id} />
       <SubscriberFields managers={managers} initial={{ ...card, discount: moneyToText(card.discountKop) }} />
     </FormDrawer>
   );
@@ -73,24 +85,34 @@ export function TariffChangeModal({ card, open, onClose }: CardFormProps) {
     refresh: refreshClients,
     onDone: onClose,
   });
-  const [current] = card.tariffHistory;
+  const { current, next, earlier } = tariffVersionsOf(card.tariffHistory, todayKyiv());
 
   return (
     <FormModal {...save.modal} title="Змінити тариф" open={open} onSubmit={(values) => save.submit(values)}>
-      {current && (
-        <FactList
-          items={[
-            { label: "Зараз", value: `${current.tariffName}, ${current.serverName}` },
-            { label: "Діє з", value: <DateText value={current.validFrom} /> },
-          ]}
-        />
-      )}
+      <FactList
+        items={[
+          { label: "Зараз", value: current ? `${current.tariffName}, ${current.serverName}` : <EmptyValue /> },
+          ...(current ? [{ label: "Діє з", value: <DateText value={current.validFrom} /> }] : []),
+          ...(next
+            ? [
+                {
+                  label: "Заплановано",
+                  value: (
+                    <>
+                      {next.tariffName}, {next.serverName} з <DateText value={next.validFrom} />
+                    </>
+                  ),
+                },
+              ]
+            : []),
+        ]}
+      />
       <TariffFields open={open} dateName="validFrom" initial={{ programId: card.programId }} />
-      {card.tariffHistory.length > 1 && (
+      {earlier.length > 0 && (
         <>
           <h3 className="form-section-title">Попередні версії</h3>
           <ul className="duplicates-list">
-            {card.tariffHistory.slice(1).map((period) => (
+            {earlier.map((period) => (
               <li key={period.id}>
                 {period.tariffName}, {period.serverName}: <DateText value={period.validFrom} /> -{" "}
                 <DateText value={period.validTo} />

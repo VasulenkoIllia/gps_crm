@@ -45,8 +45,8 @@ interface ReferenceSaveOptions<T, R> {
   refresh?: (client: QueryClient) => void;
   // The label of the second way to save, for a form with a word of its own
   addAnotherText?: string;
-  // What the toast says, and what follows a save that closes the form
-  savedText?: (result: R) => string;
+  // What the toast says, and what follows a save that closes the form. Null: the save says it in its own message
+  savedText?: (result: R) => string | null;
   onSaved?: (result: R) => void;
 }
 
@@ -72,7 +72,8 @@ export function useRecordSave<I, T extends object, R>(
     mutationFn: ({ input }: { input: I; isAddingAnother: boolean }) => save(input),
     onSuccess: (result, { isAddingAnother }) => {
       refresh(client);
-      void message.success(savedText?.(result) ?? SAVED);
+      const text = savedText ? savedText(result) : SAVED;
+      if (text) void message.success(text);
       if (isAddingAnother) {
         startNextRecord();
         return;

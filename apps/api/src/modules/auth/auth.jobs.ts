@@ -19,9 +19,10 @@ const MAX_SILENCE_MS = 3 * 24 * 60 * 60 * 1_000;
 export const AUTH_CLEANUP_JOB: JobDefinition = {
   name: "auth.cleanup",
   title: "Прибирання завершених сесій і токенів",
+  description: "Видаляє старі сесії входу й використані посилання. Працює сама, вручну запускати не потрібно.",
   cron: "0 2 * * *",
   scheduleLabel: "Щоночі о 02:00",
   maxSilenceMs: MAX_SILENCE_MS,
-  canRunByHand: true,
+  canRunByHand: false,
   run: async ({ db }) => ({ summary: await runAuthCleanup(db) }),
 };

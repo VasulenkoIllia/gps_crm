@@ -7,6 +7,7 @@ import { DataTable, NoAccess, NothingFound, PageHeader, Panel } from "../../ui";
 import { ACTIVITY_FILTER_KEYS, ACTIVITY_KEY, fetchActivityPage } from "./activity.api";
 import { activityColumns } from "./activity-columns";
 import { ActivityDetails } from "./ActivityDetails";
+import { PACKAGE_EXPANDABLE } from "./PackageItems";
 import { ActivityFilters } from "./ActivityFilters";
 
 function ActivityScreen() {
@@ -50,6 +51,7 @@ function ActivityScreen() {
           hasMore={events.hasNextPage}
           isLoadingMore={events.isFetchingNextPage}
           onLoadMore={() => void events.fetchNextPage()}
+          expandable={PACKAGE_EXPANDABLE}
         />
       </Panel>
       <ActivityDetails event={opened} onClose={() => setOpened(null)} />

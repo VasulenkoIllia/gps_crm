@@ -1,7 +1,7 @@
 import { HOME_RECENT_EVENTS, todayKyiv, type Home } from "@gps_crm/shared";
 import type { RecordScope } from "../../core/access/access.js";
 import type { DbClient } from "../../core/db/client.js";
-import { listActivity } from "../activity/index.js";
+import { CARD_VIEW, listActivity } from "../activity/index.js";
 import { countObjects } from "../objects/index.js";
 import { countExpiringContracts, countSubscribers } from "../subscribers/index.js";
 import { readRecentRecords } from "./home.queries.js";
@@ -21,7 +21,7 @@ export async function readHome(db: DbClient, userId: string, scopes: HomeScopes,
     objects ? countObjects(db, { status: "active" }, objects) : null,
     countExpiringContracts(db, clients, todayKyiv(now)),
     readRecentRecords(db, userId, { clients, objects }, now),
-    activity ? listActivity(db, { limit: HOME_RECENT_EVENTS }, activity) : null,
+    activity ? listActivity(db, { limit: HOME_RECENT_EVENTS }, activity, CARD_VIEW) : null,
   ]);
   return {
     counts: { clients: clientCount, activeObjects, expiringContracts },

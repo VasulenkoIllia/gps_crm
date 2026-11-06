@@ -1,11 +1,11 @@
 import { MenuOutlined, SearchOutlined } from "@ant-design/icons";
-import { Button, Drawer, Grid, Layout, Menu, Skeleton } from "antd";
+import { Button, Drawer, Grid, Layout, Menu, Skeleton, type MenuProps } from "antd";
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router";
 import { GlobalSearch } from "../features/search/GlobalSearch";
 import { useCan, usePermissions } from "../lib/session";
 import { BrandMark, ErrorBoundary } from "../ui";
-import { findActiveKeys, NAV_ITEMS, type NavItem } from "./nav";
+import { findActiveKeys, NAV_ITEMS, navSections, type NavItem } from "./nav";
 import { UserMenu } from "./UserMenu";
 
 const SIDER_WIDTH_PX = 236;
@@ -28,10 +28,14 @@ function toMenuItem(item: NavItem) {
 function AppMenu({ onSelect }: { onSelect?: () => void }) {
   const { pathname } = useLocation();
   const { data: permissions } = usePermissions();
-  const items = useMemo(
-    () => NAV_ITEMS.filter((item) => !item.permission || permissions?.has(item.permission)).map(toMenuItem),
-    [permissions],
-  );
+  const items = useMemo(() => {
+    const allowed = NAV_ITEMS.filter((item) => !item.permission || permissions?.has(item.permission));
+    return navSections(allowed).flatMap(({ group, items: groupItems }): MenuProps["items"] & object =>
+      group
+        ? [{ type: "group" as const, key: group, label: group, children: groupItems.map(toMenuItem) }]
+        : groupItems.map(toMenuItem),
+    );
+  }, [permissions]);
   return (
     <nav aria-label="Основне меню">
       <Menu

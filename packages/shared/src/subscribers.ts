@@ -23,7 +23,7 @@ const DISCOUNT_TEXT = "Знижка не може бути від'ємною";
 const TARIFF_DATE_TEXT = "Оберіть минулу дату, сьогодні або 1-ше число наступного місяця";
 const TARIFF_REQUIRED = "Оберіть тариф";
 const MANAGER_REQUIRED = "Оберіть менеджера";
-const CODE_TEXT = "ID складається лише з цифр, не менше 5";
+const CODE_TEXT = "ID складається лише з цифр, не менше 5, і не починається з нуля";
 const PROGRAM_TEXT = "Оберіть програму";
 const INVALID_ID = "Некоректний ідентифікатор";
 const COUNTER_CURSOR = /^\d+$/;
@@ -39,6 +39,20 @@ export const SUBSCRIBER_STATUS_META: Record<SubscriberStatus, StatusMeta> = {
 };
 
 export const ARCHIVED_STATUS_META: StatusMeta = { label: "В архіві", tone: "neutral" };
+const NO_OBJECTS_STATUS_META: StatusMeta = { label: "Без об'єктів", tone: "neutral" };
+
+// The filter goes by the status in the base: «Відключений» brings the clients without objects too (D89)
+export const SUBSCRIBER_STATUS_FILTER_META: Record<SubscriberStatus, StatusMeta> = {
+  ...SUBSCRIBER_STATUS_META,
+  disconnected: { label: "Відключений або без об'єктів", tone: "neutral" },
+};
+
+// D89: a client with no object at all is `disconnected` in the base (П17) and reads as one without objects
+export function subscriberStatusMeta(status: SubscriberStatus, objectsTotal: number, isArchived: boolean): StatusMeta {
+  if (isArchived) return ARCHIVED_STATUS_META;
+  if (status === "disconnected" && objectsTotal === 0) return NO_OBJECTS_STATUS_META;
+  return SUBSCRIBER_STATUS_META[status];
+}
 
 export interface ObjectCounts {
   objectsActive: number;
@@ -218,6 +232,8 @@ const subscriberListItemSchema = z.strictObject({
   status: z.enum(SUBSCRIBER_STATUS_KEYS),
   programName: z.string(),
   tariffName: z.string(),
+  // D91: the day the tariff takes over, later than today for a planned one
+  tariffFrom: z.string(),
   objectsActive: z.number(),
   objectsTotal: z.number(),
   managerName: z.string(),

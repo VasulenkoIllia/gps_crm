@@ -1,6 +1,6 @@
 import type { EquipmentCheck } from "@gps_crm/shared";
 import { describe, expect, it } from "vitest";
-import { hintOf, isFreeRecord } from "./number-check";
+import { checkOfTyped, hintOf, isFreeRecord } from "./number-check";
 
 const unknown: EquipmentCheck = { isValid: true, isFree: true, hasChecksumWarning: false, holder: null };
 const stock: EquipmentCheck = {
@@ -50,5 +50,17 @@ describe("a record in the stock", () => {
     expect(isFreeRecord(archived)).toBe(false);
     expect(isFreeRecord(unknown)).toBe(false);
     expect(isFreeRecord(undefined)).toBe(false);
+  });
+});
+
+// П6 of the manual test of 05.11.2026: «Уже встановлено» stayed under a number typed after it
+describe("checkOfTyped", () => {
+  it("drops the answer about a number no longer in the field", () => {
+    expect(checkOfTyped("356938035643809", "356938035643801", installed)).toBeUndefined();
+    expect(checkOfTyped("", "", installed)).toBeUndefined();
+  });
+
+  it("keeps the answer about the number in the field", () => {
+    expect(checkOfTyped("356938035643809", "356938035643809", stock)).toBe(stock);
   });
 });

@@ -1,4 +1,4 @@
-import { Button, Empty, Grid, Skeleton, Table, type TableColumnType } from "antd";
+import { Button, Empty, Grid, Skeleton, Table, type TableColumnType, type TableProps } from "antd";
 import { useMemo, type ReactNode } from "react";
 import { FormAlert } from "./FormAlert";
 import { LoadError } from "./LoadError";
@@ -24,6 +24,8 @@ export interface DataTableProps<T> {
   sort?: TableSort;
   onSort?: (sort: TableSort | null) => void;
   onRowClick?: (row: T) => void;
+  // A row that opens to more of itself, as a package of the archive in the journal (D92)
+  expandable?: TableProps<T>["expandable"];
 }
 
 const SORT_ORDERS = { asc: "ascend", desc: "descend" } as const;
@@ -55,7 +57,7 @@ function isPlainRowClick(target: EventTarget): boolean {
 
 export function DataTable<T extends object>(props: DataTableProps<T>) {
   const { rows, columns, rowKey, error, empty, onRetry, hasMore, isLoadingMore, onLoadMore } = props;
-  const { sort, onSort, onRowClick } = props;
+  const { sort, onSort, onRowClick, expandable } = props;
   const isPhone = Grid.useBreakpoint().md === false;
   const shown = useMemo(() => {
     const sorted = withSortOrder(columns, sort);
@@ -78,6 +80,8 @@ export function DataTable<T extends object>(props: DataTableProps<T>) {
           pagination={false}
           scroll={{ x: "max-content" }}
           rowClassName={onRowClick ? "table-row-link" : undefined}
+          // Pinned with the first column on a phone, so the toggle does not scroll away from the row it opens
+          expandable={expandable && { ...expandable, fixed: isPhone ? "left" : undefined }}
           onRow={(row) => ({
             onClick: (event) => {
               if (onRowClick && isPlainRowClick(event.target)) onRowClick(row);

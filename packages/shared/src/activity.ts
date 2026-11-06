@@ -35,7 +35,9 @@ export const ACTIVITY_ACTIONS = {
   "reference.restored": "Відновлення запису довідника",
   "reference.tariff_version_created": "Нова версія тарифу",
   "reference.price_added": "Нова ціна послуги",
+  "reference.price_cancelled": "Видалення запланованої ціни послуги",
   "reference.cost_added": "Нова собівартість",
+  "reference.cost_cancelled": "Видалення запланованої собівартості",
   "subscriber.created": "Новий клієнт",
   "subscriber.updated": "Зміна клієнта",
   "subscriber.code_changed": "Зміна ID клієнта",
@@ -105,6 +107,44 @@ export const ACTIVITY_ACTIONS = {
 export type ActivityAction = keyof typeof ACTIVITY_ACTIONS;
 
 const ACTIVITY_ACTION_KEYS = Object.keys(ACTIVITY_ACTIONS) as ActivityAction[];
+
+// D92: one line of the package stands for what went to the archive or came back with it. Each record still writes its
+// own line in the same request (activity.md §11), and a journal with no filter by action or record shows the package
+// alone, which opens to them.
+export const PACKAGE_ACTIONS = ["record.archived", "record.restored"] as const satisfies ActivityAction[];
+export type PackageAction = (typeof PACKAGE_ACTIONS)[number];
+
+export const PACKAGE_ITEM_ACTIONS = [
+  "subscriber.archived",
+  "subscriber.restored",
+  "contact.archived",
+  "contact.restored",
+  "payer.archived",
+  "payer.restored",
+  "contract.archived",
+  "contract.restored",
+  "object.archived",
+  "object.restored",
+  "device.archived",
+  "device.restored",
+  "sim.archived",
+  "sim.restored",
+  "sensor.archived",
+  "sensor.restored",
+  "reference.deactivated",
+  "reference.restored",
+] as const satisfies ActivityAction[];
+
+// D92: a look at a file changes nothing, so only the journal of actions shows it: not a card, not the home page
+export const FILE_READ_ACTIONS = [
+  "contract.file_viewed",
+  "contract.file_downloaded",
+  "export.downloaded",
+] as const satisfies ActivityAction[];
+
+export function isPackageEvent(event: { action: string; entityId: string | null }): boolean {
+  return (PACKAGE_ACTIONS as readonly string[]).includes(event.action) && event.entityId !== null;
+}
 
 export const ACTIVITY_ENTITY_TYPES = {
   user: "Користувач",
@@ -333,6 +373,14 @@ export type ArchiveListQuery = z.infer<typeof archiveListQuerySchema>;
 export const archiveBatchParamsSchema = z.strictObject({
   batchId: z.uuid("Некоректний ідентифікатор").max(ID_LENGTH_MAX),
 });
+
+export const activityPackageQuerySchema = z.strictObject({
+  action: z.enum(PACKAGE_ACTIONS),
+});
+export type ActivityPackageQuery = z.infer<typeof activityPackageQuerySchema>;
+
+// The lines of one package, oldest first. A package past the cap says how many it holds in its own line (itemCount).
+export const PACKAGE_ITEMS_MAX = 200;
 
 export function activityActionLabel(action: string): string {
   return ACTIVITY_ACTIONS[action as ActivityAction] ?? action;

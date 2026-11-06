@@ -34,15 +34,17 @@ test.describe.serial("the search, the home page and the export", () => {
   test("the header finds a client by the last digits of a phone, and Enter opens all results", async ({ page }) => {
     await createClient(page, { name: CLIENT, program: PROGRAM, tariff: TARIFF, phone: CLIENT_PHONE });
     const lastDigits = CLIENT_PHONE.slice(-7);
+    // The line of the contact, its name and phone: the client's own line now reads «name, ID …» too
+    const contactLine = new RegExp(`^${CLIENT} \\+380`);
 
     await page.goto("/objects");
     await typeInHeader(page, lastDigits);
-    await page.getByRole("option", { name: new RegExp(`^${CLIENT}`) }).click();
+    await page.getByRole("option", { name: contactLine }).click();
     await expect(page.getByRole("heading", { name: CLIENT, exact: true })).toBeVisible();
     await expect(page.getByRole("tab", { name: "Контакти", selected: true })).toBeVisible();
 
     await typeInHeader(page, lastDigits);
-    await expect(page.getByRole("option", { name: new RegExp(`^${CLIENT}`) })).toBeVisible();
+    await expect(page.getByRole("option", { name: contactLine })).toBeVisible();
     await headerSearch(page).press("Enter");
     await expect(page).toHaveURL(new RegExp(`/search\\?q=${lastDigits}$`));
     const contacts = page.getByRole("region", { name: "Контакти" });
@@ -55,8 +57,10 @@ test.describe.serial("the search, the home page and the export", () => {
   test("the home page counts the records and keeps the last ones changed", async ({ page }) => {
     await page.goto("/");
     await expect(page.getByRole("heading", { name: "Головна" })).toBeVisible();
-    await expect(page.getByRole("link", { name: /Клієнтів/ })).toBeVisible();
-    await expect(page.getByRole("link", { name: /Активних об'єктів/ })).toBeVisible();
+    // The tiles are links now, beside the same words in the menu
+    const tiles = page.getByRole("main");
+    await expect(tiles.getByRole("link", { name: /^Клієнти \d+/ })).toBeVisible();
+    await expect(tiles.getByRole("link", { name: /^Активні об'єкти \d+/ })).toBeVisible();
     const recent = page.getByRole("region", { name: "Мої останні записи" });
     await expect(recent.getByRole("link").first()).toHaveText(CLIENT);
     await expect(page.getByRole("link", { name: "Увесь журнал" })).toBeVisible();

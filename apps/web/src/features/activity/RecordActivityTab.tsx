@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { DataTable } from "../../ui";
 import { activityColumns } from "./activity-columns";
 import { ActivityDetails } from "./ActivityDetails";
+import { PACKAGE_EXPANDABLE } from "./PackageItems";
 
 interface RecordActivityTabProps {
   queryKey: string[];
@@ -34,6 +35,7 @@ export function RecordActivityTab({ queryKey, fetchPage }: RecordActivityTabProp
         hasMore={events.hasNextPage}
         isLoadingMore={events.isFetchingNextPage}
         onLoadMore={() => void events.fetchNextPage()}
+        expandable={PACKAGE_EXPANDABLE}
       />
       <ActivityDetails event={opened} onClose={() => setOpened(null)} />
     </>

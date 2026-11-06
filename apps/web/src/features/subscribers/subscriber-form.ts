@@ -1,4 +1,13 @@
-import { BILLING_MODELS, formatMoney, isTariffDateAllowed, todayKyiv, type Tariff } from "@gps_crm/shared";
+import {
+  BILLING_MODELS,
+  formatMoney,
+  isTariffDateAllowed,
+  periodAfter,
+  periodOn,
+  todayKyiv,
+  type Tariff,
+  type TariffVersion,
+} from "@gps_crm/shared";
 import { useQuery } from "@tanstack/react-query";
 import dayjs, { type Dayjs } from "dayjs";
 import { useMemo } from "react";
@@ -8,6 +17,17 @@ import { fetchManagers, MANAGERS_KEY } from "./subscribers.api";
 // П25: the name of a tariff repeats, so what tells two apart has to be in the list itself (D54)
 export function tariffLabel({ name, serverName, billingModel, priceKop }: Tariff): string {
   return `${name}, ${serverName}, ${BILLING_MODELS[billingModel].toLowerCase()}, ${formatMoney(priceKop)}`;
+}
+
+// П25: the newest version may not have begun yet, so a card shows the one in force and the planned one apart
+export function tariffVersionsOf(history: TariffVersion[], today: string) {
+  const current = periodOn(history, today);
+  const next = periodAfter(history, today);
+  return { current, next, earlier: history.filter((version) => version !== current && version !== next) };
+}
+
+export function tariffVersionText({ tariffName, serverName, billingModel }: TariffVersion): string {
+  return `${tariffName}, ${serverName}, ${BILLING_MODELS[billingModel].toLowerCase()}`;
 }
 
 export function tariffOptionsOf(tariffs: Tariff[] | undefined, programId: string | undefined) {

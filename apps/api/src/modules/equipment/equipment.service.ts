@@ -161,12 +161,12 @@ function assertDeviceState(before: repo.DeviceRow, status: DeviceStatus): void {
     throw stateRefused(`Трекер стоїть на об'єкті «${before.object.name}»: спершу замініть його там`);
   }
   if (!before.object && status === "installed")
-    throw stateRefused("Стан «Встановлено» ставиться при встановленні на об'єкт");
+    throw stateRefused("Стан «На об'єкті» ставиться при встановленні на об'єкт");
 }
 
 function assertSimState(before: repo.SimRow, status: SimStatus): void {
   if (before.device && status === "free") throw stateRefused(`SIM стоїть у трекері ${before.device.imei}`);
-  if (!before.device && status === "active") throw stateRefused("Активна лише SIM у трекері");
+  if (!before.device && status === "active") throw stateRefused("Стан «У трекері» лише в SIM, що стоїть у трекері");
 }
 
 function stateEvent(

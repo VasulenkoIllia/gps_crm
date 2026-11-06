@@ -1,7 +1,7 @@
-import { Tabs } from "antd";
 import type { ReactNode } from "react";
 import { useSearchParams } from "react-router";
 import { PageHeader } from "./PageHeader";
+import { PageTabs } from "./PageTabs";
 import { Panel } from "./Panel";
 
 const TAB_PARAM = "tab";
@@ -33,7 +33,7 @@ export function DetailPage({ title, subtitle, actions, facts, tabs }: DetailPage
         <div className="detail-facts">{facts}</div>
       </Panel>
       <Panel>
-        <Tabs
+        <PageTabs
           activeKey={active?.key}
           // In the tab panel itself, so a screen reader finds the content the tab points to
           items={tabs.map(({ key, label, render }) => ({

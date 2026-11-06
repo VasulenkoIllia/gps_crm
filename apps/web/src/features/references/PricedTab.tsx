@@ -90,6 +90,7 @@ export function PricedTab<K extends PricedKind>(props: PricedTabProps<K>) {
         title={historyOf?.name ?? ""}
         open={historyOf !== null}
         blocks={historyOf ? historyBlocks(historyOf) : []}
+        canChange={canManage && historyOf?.isActive === true}
         onClose={() => setHistoryOf(null)}
       />
     </>

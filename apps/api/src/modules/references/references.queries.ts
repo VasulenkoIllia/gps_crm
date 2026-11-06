@@ -125,6 +125,9 @@ export async function listTariffs(db: DbOrTx, query: ReferenceListQuery): Promis
       selectedAt: true,
       program: { select: { name: true } },
       server: { select: { name: true } },
+      // D88: the tariff this one was made from, and the latest made from this one (ids are uuidv7: by id is by time)
+      basedOn: { select: { name: true } },
+      versions: { orderBy: { id: "desc" }, take: 1, select: { name: true } },
     },
     ...pageArgs(query),
   });
@@ -134,13 +137,15 @@ export async function listTariffs(db: DbOrTx, query: ReferenceListQuery): Promis
     page.map(({ id }) => id),
   );
   return {
-    items: page.map(({ program, server, selectedAt, priceKop, ...row }) => ({
+    items: page.map(({ program, server, selectedAt, priceKop, basedOn, versions, ...row }) => ({
       ...row,
       priceKop: Number(priceKop),
       isSelected: selectedAt !== null,
       programName: program.name,
       serverName: server.name,
       clientCount: clients.get(row.id) ?? 0,
+      basedOnName: basedOn?.name ?? null,
+      newerVersionName: versions[0]?.name ?? null,
     })),
     nextCursor,
   };

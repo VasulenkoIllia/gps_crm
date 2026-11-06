@@ -44,12 +44,12 @@ describe("the sections of the search", () => {
   it("leads each line to its card, and a tracker to its object or to the stock found by its number", () => {
     expect(sections[0]?.lines[0]).toMatchObject({
       to: "/subscribers/c1",
-      title: "10001 Ромашка",
+      title: "Ромашка, ID 10001",
       meta: "старий номер А-1",
     });
     expect(sections[1]?.lines[0]).toMatchObject({
       to: "/subscribers/c1?tab=contacts",
-      meta: "+380 50 111 22 33 · 10001 Ромашка",
+      meta: "+380 50 111 22 33 · Ромашка, ID 10001",
     });
     expect(sections[3]?.lines.map((line) => line.to)).toEqual([
       "/objects/o1",

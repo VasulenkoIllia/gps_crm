@@ -126,6 +126,7 @@ export function RemoveSensorModal({ objectId, sensor, open, onClose }: RemoveSen
     <FormModal
       {...save.modal}
       title={`Зняти датчик ${sensor?.serialNo ?? ""}`}
+      submitLabel="Зняти"
       open={open}
       onSubmit={(values) => save.submit(values, false)}
     >

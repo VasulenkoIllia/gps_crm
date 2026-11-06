@@ -184,6 +184,9 @@ function clientName(q: Sql, form: keyof WordList, n: string) {
                       ELSE ${municipal} || ${company} END`;
 }
 
+// The one version of a client's tariff begins on this day, and the row keeps it (D91)
+const TARIFF_FROM = "DATE '2020-01-01' + (c.n * 37 % 2300)";
+
 const subscribers: Step = {
   name: "subscribers",
   rows: (plan) => plan.clients,
@@ -192,14 +195,14 @@ const subscribers: Step = {
     const q = new Sql();
     return [
       q.statement(`INSERT INTO subscribers (id, code, legacy_code, type, name, name_norm, tax_id, crm_url, manager_id,
-             grace_days, program_id, tariff_id, archived_at, archived_by, archive_batch_id)
+             grace_days, program_id, tariff_id, tariff_from, archived_at, archived_by, archive_batch_id)
            SELECT c.id, ${SEED_CODE_FROM} + c.n - 1,
              CASE WHEN c.n % 10 < 7 THEN (c.n::bigint * 7 + 3)::text END,
              c.type, ${clientName(q, "shown", "c.n")}, ${clientName(q, "norm", "c.n")},
              CASE WHEN c.type <> 'B2C' THEN seed.edrpou(c.n::bigint * 7919)
                   WHEN c.n % 2 = 0 THEN seed.ipn(c.n::bigint * 104729) END,
              CASE WHEN c.n % 10 <> 9 THEN 'https://crm.example.test/clients/' || c.n END,
-             m.id, (c.n % 4) * 5, t.parent_id, t.id,
+             m.id, (c.n % 4) * 5, t.parent_id, t.id, ${TARIFF_FROM},
              CASE WHEN c.archived THEN now() - interval '30 days' END,
              CASE WHEN c.archived THEN a.id END,
              c.batch_id
@@ -210,7 +213,7 @@ const subscribers: Step = {
            WHERE c.n BETWEEN ${from} AND ${to}
            ORDER BY c.n`),
       sql(`INSERT INTO subscriber_tariff_periods (subscriber_id, tariff_id, valid_from)
-           SELECT s.id, s.tariff_id, DATE '2020-01-01' + (c.n * 37 % 2300)
+           SELECT s.id, s.tariff_id, ${TARIFF_FROM}
            FROM seed.client c JOIN subscribers s ON s.id = c.id
            WHERE c.n BETWEEN ${from} AND ${to}`),
     ];

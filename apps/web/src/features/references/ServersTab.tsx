@@ -8,12 +8,14 @@ import { FirstCostFields, firstCostOf, priceColumns, type FirstCostValues } from
 import type { RowFormProps, TabProps } from "./ReferenceTab";
 import { useReferenceSave } from "./reference-form";
 import { REFERENCE_TEXTS } from "./reference-texts";
-import { createReference, updateReference, useReferenceOptions } from "./references.api";
+import { createReference, removeCostPrice, updateReference, useReferenceOptions } from "./references.api";
 
 const COST_LABEL = "Собівартість ліцензії за 1 об'єкт";
 const COST_COLUMN = "Собівартість ліцензії";
 const LABELS = { cost: COST_LABEL, newCost: "Нова собівартість", history: "Історія собівартості" };
-const historyBlocks = (row: Server) => [{ title: COST_COLUMN, history: row.costs }];
+const historyBlocks = (row: Server) => [
+  { title: COST_COLUMN, history: row.costs, remove: removeCostPrice, noun: "собівартість" },
+];
 
 interface ServerValues extends FirstCostValues {
   programId: string;
@@ -65,7 +67,7 @@ function buildColumns(canReadCost: boolean): DataTableColumn<Server>[] {
     { title: "Програма", dataIndex: "programName" },
     { title: "Назва", dataIndex: "name" },
     { title: "Адреса", dataIndex: "url", render: (url: string | null) => url ?? <EmptyValue /> },
-    ...(canReadCost ? priceColumns<Server>(COST_COLUMN, (row) => row.costs) : []),
+    ...(canReadCost ? priceColumns<Server>(COST_COLUMN, "Наступна собівартість", (row) => row.costs) : []),
   ];
 }
 

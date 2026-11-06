@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { normalizeName } from "./normalize.ts";
 
 const SEARCH_MAX_LENGTH = 100;
 // search-exports.md П3
@@ -13,6 +14,17 @@ const PHONE_LIKE = /^[\d\s()+-]+$/;
 // do not make it text.
 export function isNumberQuery(text: string): boolean {
   return PHONE_LIKE.test(text) && /\d/.test(text);
+}
+
+// A query too short finds nothing on purpose (П1, П2), and the screen says why instead of «nothing found»
+export function searchTooShortText(query: string | undefined): string | null {
+  // Measured as the server measures it: spaces in a row count once
+  const text = normalizeName(query ?? "");
+  if (!text) return null;
+  if (isNumberQuery(text)) {
+    return text.replace(/\D/g, "").length < SEARCH_MIN_DIGITS ? `Введіть щонайменше ${SEARCH_MIN_DIGITS} цифри` : null;
+  }
+  return text.length < SEARCH_MIN_NAME ? `Введіть щонайменше ${SEARCH_MIN_NAME} символи` : null;
 }
 
 export const searchQuerySchema = z.strictObject({

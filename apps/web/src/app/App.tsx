@@ -25,6 +25,7 @@ const ObjectsPage = lazyPage(() => import("../features/objects/ObjectsPage"), "O
 const ObjectPage = lazyPage(() => import("../features/objects/ObjectPage"), "ObjectPage");
 const EquipmentPage = lazyPage(() => import("../features/equipment/EquipmentPage"), "EquipmentPage");
 const ContractsPage = lazyPage(() => import("../features/contracts/ContractsPage"), "ContractsPage");
+const PayersPage = lazyPage(() => import("../features/payers/PayersPage"), "PayersPage");
 const IdSeriesPage = lazyPage(() => import("../features/id-series/IdSeriesPage"), "IdSeriesPage");
 const ActivityPage = lazyPage(() => import("../features/activity/ActivityPage"), "ActivityPage");
 const ArchivePage = lazyPage(() => import("../features/activity/ArchivePage"), "ArchivePage");
@@ -39,6 +40,7 @@ const BUILT_PAGES: Record<string, ReactNode> = {
   "/objects": <ObjectsPage />,
   "/equipment": <EquipmentPage />,
   "/contracts": <ContractsPage />,
+  "/payers": <PayersPage />,
   "/references": <ReferencesPage />,
   "/id-series": <IdSeriesPage />,
   "/users": <UsersPage />,

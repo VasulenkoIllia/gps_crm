@@ -150,6 +150,35 @@ function pageOf<T extends { id: string }, R>(rows: T[], limit: number, toRow: (r
   };
 }
 
+// П5: which records of a page stood anywhere, in one query for the page: their menu offers no deletion.
+// GROUP BY in the database: Prisma's `distinct` would read every installation of the page and drop repeats in memory
+async function installedIds(db: DbOrTx, kind: EquipmentKind, ids: string[]): Promise<Set<string>> {
+  if (ids.length === 0) return new Set();
+  if (kind === "device") {
+    const rows = await db.deviceInstallation.groupBy({ by: ["deviceId"], where: { deviceId: { in: ids } } });
+    return new Set(rows.map(({ deviceId }) => deviceId));
+  }
+  if (kind === "sim") {
+    const rows = await db.simInstallation.groupBy({ by: ["simId"], where: { simId: { in: ids } } });
+    return new Set(rows.map(({ simId }) => simId));
+  }
+  const rows = await db.sensorInstallation.groupBy({ by: ["sensorId"], where: { sensorId: { in: ids } } });
+  return new Set(rows.map(({ sensorId }) => sensorId));
+}
+
+async function withHistory<T extends { id: string }>(
+  db: DbOrTx,
+  kind: EquipmentKind,
+  page: { items: T[]; nextCursor: string | null },
+) {
+  const installed = await installedIds(
+    db,
+    kind,
+    page.items.map(({ id }) => id),
+  );
+  return { ...page, items: page.items.map((item) => ({ ...item, hasHistory: installed.has(item.id) })) };
+}
+
 function archivedWhere(archived: "true" | undefined) {
   return { archivedAt: archived ? { not: null } : null };
 }
@@ -173,7 +202,7 @@ export async function listDevices(db: DbOrTx, query: DeviceListQuery): Promise<D
     take: limit + 1,
     select: DEVICE_LIST_ROW,
   });
-  return pageOf(rows, limit, toDeviceRow);
+  return withHistory(db, "device", pageOf(rows, limit, toDeviceRow));
 }
 
 export async function listSims(db: DbOrTx, query: SimListQuery): Promise<SimList> {
@@ -191,7 +220,7 @@ export async function listSims(db: DbOrTx, query: SimListQuery): Promise<SimList
     take: limit + 1,
     select: SIM_LIST_ROW,
   });
-  return pageOf(rows, limit, toSimRow);
+  return withHistory(db, "sim", pageOf(rows, limit, toSimRow));
 }
 
 export async function listSensors(db: DbOrTx, query: SensorListQuery): Promise<SensorList> {
@@ -207,7 +236,7 @@ export async function listSensors(db: DbOrTx, query: SensorListQuery): Promise<S
     take: limit + 1,
     select: SENSOR_LIST_ROW,
   });
-  return pageOf(rows, limit, toSensorRow);
+  return withHistory(db, "sensor", pageOf(rows, limit, toSensorRow));
 }
 
 // A free tracker is one that came off an object: in repair or written off it is no choice for a form (D71)

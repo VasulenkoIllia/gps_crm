@@ -1,7 +1,9 @@
 import {
   COST_SUBJECT_TYPES,
+  dateText,
   PROGRAM_REQUIRED,
   REFERENCE_ENTITY_TYPES,
+  todayKyiv,
   type AddonCreate,
   type AddonUpdate,
   type CostPriceInput,
@@ -18,6 +20,7 @@ import {
   assertVersion,
   changedFields,
   hasChanges,
+  lockedReferences,
   notFound,
   recordCreated,
   recordUpdated,
@@ -25,8 +28,16 @@ import {
 } from "./references.helpers.js";
 import * as repo from "./references.repository.js";
 
-const PRICE_TOO_EARLY = "Нова ціна не може діяти раніше за чинну";
-const PRICE_DATE_TAKEN = "На цю дату ціна вже є";
+// The word for the sum as its screen says it: the price of an addon, the cost of a server or an addon, the cost of a
+// plan of an operator, which that screen calls «вартість» (references.md §5)
+type PriceNoun = "ціна" | "собівартість" | "вартість";
+const SALE_PRICE: PriceNoun = "ціна";
+
+const priceTooEarly = (noun: PriceNoun) => `Нова ${noun} не може діяти раніше за чинну`;
+const priceDateTaken = (noun: PriceNoun) => `На цю дату ${noun} вже є`;
+const priceStarted = (noun: PriceNoun) => `Ця ${noun} вже діє: видалити можна лише заплановану`;
+const plannedIsLater = (date: string) =>
+  `Уже є запланована з ${dateText(date)}: нова має діяти пізніше. Помилкову заплановану видаліть в історії`;
 
 const COST_SUBJECT_KINDS: Record<(typeof COST_SUBJECT_TYPES)[number], ReferenceKind> = {
   server: "servers",
@@ -34,12 +45,69 @@ const COST_SUBJECT_KINDS: Record<(typeof COST_SUBJECT_TYPES)[number], ReferenceK
   addon: "addons",
 };
 
+const COST_NOUNS: Record<CostSubjectType, PriceNoun> = {
+  server: "собівартість",
+  sim_plan: "вартість",
+  addon: "собівартість",
+};
+
 // The history only grows at its end, so a row never changes and two periods cannot overlap (references.md П3)
-function assertAfterLast(last: string | null, validFrom: string): void {
+function assertAfterLast(last: string | null, validFrom: string, noun: PriceNoun): void {
   if (!last || validFrom > last) return;
-  if (validFrom === last)
-    throw new AppError(409, "price_date_taken", PRICE_DATE_TAKEN, { validFrom: PRICE_DATE_TAKEN });
-  throw new AppError(422, "price_too_early", PRICE_TOO_EARLY, { validFrom: PRICE_TOO_EARLY });
+  if (validFrom === last) {
+    const message = priceDateTaken(noun);
+    throw new AppError(409, "price_date_taken", message, { validFrom: message });
+  }
+  const message = last > todayKyiv() ? plannedIsLater(last) : priceTooEarly(noun);
+  throw new AppError(422, "price_too_early", message, { validFrom: message });
+}
+
+interface PlannedPrice {
+  kind: ReferenceKind;
+  noun: PriceNoun;
+  subjectId: string;
+  amountKop: number;
+  validFrom: string;
+}
+
+// A price typed in by mistake goes before it starts; what was in force stays (D87). Under the lock of the lists, so a
+// price added at the same moment sees the history without it.
+async function cancelPlanned(
+  tx: DbOrTx,
+  context: ActivityContext,
+  price: PlannedPrice,
+  action: "reference.price_cancelled" | "reference.cost_cancelled",
+  remove: () => Promise<void>,
+): Promise<void> {
+  if (price.validFrom <= todayKyiv()) throw new AppError(409, "price_started", priceStarted(price.noun));
+  const subject = await repo.findNamed(tx, price.kind, price.subjectId);
+  if (!subject) throw notFound();
+  await remove();
+  const amountField = action === "reference.price_cancelled" ? "priceKop" : "costKop";
+  await recordActivity(tx, context, {
+    action,
+    entityType: REFERENCE_ENTITY_TYPES[price.kind],
+    entityId: subject.id,
+    details: { label: subject.name, [amountField]: price.amountKop, validFrom: price.validFrom },
+  });
+}
+
+export async function cancelAddonPrice(deps: Pick<AppDeps, "db">, context: ActivityContext, id: string) {
+  await lockedReferences(deps, async (tx) => {
+    const price = await repo.findAddonPrice(tx, id);
+    if (!price) throw notFound();
+    const planned = { kind: "addons" as const, noun: SALE_PRICE, subjectId: price.addonId, ...price };
+    await cancelPlanned(tx, context, planned, "reference.price_cancelled", () => repo.deleteAddonPriceRow(tx, id));
+  });
+}
+
+export async function cancelCostPrice(deps: Pick<AppDeps, "db">, context: ActivityContext, id: string) {
+  await lockedReferences(deps, async (tx) => {
+    const cost = await repo.findCostPrice(tx, id);
+    if (!cost) throw notFound();
+    const planned = { kind: COST_SUBJECT_KINDS[cost.subjectType], noun: COST_NOUNS[cost.subjectType], ...cost };
+    await cancelPlanned(tx, context, planned, "reference.cost_cancelled", () => repo.deleteCostRow(tx, id));
+  });
 }
 
 // Programs an addon newly gets must be working ones; one it already has stays, though it was deactivated since
@@ -65,7 +133,7 @@ export async function addCost(
   subject: { type: CostSubjectType; id: string; name: string },
   price: DatedPrice,
 ): Promise<void> {
-  assertAfterLast(await repo.lastCostDate(tx, subject.type, subject.id), price.validFrom);
+  assertAfterLast(await repo.lastCostDate(tx, subject.type, subject.id), price.validFrom, COST_NOUNS[subject.type]);
   await repo.addCostRow(tx, subject.type, subject.id, price, actorIdOf(context));
   await recordActivity(tx, context, {
     action: "reference.cost_added",
@@ -143,7 +211,7 @@ export async function addAddonPrice(
   await writeReference(deps, "addons", async (tx) => {
     const addon = await repo.findNamed(tx, "addons", id);
     if (!addon) throw notFound();
-    assertAfterLast(await repo.lastAddonPriceDate(tx, id), price.validFrom);
+    assertAfterLast(await repo.lastAddonPriceDate(tx, id), price.validFrom, SALE_PRICE);
     await repo.addAddonPriceRow(tx, id, price, actorIdOf(context));
     await recordActivity(tx, context, {
       action: "reference.price_added",

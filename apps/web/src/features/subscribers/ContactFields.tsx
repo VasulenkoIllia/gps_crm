@@ -59,6 +59,7 @@ export function ContactChannelFields({ prefix = [], initial }: ChannelFieldsProp
       initialValue={initial?.[field.name] ?? undefined}
       required={channel === field.channel}
       dependencies={[channelField]}
+      validateFirst
       rules={[needsValueFor(field.channel, channelField), zodRule(field.schema.optional())]}
     >
       <Input type={field.type} autoComplete="off" />

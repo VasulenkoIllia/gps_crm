@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { blankToNull } from "./contacts.ts";
+import { dateText } from "./dates.ts";
 import { deviceChoiceSchema, pastDateSchema, sensorChoiceSchema, simChoiceSchema } from "./equipment.ts";
 import { decodeListCursor, listCursorSchema } from "./list-cursor.ts";
 import { isLivePeriod, periodOn, type DatedPeriod } from "./periods.ts";
@@ -51,7 +52,7 @@ export function nextObjectStatuses(status: ObjectStatus): ObjectStatus[] {
 }
 
 // What may stand in for a tracker going off an object: it comes back to work or goes to be fixed (П14)
-export const OLD_DEVICE_STATES = { removed: "Знято", repair: "Ремонт" } as const;
+export const OLD_DEVICE_STATES = { removed: "На склад", repair: "Ремонт" } as const;
 export type OldDeviceState = keyof typeof OLD_DEVICE_STATES;
 const OLD_DEVICE_STATE_KEYS = Object.keys(OLD_DEVICE_STATES) as OldDeviceState[];
 
@@ -110,6 +111,21 @@ export const objectCreateSchema = z
     }
   });
 export type ObjectCreate = z.infer<typeof objectCreateSchema>;
+
+interface WorkDates {
+  status?: ObjectStatus;
+  statusFrom?: string;
+  connectedOn?: string;
+  installedOn?: string;
+}
+
+// D89 (Р8): an object at work before its tracker came is allowed, and asked about. A warning, never a refusal.
+export function workBeforeTrackerText({ status, statusFrom, connectedOn, installedOn }: WorkDates): string | null {
+  if (!installedOn) return null;
+  const isWorkingEarly = status !== "disconnected" && Boolean(statusFrom && statusFrom < installedOn);
+  if (!isWorkingEarly && !(connectedOn && connectedOn < installedOn)) return null;
+  return `Трекер встановлено ${dateText(installedOn)}, а об'єкт працює раніше. Перевірте дати: зберегти можна й так`;
+}
 
 // A change carries the whole record (D59); all the rest has an action of its own, with a date
 export const objectUpdateSchema = z.strictObject({
@@ -245,6 +261,8 @@ const objectListItemSchema = z.strictObject({
   programName: z.string(),
   tariffName: z.string(),
   hasOwnTariff: z.boolean(),
+  // D91: the day the tariff takes over for this object, later than today for a planned one
+  tariffFrom: z.string(),
   addonNames: z.array(z.string()),
   modelName: z.string().nullable(),
   imei: z.string().nullable(),

@@ -1,4 +1,4 @@
-import { MONEY_MAX_KOP } from "@gps_crm/shared";
+import { MONEY_MAX_KOP, todayKyiv } from "@gps_crm/shared";
 import { afterAll, afterEach, beforeEach, describe, expect, it } from "vitest";
 import { APP_ROLE_NAME } from "./app-role.repository.js";
 import type { DbClient } from "./client.js";
@@ -6,6 +6,8 @@ import { connectTestDatabase } from "./test-database.js";
 
 // Every object Prisma cannot describe is registered here, so a migration that loses one fails the build
 const REQUIRED_EXTENSIONS = ["btree_gist", "pg_stat_statements", "pg_trgm"];
+// A date no test reaches: a price from it is planned, so a trigger lets it be deleted (D87)
+const PLANNED_DATE = new Date("2999-01-01");
 // pgboss comes from the setup step and not from a migration
 const REQUIRED_SCHEMAS = ["part", "pgboss"];
 const REQUIRED_CHECKS = [
@@ -264,6 +266,17 @@ describe("schema invariants", () => {
     expect(rows).toHaveLength(1);
   });
 
+  it.each([
+    ["addon_prices", "addon_prices_keep_started"],
+    ["cost_prices", "cost_prices_keep_started"],
+  ])("keeps the prices in force of %s by a trigger", async (table, name) => {
+    const rows = await db.$queryRaw<{ name: string }[]>`
+      SELECT t.tgname AS name FROM pg_trigger t
+      WHERE t.tgrelid = ${`public.${table}`}::regclass AND t.tgname = ${name} AND t.tgenabled = 'O'
+    `;
+    expect(rows).toHaveLength(1);
+  });
+
   it("knows which combinations of the filters of objects exist", async () => {
     const rows = await db.$queryRaw<{ name: string }[]>`
       SELECT stxname AS name FROM pg_statistic_ext WHERE stxname = 'objects_filters_stats'
@@ -351,9 +364,27 @@ describe("schema invariants", () => {
         );
       }
 
-      // The same limit as the API's: what it accepts must not end as a 500 here
-      const largest = await db.addonPrice.create({ data: { ...addonPrice, priceKop: BigInt(MONEY_MAX_KOP) } });
+      // The same limit as the API's: what it accepts must not end as a 500 here. Planned, so it may be deleted (D87).
+      const largest = await db.addonPrice.create({
+        data: { ...addonPrice, validFrom: PLANNED_DATE, priceKop: BigInt(MONEY_MAX_KOP) },
+      });
       await db.addonPrice.delete({ where: { id: largest.id } });
+    });
+
+    // D87: a planned price may go, one in force stays, even for the owner of the tables
+    it("keeps a price in force in its history, and lets a planned one go", async () => {
+      const addon = await db.addon.create({ data: { name: "Послуга", nameNorm: `${NAME_PREFIX} послуга` } });
+      const startedToday = { addonId: addon.id, priceKop: 100n, validFrom: new Date(`${todayKyiv()}T00:00:00Z`) };
+      const removeStarted = db.$transaction(async (tx) => {
+        const started = await tx.addonPrice.create({ data: startedToday });
+        await tx.addonPrice.delete({ where: { id: started.id } });
+      });
+      await expect(removeStarted).rejects.toThrow(/prices_keep_started/);
+
+      const cost = { subjectType: "addon", subjectId: addon.id, costKop: 100n, validFrom: PLANNED_DATE } as const;
+      const planned = await db.costPrice.create({ data: cost });
+      await db.costPrice.delete({ where: { id: planned.id } });
+      expect(await db.costPrice.count({ where: { subjectId: addon.id } })).toBe(0);
     });
 
     it("keeps a deactivated record in a package of the archive, the only way back", async () => {
